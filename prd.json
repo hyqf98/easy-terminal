@@ -1,0 +1,123 @@
+{
+  "name": "Easy Terminal - 产品需求文档 (PRD) v2.0",
+  "description": "**Easy Terminal** - 轻量级跨平台智能终端管理软件",
+  "branchName": "feature/1.0.0",
+  "userStories": [
+    {
+      "id": "STORY-001",
+      "title": "基础架构 (第1周)",
+      "description": "- 前端项目初始化 - 后端项目初始化 - IPC 通信层",
+      "acceptanceCriteria": [],
+      "priority": 1,
+      "passes": true,
+      "labels": [],
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "STORY-002",
+      "title": "布局与主题 (第2周)",
+      "description": "- 主布局组件 - 主题系统 - 窗口管理",
+      "acceptanceCriteria": [],
+      "priority": 2,
+      "passes": true,
+      "labels": [],
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "STORY-003",
+      "title": "终端核心 (第3-4周)",
+      "description": "- 本地终端后端 - 本地终端前端 - 多标签系统 - 分屏系统 - 命令高亮",
+      "acceptanceCriteria": [],
+      "priority": 3,
+      "passes": true,
+      "labels": [],
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "STORY-004",
+      "title": "文件管理器 (第5-6周)",
+      "description": "- 文件系统后端 - 文件树前端 - 路径联动 - 文件预览/编辑",
+      "acceptanceCriteria": [],
+      "priority": 4,
+      "passes": true,
+      "labels": [],
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "STORY-005",
+      "title": "SSH 连接 (第7周)",
+      "description": "- SSH 后端 - SSH 前端",
+      "acceptanceCriteria": [],
+      "priority": 4,
+      "passes": true,
+      "labels": [],
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "STORY-006",
+      "title": "Docker 支持 (第8周)",
+      "description": "- Docker 后端 - Docker 前端",
+      "acceptanceCriteria": [],
+      "priority": 4,
+      "passes": true,
+      "labels": [],
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "STORY-007",
+      "title": "智能提示 (第9周)",
+      "description": "- 命令历史 - 自动补全 - 智能建议基础",
+      "acceptanceCriteria": [],
+      "priority": 4,
+      "passes": true,
+      "labels": [],
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "STORY-008",
+      "title": "设置系统 (第10周)",
+      "description": "- 设置后端 - 设置前端",
+      "acceptanceCriteria": [],
+      "priority": 4,
+      "passes": true,
+      "labels": [],
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "STORY-009",
+      "title": "快捷键 (第11周)",
+      "description": "- 快捷键系统",
+      "acceptanceCriteria": [],
+      "priority": 4,
+      "passes": true,
+      "labels": [],
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "STORY-010",
+      "title": "打包分发 (第12周)",
+      "description": "- 各平台安装包 - 自动更新 - CI/CD",
+      "acceptanceCriteria": [],
+      "priority": 4,
+      "passes": true,
+      "labels": [],
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
+    }
+  ],
+  "metadata": {
+    "createdAt": "2026-02-28T13:12:20.719Z",
+    "version": "1.0.0",
+    "sourcePrd": "tasks\\prd-easy-terminal-prd.md",
+    "updatedAt": "2026-03-01T04:42:33.177Z"
+  }
+}

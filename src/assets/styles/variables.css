@@ -1,0 +1,147 @@
+/* Easy Terminal - CSS Variables */
+/* Light theme is the default, dark theme variables are in themes/dark.css */
+
+:root {
+  /* Colors - Primary */
+  --color-primary: #18a058;
+  --color-primary-hover: #36ad6a;
+  --color-primary-pressed: #0c7a43;
+  --color-primary-suppl: #36ad6a;
+
+  /* Colors - Info */
+  --color-info: #2080f0;
+  --color-info-hover: #4098fc;
+  --color-info-pressed: #1060c9;
+  --color-info-suppl: #4098fc;
+
+  /* Colors - Success */
+  --color-success: #18a058;
+  --color-success-hover: #36ad6a;
+  --color-success-pressed: #0c7a43;
+  --color-success-suppl: #36ad6a;
+
+  /* Colors - Warning */
+  --color-warning: #f0a020;
+  --color-warning-hover: #fcb040;
+  --color-warning-pressed: #c97c10;
+  --color-warning-suppl: #fcb040;
+
+  /* Colors - Error */
+  --color-error: #d03050;
+  --color-error-hover: #de576d;
+  --color-error-pressed: #ab1f3f;
+  --color-error-suppl: #de576d;
+
+  /* Base colors */
+  --color-body: #fff;
+  --color-card: #fff;
+  --color-modal: #fff;
+  --color-popover: #fff;
+  --color-table: #fff;
+  --color-input: #fff;
+  --color-action: #fff;
+  --color-hover: #f3f3f5;
+  --color-pressed: #e0e0e6;
+  --color-border: #e0e0e6;
+  --color-divider: #e0e0e6;
+  --color-scroll: #d5d5d5;
+  --color-scroll-hover: #c2c2c2;
+
+  /* Text colors */
+  --color-text-base: #000;
+  --color-text-1: rgb(31, 34, 37);
+  --color-text-2: rgb(51, 54, 57);
+  --color-text-3: rgb(118, 124, 130);
+  --color-text-disabled: rgba(194, 194, 194, 1);
+
+  /* Placeholder */
+  --color-placeholder: rgba(194, 194, 194, 1);
+
+  /* Special colors */
+  --color-close: #d03050;
+  --color-close-hover: #de576d;
+
+  /* Font */
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-family-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  --font-family-terminal: 'Cascadia Code', 'SF Mono', Monaco, Consolas, 'Courier New', monospace;
+  --font-size: 14px;
+  --font-size-mini: 12px;
+  --font-size-tiny: 12px;
+  --font-size-small: 14px;
+  --font-size-medium: 14px;
+  --font-size-large: 15px;
+  --font-size-huge: 16px;
+  --font-line-height: 1.6;
+  --font-weight: 400;
+  --font-weight-strong: 500;
+
+  /* Height */
+  --height-tiny: 22px;
+  --height-small: 28px;
+  --height-medium: 34px;
+  --height-large: 40px;
+  --height-huge: 46px;
+
+  /* Border radius */
+  --border-radius: 3px;
+  --border-radius-small: 2px;
+  --border-radius-large: 4px;
+
+  /* Box shadow */
+  --box-shadow: 0 1px 2px -2px rgba(0, 0, 0, 0.08), 0 3px 6px 0 rgba(0, 0, 0, 0.06), 0 5px 12px 4px rgba(0, 0, 0, 0.04);
+  --box-shadow-hover: 0 1px 2px -2px rgba(0, 0, 0, 0.12), 0 3px 6px 0 rgba(0, 0, 0, 0.12), 0 5px 12px 4px rgba(0, 0, 0, 0.08);
+  --box-shadow-modal: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --box-shadow-popover: 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 9px 28px 8px rgba(0, 0, 0, 0.05);
+
+  /* Transition */
+  --transition-duration: 0.2s;
+  --transition-duration-fast: 0.1s;
+  --transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Opacity */
+  --opacity-disabled: 0.4;
+  --opacity-hover: 0.9;
+  --opacity-pressed: 0.8;
+
+  /* Layout */
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 48px;
+  --header-height: 38px;
+  --tab-height: 36px;
+  --status-bar-height: 24px;
+
+  /* Z-index */
+  --z-dropdown: 1000;
+  --z-modal: 2000;
+  --z-popover: 2000;
+  --z-tooltip: 3000;
+  --z-context-menu: 4000;
+}
+
+/* Theme transition - smooth color transitions when switching themes */
+*,
+*::before,
+*::after {
+  transition:
+    background-color var(--transition-duration) var(--transition-timing-function),
+    border-color var(--transition-duration) var(--transition-timing-function),
+    color var(--transition-duration) var(--transition-timing-function),
+    box-shadow var(--transition-duration) var(--transition-timing-function);
+}
+
+/* Disable transitions during initial load to prevent flash */
+.no-transitions *,
+.no-transitions *::before,
+.no-transitions *::after {
+  transition: none !important;
+}
+
+/* Drag region utility */
+.drag-region {
+  -webkit-app-region: drag;
+}
+
+.no-drag-region {
+  -webkit-app-region: no-drag;
+}

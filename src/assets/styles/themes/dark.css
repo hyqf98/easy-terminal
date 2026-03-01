@@ -1,0 +1,68 @@
+/* Easy Terminal - Dark Theme */
+
+[data-theme='dark'] {
+  /* Base colors */
+  --color-body: rgb(16, 16, 20);
+  --color-card: rgb(24, 24, 28);
+  --color-modal: rgb(30, 30, 34);
+  --color-popover: rgb(30, 30, 34);
+  --color-table: rgb(24, 24, 28);
+  --color-input: rgba(0, 0, 0, 0.2);
+  --color-action: rgb(36, 36, 40);
+  --color-hover: rgba(255, 255, 255, 0.09);
+  --color-pressed: rgba(255, 255, 255, 0.13);
+  --color-border: rgba(255, 255, 255, 0.12);
+  --color-divider: rgba(255, 255, 255, 0.09);
+  --color-scroll: rgba(255, 255, 255, 0.2);
+  --color-scroll-hover: rgba(255, 255, 255, 0.3);
+
+  /* Text colors */
+  --color-text-base: #fff;
+  --color-text-1: rgb(229, 229, 231);
+  --color-text-2: rgb(194, 196, 199);
+  --color-text-3: rgb(137, 140, 145);
+  --color-text-disabled: rgba(255, 255, 255, 0.38);
+
+  /* Placeholder */
+  --color-placeholder: rgba(255, 255, 255, 0.38);
+
+  /* Primary colors adjusted for dark theme */
+  --color-primary: #63e2b7;
+  --color-primary-hover: #7ce7c2;
+  --color-primary-pressed: #5acea8;
+  --color-primary-suppl: #5acea8;
+
+  /* Info colors */
+  --color-info: #70c0e8;
+  --color-info-hover: #8acbec;
+  --color-info-pressed: #66afd3;
+  --color-info-suppl: #66afd3;
+
+  /* Success colors */
+  --color-success: #63e2b7;
+  --color-success-hover: #7ce7c2;
+  --color-success-pressed: #5acea8;
+  --color-success-suppl: #5acea8;
+
+  /* Warning colors */
+  --color-warning: #f2c97d;
+  --color-warning-hover: #f5d599;
+  --color-warning-pressed: #e6c260;
+  --color-warning-suppl: #e6c260;
+
+  /* Error colors */
+  --color-error: #e88080;
+  --color-error-hover: #e98b8b;
+  --color-error-pressed: #e57373;
+  --color-error-suppl: #e57373;
+
+  /* Special colors */
+  --color-close: #e88080;
+  --color-close-hover: #e98b8b;
+
+  /* Box shadow */
+  --box-shadow: 0 1px 2px -2px rgba(0, 0, 0, 0.24), 0 3px 6px 0 rgba(0, 0, 0, 0.18), 0 5px 12px 4px rgba(0, 0, 0, 0.12);
+  --box-shadow-hover: 0 1px 2px -2px rgba(0, 0, 0, 0.28), 0 3px 6px 0 rgba(0, 0, 0, 0.24), 0 5px 12px 4px rgba(0, 0, 0, 0.18);
+  --box-shadow-modal: 0 4px 16px rgba(0, 0, 0, 0.36);
+  --box-shadow-popover: 0 3px 6px -4px rgba(0, 0, 0, 0.28), 0 6px 16px 0 rgba(0, 0, 0, 0.24), 0 9px 28px 8px rgba(0, 0, 0, 0.2);
+}

@@ -1,0 +1,466 @@
+{
+  "name": "Easy Terminal 自动化测试",
+  "branchName": "feature/automated-testing",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "TabBar 组件测试",
+      "description": "测试 TabBar 组件的功能和UI样式，包括 Tab 创建、切换、关闭、拖拽排序、右键菜单等功能，以及激活状态样式、悬停效果等UI测试",
+      "acceptanceCriteria": [
+        "Tab 创建功能正常",
+        "Tab 切换功能正常",
+        "Tab 关闭功能正常",
+        "Tab 拖拽排序正常",
+        "Tab 右键菜单正常",
+        "Tab 激活状态样式正确",
+        "Tab 悬停效果正确",
+        "单个Tab时关闭行为正确",
+        "大量Tab时滚动正常"
+      ],
+      "priority": 1,
+      "passes": true,
+      "dependsOn": [],
+      "labels": [
+        "P0",
+        "终端核心",
+        "功能测试",
+        "UI样式测试"
+      ],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-002",
+      "title": "SplitContainer 组件测试",
+      "description": "测试 SplitContainer 组件的功能和UI样式，包括水平/垂直分屏、分屏比例调整、分屏关闭、焦点切换等功能",
+      "acceptanceCriteria": [
+        "水平分屏功能正常",
+        "垂直分屏功能正常",
+        "分屏比例调整正常",
+        "分屏关闭功能正常",
+        "分屏焦点切换正常",
+        "分隔线样式正确",
+        "最大分屏数量限制有效",
+        "最小分屏尺寸限制有效"
+      ],
+      "priority": 1,
+      "passes": true,
+      "dependsOn": [],
+      "labels": [
+        "P0",
+        "终端核心",
+        "功能测试",
+        "UI样式测试"
+      ],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-003",
+      "title": "TerminalContainer 组件测试",
+      "description": "测试 TerminalContainer 组件的功能和UI样式，包括终端会话创建/销毁、多终端管理、终端输入输出、滚动等功能",
+      "acceptanceCriteria": [
+        "终端会话创建正常",
+        "终端会话销毁正常",
+        "多终端管理正常",
+        "终端输入输出正常",
+        "终端滚动正常",
+        "终端背景色正确",
+        "终端字体样式正确",
+        "大量输出时性能良好",
+        "Unicode字符显示正常"
+      ],
+      "priority": 1,
+      "passes": true,
+      "dependsOn": [],
+      "labels": [
+        "P0",
+        "终端核心",
+        "功能测试",
+        "UI样式测试"
+      ],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-004",
+      "title": "TerminalPane 组件测试",
+      "description": "测试 TerminalPane 组件的功能和UI样式，包括 PTY 会话初始化、命令执行、命令历史、复制粘贴、终端清空等功能",
+      "acceptanceCriteria": [
+        "PTY会话初始化正常",
+        "命令执行正常",
+        "命令历史功能正常",
+        "复制粘贴功能正常",
+        "终端清空功能正常",
+        "终端面板布局正确",
+        "长时间运行命令支持",
+        "交互式命令支持",
+        "信号处理 (Ctrl+C) 正常"
+      ],
+      "priority": 1,
+      "passes": true,
+      "dependsOn": [
+        "US-003"
+      ],
+      "labels": [
+        "P0",
+        "本地终端",
+        "功能测试",
+        "UI样式测试"
+      ],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-005",
+      "title": "TerminalSuggest 组件测试",
+      "description": "测试 TerminalSuggest 组件的功能和UI样式，包括命令自动补全、历史命令建议、建议列表导航和选择等功能",
+      "acceptanceCriteria": [
+        "命令自动补全正常",
+        "历史命令建议正常",
+        "建议列表导航正常",
+        "建议项选择正常",
+        "建议列表样式正确",
+        "选中项高亮正确",
+        "空建议列表处理正确",
+        "快速输入防抖有效"
+      ],
+      "priority": 1,
+      "passes": true,
+      "dependsOn": [
+        "US-004"
+      ],
+      "labels": [
+        "P0",
+        "本地终端",
+        "功能测试",
+        "UI样式测试"
+      ],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-006",
+      "title": "SshConnectionForm 组件测试",
+      "description": "测试 SSH 连接表单组件的功能和UI样式，包括表单验证、连接参数保存、密码显示/隐藏、密钥文件选择等功能",
+      "acceptanceCriteria": [
+        "表单字段验证正常",
+        "连接参数保存正常",
+        "密码显示/隐藏切换正常",
+        "密钥文件选择正常",
+        "表单布局正确",
+        "验证错误提示正确",
+        "无效主机名处理正确",
+        "无效端口处理正确"
+      ],
+      "priority": 2,
+      "passes": true,
+      "dependsOn": [],
+      "labels": [
+        "P1",
+        "SSH连接",
+        "功能测试",
+        "UI样式测试"
+      ],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-007",
+      "title": "SshManager 组件测试",
+      "description": "测试 SSH 管理组件的功能和UI样式，包括连接配置列表、新建/编辑/删除连接、快速连接等功能",
+      "acceptanceCriteria": [
+        "连接配置列表显示正常",
+        "新建连接功能正常",
+        "编辑连接功能正常",
+        "删除连接功能正常",
+        "快速连接功能正常",
+        "连接状态图标正确",
+        "重复连接名处理正确",
+        "连接失败处理正确"
+      ],
+      "priority": 2,
+      "passes": true,
+      "dependsOn": [
+        "US-006"
+      ],
+      "labels": [
+        "P1",
+        "SSH连接",
+        "功能测试",
+        "UI样式测试"
+      ],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-008",
+      "title": "FileExplorer 组件测试",
+      "description": "测试文件浏览器组件的功能和UI样式，包括目录导航、文件搜索、路径输入、刷新目录、返回上级等功能",
+      "acceptanceCriteria": [
+        "目录导航正常",
+        "文件搜索正常",
+        "路径输入正常",
+        "刷新目录正常",
+        "返回上级正常",
+        "工具栏布局正确",
+        "无权限目录处理正确",
+        "不存在路径处理正确"
+      ],
+      "priority": 2,
+      "passes": true,
+      "dependsOn": [],
+      "labels": [
+        "P1",
+        "文件浏览",
+        "功能测试",
+        "UI样式测试"
+      ],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-009",
+      "title": "FileTree 组件测试",
+      "description": "测试文件树组件的功能和UI样式，包括目录展开/折叠、文件选择、多选操作、拖拽移动、排序等功能",
+      "acceptanceCriteria": [
+        "目录展开/折叠正常",
+        "文件选择正常",
+        "多选操作正常",
+        "拖拽移动正常",
+        "排序功能正常",
+        "树形结构缩进正确",
+        "文件类型图标正确",
+        "大量文件处理正常",
+        "深层嵌套处理正常"
+      ],
+      "priority": 2,
+      "passes": true,
+      "dependsOn": [
+        "US-008"
+      ],
+      "labels": [
+        "P1",
+        "文件浏览",
+        "功能测试",
+        "UI样式测试"
+      ],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-010",
+      "title": "FileContextMenu 组件测试",
+      "description": "测试文件右键菜单组件的功能和UI样式，包括复制/粘贴/删除、重命名、新建文件/文件夹、属性查看等功能",
+      "acceptanceCriteria": [
+        "右键菜单打开正常",
+        "复制/粘贴/删除功能正常",
+        "重命名功能正常",
+        "新建文件/文件夹正常",
+        "属性查看正常",
+        "菜单定位正确",
+        "边界位置显示正确",
+        "多文件操作正常",
+        "只读文件处理正确"
+      ],
+      "priority": 2,
+      "passes": true,
+      "dependsOn": [
+        "US-008",
+        "US-009"
+      ],
+      "labels": [
+        "P1",
+        "文件浏览",
+        "功能测试",
+        "UI样式测试"
+      ],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-011",
+      "title": "DockerManager 组件测试",
+      "description": "测试 Docker 管理组件的功能和UI样式，包括容器列表显示、容器启动/停止/重启/删除、日志查看等功能",
+      "acceptanceCriteria": [
+        "容器列表显示正常",
+        "容器启动/停止正常",
+        "容器重启正常",
+        "容器删除正常",
+        "日志查看正常",
+        "容器卡片样式正确",
+        "状态指示器正确",
+        "Docker未运行处理正确",
+        "无容器状态显示正确"
+      ],
+      "priority": 3,
+      "passes": true,
+      "dependsOn": [],
+      "labels": [
+        "P2",
+        "Docker管理",
+        "功能测试",
+        "UI样式测试"
+      ],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-012",
+      "title": "CodeEditor 组件测试",
+      "description": "测试代码编辑器组件的功能和UI样式，包括文件打开、代码编辑、语法高亮、代码折叠、查找替换等功能",
+      "acceptanceCriteria": [
+        "文件打开正常",
+        "代码编辑正常",
+        "语法高亮正常",
+        "代码折叠正常",
+        "查找替换正常",
+        "编辑器主题正确",
+        "行号样式正确",
+        "大文件处理正常",
+        "二进制文件处理正确"
+      ],
+      "priority": 3,
+      "passes": true,
+      "dependsOn": [
+        "US-008"
+      ],
+      "labels": [
+        "P2",
+        "代码编辑",
+        "功能测试",
+        "UI样式测试"
+      ],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-013",
+      "title": "SettingsPanel 组件测试",
+      "description": "测试设置面板组件的功能和UI样式，包括设置分类导航、设置项修改、设置保存/重置等功能",
+      "acceptanceCriteria": [
+        "设置分类导航正常",
+        "设置项修改正常",
+        "设置保存正常",
+        "设置重置正常",
+        "侧边栏样式正确",
+        "设置项布局正确",
+        "无效值处理正确",
+        "配置文件损坏处理正确"
+      ],
+      "priority": 4,
+      "passes": true,
+      "dependsOn": [],
+      "labels": [
+        "P3",
+        "设置面板",
+        "功能测试",
+        "UI样式测试"
+      ],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-014",
+      "title": "AppHeader 组件测试",
+      "description": "测试应用头部组件的功能和UI样式，包括标题显示、窗口控制按钮、搜索功能、用户菜单等功能",
+      "acceptanceCriteria": [
+        "标题显示正常",
+        "窗口控制按钮正常",
+        "搜索功能正常",
+        "用户菜单正常",
+        "头部布局正确",
+        "按钮样式正确",
+        "响应式适配正确"
+      ],
+      "priority": 4,
+      "passes": true,
+      "dependsOn": [],
+      "labels": [
+        "P3",
+        "布局组件",
+        "功能测试",
+        "UI样式测试"
+      ],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-015",
+      "title": "AppSidebar 组件测试",
+      "description": "测试应用侧边栏组件的功能和UI样式，包括导航切换、折叠/展开、快捷操作等功能",
+      "acceptanceCriteria": [
+        "导航切换正常",
+        "折叠/展开正常",
+        "快捷操作正常",
+        "侧边栏宽度正确",
+        "图标样式正确",
+        "激活状态正确"
+      ],
+      "priority": 4,
+      "passes": true,
+      "dependsOn": [],
+      "labels": [
+        "P3",
+        "布局组件",
+        "功能测试",
+        "UI样式测试"
+      ],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-016",
+      "title": "StatusBar 组件测试",
+      "description": "测试状态栏组件的功能和UI样式，包括状态信息显示、通知提示、进度指示等功能",
+      "acceptanceCriteria": [
+        "状态信息显示正常",
+        "通知提示正常",
+        "进度指示正常",
+        "底部固定正确",
+        "状态图标正确",
+        "文本样式正确"
+      ],
+      "priority": 4,
+      "passes": true,
+      "dependsOn": [],
+      "labels": [
+        "P3",
+        "布局组件",
+        "功能测试",
+        "UI样式测试"
+      ],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-017",
+      "title": "测试环境搭建",
+      "description": "搭建自动化测试环境，包括 Tauri MCP 服务连接配置、Mock 数据配置等",
+      "acceptanceCriteria": [
+        "开发服务器启动正常",
+        "Tauri MCP 连接成功",
+        "SSH Mock 配置完成",
+        "Docker Mock 配置完成",
+        "测试报告格式验证通过"
+      ],
+      "priority": 1,
+      "passes": true,
+      "dependsOn": [],
+      "labels": [
+        "基础设施",
+        "环境配置"
+      ],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-018",
+      "title": "测试报告生成",
+      "description": "实现测试报告生成功能，包括 JSON 格式报告、测试截图存档、修复记录等",
+      "acceptanceCriteria": [
+        "JSON 报告生成正常",
+        "测试截图保存正常",
+        "修复记录完整",
+        "报告包含所有测试阶段结果",
+        "报告包含统计数据"
+      ],
+      "priority": 2,
+      "passes": true,
+      "dependsOn": [
+        "US-017"
+      ],
+      "labels": [
+        "基础设施",
+        "报告生成"
+      ],
+      "completionNotes": "Completed by agent"
+    }
+  ],
+  "metadata": {
+    "updatedAt": "2026-03-01T13:14:41.594Z"
+  }
+}
