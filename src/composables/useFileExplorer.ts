@@ -86,14 +86,20 @@ export function useFileExplorer(options: UseFileExplorerOptions = {}): UseFileEx
 
   // Load directory contents
   async function loadDirectory(path: string): Promise<void> {
-    if (isLoading.value) return;
+    console.log('[useFileExplorer] loadDirectory called with path:', path);
+    if (isLoading.value) {
+      console.log('[useFileExplorer] Already loading, skipping');
+      return;
+    }
 
     isLoading.value = true;
     error.value = null;
     store.setLoading(path, true);
 
     try {
+      console.log('[useFileExplorer] Calling fileService.listDirectory...');
       const items = await fileService.listDirectory(path, listOptions);
+      console.log('[useFileExplorer] listDirectory returned:', items.length, 'items');
 
       // Get icons for each item
       const itemsWithIcons = await Promise.all(
@@ -109,13 +115,18 @@ export function useFileExplorer(options: UseFileExplorerOptions = {}): UseFileEx
         })
       );
 
+      console.log('[useFileExplorer] Setting files to store for path:', path);
       store.setCurrentPath(path);
       store.setFiles(path, itemsWithIcons);
       currentPath.value = path;
+
+      // Verify files were stored
+      const storedChildren = store.getChildren(path);
+      console.log('[useFileExplorer] Stored children count:', storedChildren.length);
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Failed to load directory';
       error.value = message;
-      console.error('Failed to load directory:', e);
+      console.error('[useFileExplorer] Failed to load directory:', e);
     } finally {
       isLoading.value = false;
       store.setLoading(path, false);
@@ -146,19 +157,28 @@ export function useFileExplorer(options: UseFileExplorerOptions = {}): UseFileEx
 
   // Toggle directory expansion (for tree view)
   async function toggleExpand(path: string): Promise<void> {
+    console.log('[useFileExplorer] toggleExpand called for:', path);
+    console.log('[useFileExplorer] Current expandedPaths:', Array.from(expandedPaths.value));
+
     if (expandedPaths.value.has(path)) {
       expandedPaths.value.delete(path);
       store.setExpanded(path, false);
+      console.log('[useFileExplorer] Collapsed:', path);
     } else {
       expandedPaths.value.add(path);
       store.setExpanded(path, true);
+      console.log('[useFileExplorer] Expanded:', path);
 
       // Load children if not already loaded
       const children = store.getChildren(path);
+      console.log('[useFileExplorer] Existing children count:', children.length);
       if (children.length === 0) {
         store.setLoading(path, true);
         try {
+          console.log('[useFileExplorer] Loading children for:', path);
           const items = await fileService.listDirectory(path, listOptions);
+          console.log('[useFileExplorer] Loaded items:', items.length);
+
           const itemsWithIcons = await Promise.all(
             items.map(async (item) => {
               if (!item.iconType) {
@@ -172,8 +192,12 @@ export function useFileExplorer(options: UseFileExplorerOptions = {}): UseFileEx
             })
           );
           store.setFiles(path, itemsWithIcons);
+
+          // Verify after setting
+          const verifyChildren = store.getChildren(path);
+          console.log('[useFileExplorer] Verified children after setFiles:', verifyChildren.length);
         } catch (e) {
-          console.error('Failed to load children:', e);
+          console.error('[useFileExplorer] Failed to load children:', e);
         } finally {
           store.setLoading(path, false);
         }

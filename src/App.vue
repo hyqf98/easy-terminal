@@ -3,15 +3,17 @@
  * Easy Terminal - Main Application Component
  */
 import { onMounted, onUnmounted, ref, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useSettingsStore, useTerminalStore, useConnectionsStore } from '@/stores';
 import { useShortcuts, useKeyboardHandler, DEFAULT_SHORTCUTS } from '@/composables';
-import { AppHeader, AppSidebar, MainContent, StatusBar } from '@/components/layout';
+import { AppHeader, AppSidebar, MainContent, StatusBar, AppMenu } from '@/components/layout';
 import { NDialogProvider, NNotificationProvider, NMessageProvider } from 'naive-ui';
 import { FileExplorer } from '@/components/fileExplorer';
 import { SshManager } from '@/components/ssh';
 import { SettingsPanel } from '@/components/settings';
 import type { FileItem, SshConnectionConfig } from '@/types';
 
+const { t } = useI18n();
 const settingsStore = useSettingsStore();
 const terminalStore = useTerminalStore();
 const connectionsStore = useConnectionsStore();
@@ -24,6 +26,10 @@ const showSshManager = ref(false);
 
 // Settings panel state
 const showSettings = ref(false);
+
+// App menu state
+const showAppMenu = ref(false);
+const appMenuPosition = ref({ x: 0, y: 0 });
 
 // Command palette state
 const showCommandPalette = ref(false);
@@ -71,19 +77,32 @@ onUnmounted(() => {
 });
 
 // Methods
-function handleMenuClick() {
-  // Menu handling - will be implemented later
-  console.log('Menu clicked');
+function handleMenuClick(event: MouseEvent) {
+  event.stopPropagation();
+  const target = event.currentTarget as HTMLElement;
+  const rect = target.getBoundingClientRect();
+  appMenuPosition.value = { x: rect.left, y: rect.bottom + 4 };
+  showAppMenu.value = true;
+}
+
+function handleAppMenuHide() {
+  showAppMenu.value = false;
+}
+
+function handleAppMenuNewTerminal() {
+  terminalStore.createSession();
+}
+
+function handleAppMenuToggleSidebar() {
+  sidebarVisible.value = !sidebarVisible.value;
 }
 
 function handleThemeClick() {
   // Theme toggle handled inside AppHeader
-  console.log('Theme toggled');
 }
 
 function handleNewTab() {
   // Handled by TerminalContainer
-  console.log('New tab requested');
 }
 
 function handleTabClick(id: string) {
@@ -97,8 +116,6 @@ function handleTabClose(id: string) {
 // File explorer events
 function handleFileOpen(file: FileItem) {
   editorFile.value = file;
-  console.log('Opening file:', file.path);
-  // TODO: Open file in editor tab
 }
 
 function handleTerminalCd(path: string) {
@@ -106,8 +123,6 @@ function handleTerminalCd(path: string) {
   const activeSession = terminalStore.activeSession;
   if (activeSession) {
     // Send cd command to terminal
-    // This will be handled by the terminal input system
-    console.log('CD to:', path);
   }
 }
 
@@ -120,8 +135,6 @@ function handleQuickAction(action: string) {
     case 'settings':
       showSettings.value = true;
       break;
-    default:
-      console.log('Quick action:', action);
   }
 }
 
@@ -130,14 +143,12 @@ function handleSshConnect(sshSessionId: string, config: SshConnectionConfig) {
   connectionsStore.setConnectionStatus(config.id, 'connected');
 
   // Create a terminal session for this SSH connection
-  const session = terminalStore.addSshSession(
+  terminalStore.addSshSession(
     sshSessionId,
     config.id,
     config.name || `${config.username}@${config.host}`,
     config.cwd
   );
-
-  console.log('SSH session created:', session.id, 'for config:', config.name);
 }
 
 function handleSshManagerClose() {
@@ -152,7 +163,7 @@ function handleSshManagerClose() {
         <div class="app" :data-theme="settingsStore.effectiveTheme">
     <!-- Header -->
     <AppHeader
-      :title="'Easy Terminal'"
+      :title="t('app.title')"
       :show-window-controls="true"
       @menu-click="handleMenuClick"
       @theme-click="handleThemeClick"
@@ -200,6 +211,18 @@ function handleSshManagerClose() {
 
     <!-- Settings Panel -->
     <SettingsPanel v-model:show="showSettings" />
+
+    <!-- App Menu -->
+    <AppMenu
+      :visible="showAppMenu"
+      :x="appMenuPosition.x"
+      :y="appMenuPosition.y"
+      @hide="handleAppMenuHide"
+      @new-terminal="handleAppMenuNewTerminal"
+      @open-settings="showSettings = true"
+      @open-ssh="showSshManager = true"
+      @toggle-sidebar="handleAppMenuToggleSidebar"
+    />
         </div>
       </n-message-provider>
     </n-notification-provider>

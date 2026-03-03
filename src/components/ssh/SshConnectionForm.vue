@@ -389,6 +389,8 @@ function handleCancel() {
 .form-group input:focus,
 .form-group select:focus {
   border-color: var(--color-primary, #007acc);
+  box-shadow: 0 0 0 2px rgba(0, 122, 204, 0.2);
+  background-color: var(--color-input-bg-focus, #323236);
 }
 
 .form-group input::placeholder {

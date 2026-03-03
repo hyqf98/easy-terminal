@@ -16,11 +16,18 @@
   --color-scroll: rgba(255, 255, 255, 0.2);
   --color-scroll-hover: rgba(255, 255, 255, 0.3);
 
+  /* Surface colors for cards and inputs */
+  --color-surface: #2d2d2d;
+  --color-surface-hover: #3c3c3c;
+  --color-input-bg: #2a2a2e;
+  --color-input-bg-focus: #323236;
+
   /* Text colors */
   --color-text-base: #fff;
   --color-text-1: rgb(229, 229, 231);
   --color-text-2: rgb(194, 196, 199);
   --color-text-3: rgb(137, 140, 145);
+  --color-text-4: #888888;
   --color-text-disabled: rgba(255, 255, 255, 0.38);
 
   /* Placeholder */
@@ -31,6 +38,7 @@
   --color-primary-hover: #7ce7c2;
   --color-primary-pressed: #5acea8;
   --color-primary-suppl: #5acea8;
+  --color-primary-bg: rgba(99, 226, 183, 0.1);
 
   /* Info colors */
   --color-info: #70c0e8;
@@ -65,4 +73,14 @@
   --box-shadow-hover: 0 1px 2px -2px rgba(0, 0, 0, 0.28), 0 3px 6px 0 rgba(0, 0, 0, 0.24), 0 5px 12px 4px rgba(0, 0, 0, 0.18);
   --box-shadow-modal: 0 4px 16px rgba(0, 0, 0, 0.36);
   --box-shadow-popover: 0 3px 6px -4px rgba(0, 0, 0, 0.28), 0 6px 16px 0 rgba(0, 0, 0, 0.24), 0 9px 28px 8px rgba(0, 0, 0, 0.2);
+
+  /* Tab bar colors */
+  --color-tab-bar-bg: #252526;
+  --color-tab-inactive: #2d2d2d;
+  --color-tab-hover: #3d3d3d;
+  --color-tab-active: #1e1e1e;
+  --color-tab-border: #3d3d3d;
+
+  /* Menu colors */
+  --color-menu-bg: #2d2d2d;
 }

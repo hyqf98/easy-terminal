@@ -28,3 +28,6 @@ export {
 export { DEFAULT_SHORTCUTS } from './useShortcuts';
 export { useUpdater } from './useUpdater';
 export type { UseUpdaterOptions, Updater } from './useUpdater';
+export { useModifierKeys } from './useModifierKeys';
+export { useCommandInterceptor } from './useCommandInterceptor';
+export type { EditorCommand } from './useCommandInterceptor';

@@ -90,3 +90,19 @@ export interface FileWatchEvent {
   /** New path (for rename events) */
   newPath?: string;
 }
+
+/** Drive information for multi-root support */
+export interface DriveInfo {
+  /** Display name (e.g., "C: (本地)") */
+  name: string;
+  /** Drive path (e.g., "C:\") */
+  path: string;
+  /** Total space in bytes */
+  totalSpace: number;
+  /** Available space in bytes */
+  availableSpace: number;
+  /** Whether the drive is removable */
+  isRemovable: boolean;
+  /** Drive type (fixed, removable, network, etc.) */
+  driveType: string;
+}

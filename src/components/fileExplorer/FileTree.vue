@@ -5,6 +5,9 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import type { FileItem } from '@/types';
 import FileItemComponent from './FileItem.vue';
+import { useFileExplorerStore } from '@/stores';
+
+const store = useFileExplorerStore();
 
 const props = withDefaults(defineProps<{
   files: FileItem[];
@@ -23,6 +26,10 @@ const emit = defineEmits<{
   (e: 'toggle', item: FileItem): void;
   (e: 'contextmenu', item: FileItem, event: MouseEvent): void;
   (e: 'rename', item: FileItem, newName: string): void;
+  (e: 'dragstart', item: FileItem, event: DragEvent): void;
+  (e: 'dragover', item: FileItem, event: DragEvent): void;
+  (e: 'drop', item: FileItem, event: DragEvent): void;
+  (e: 'dragend', item: FileItem, event: DragEvent): void;
 }>();
 
 const containerRef = ref<HTMLDivElement | null>(null);
@@ -71,10 +78,12 @@ const flatFiles = computed(() => {
 });
 
 // Get child items for a path
-function getChildItems(_parentPath: string): FileItem[] {
-  // This will be provided by the parent component
-  // For now, return empty array - the actual data comes from props.files
-  return [];
+function getChildItems(parentPath: string): FileItem[] {
+  // Get children from store
+  console.log('[FileTree] getChildItems for:', parentPath);
+  const children = store.getChildren(parentPath);
+  console.log('[FileTree] getChildItems returned:', children.length, 'items');
+  return children;
 }
 
 // Virtual scrolling calculations
@@ -145,6 +154,23 @@ function handleItemContextMenu(item: FileItem, event: MouseEvent) {
 
 function handleItemRename(item: FileItem, newName: string) {
   emit('rename', item, newName);
+}
+
+// Drag and drop handlers
+function handleItemDragStart(item: FileItem, event: DragEvent) {
+  emit('dragstart', item, event);
+}
+
+function handleItemDragOver(item: FileItem, event: DragEvent) {
+  emit('dragover', item, event);
+}
+
+function handleItemDrop(item: FileItem, event: DragEvent) {
+  emit('drop', item, event);
+}
+
+function handleItemDragEnd(item: FileItem, event: DragEvent) {
+  emit('dragend', item, event);
 }
 
 function isExpanded(path: string): boolean {
@@ -263,6 +289,10 @@ defineExpose({ scrollToPath });
           @toggle="handleItemToggle"
           @contextmenu="handleItemContextMenu"
           @rename="handleItemRename"
+          @dragstart="handleItemDragStart"
+          @dragover="handleItemDragOver"
+          @drop="handleItemDrop"
+          @dragend="handleItemDragEnd"
         />
       </div>
     </div>

@@ -81,7 +81,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   localShell: '',
   encoding: 'utf-8',
   showSidebar: true,
-  sidebarWidth: 260,
+  sidebarWidth: 320,
   confirmOnClose: true,
   copyOnSelect: false,
   rightClickBehavior: 'menu',

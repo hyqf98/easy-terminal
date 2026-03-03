@@ -18,7 +18,7 @@ use commands::{
     list_directory, get_file_info, create_directory, create_file,
     delete_path, rename_path, copy_path, move_path, read_file, write_file,
     path_exists, get_home_directory, get_default_directory,
-    watch_directory, unwatch_directory, search_files, get_file_icon,
+    watch_directory, unwatch_directory, search_files, get_file_icon, list_drives,
     get_settings, save_settings, reset_settings,
     get_window_state, save_window_state, get_app_version, get_platform_info,
     init_terminal_state,
@@ -106,6 +106,7 @@ pub fn run() {
             unwatch_directory,
             search_files,
             get_file_icon,
+            list_drives,
             // Config commands
             get_settings,
             save_settings,

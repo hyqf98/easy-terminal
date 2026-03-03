@@ -13,8 +13,10 @@ export async function invokeCommand<T>(
   args?: Record<string, unknown>,
   _options?: InvokeOptions
 ): Promise<T> {
+  console.log('[base] invokeCommand called:', cmd, 'args:', args);
   try {
     const result = await invoke<ServiceResponse<T>>(cmd, args);
+    console.log('[base] invokeCommand result for', cmd, ':', JSON.stringify(result, null, 2));
 
     if (!result.success) {
       throw new ServiceError(
@@ -25,6 +27,7 @@ export async function invokeCommand<T>(
 
     return result.data as T;
   } catch (error) {
+    console.error('[base] invokeCommand error for', cmd, ':', error);
     if (error instanceof ServiceError) {
       throw error;
     }

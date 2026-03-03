@@ -19,14 +19,42 @@ export const useFileExplorerStore = defineStore('fileExplorer', () => {
     sortOrder: 'asc',
   });
 
+  // Helper: Get parent path (supports both / and \ separators)
+  function getParentPath(path: string): string {
+    // Normalize path for consistent handling
+    const normalized = path.replace(/\\/g, '/');
+    // Remove trailing slash for processing
+    const trimmed = normalized.replace(/\/+$/, '');
+
+    const lastSep = trimmed.lastIndexOf('/');
+    if (lastSep <= 0) {
+      // Root path case (e.g., "C:/" or "/")
+      // Return the root with trailing slash
+      const colonIndex = trimmed.indexOf(':');
+      if (colonIndex === 1) {
+        // Windows drive: "C:" -> "C:/"
+        return trimmed.substring(0, 2) + '/';
+      }
+      return '/';
+    }
+    return trimmed.substring(0, lastSep + 1);
+  }
+
+  // Helper: Normalize path separators
+  function normalizePath(path: string): string {
+    return path.replace(/\\/g, '/');
+  }
+
   // Getters
   const rootFiles = computed(() => {
     const result: FileItem[] = [];
+    const normalizedCurrentPath = normalizePath(currentPath.value);
     // Get all files that are direct children of current path
     for (const file of files.value.values()) {
       if (file.path === currentPath.value) continue;
-      const parentPath = file.path.substring(0, file.path.lastIndexOf('/'));
-      if (parentPath === currentPath.value || (currentPath.value === '' && !file.path.includes('/'))) {
+      const parentPath = getParentPath(file.path);
+      const normalizedParent = normalizePath(parentPath);
+      if (normalizedParent === normalizedCurrentPath || (currentPath.value === '' && !file.path.includes('/') && !file.path.includes('\\'))) {
         result.push(file);
       }
     }
@@ -77,8 +105,9 @@ export const useFileExplorerStore = defineStore('fileExplorer', () => {
 
   function setFiles(path: string, fileList: FileItem[]): void {
     // Clear existing files for this path's children
+    const normalizedPath = normalizePath(path);
     for (const file of files.value.values()) {
-      if (file.path.startsWith(path + '/')) {
+      if (normalizePath(file.path).startsWith(normalizedPath + '/')) {
         files.value.delete(file.path);
       }
     }
@@ -105,8 +134,9 @@ export const useFileExplorerStore = defineStore('fileExplorer', () => {
     expandedPaths.value.delete(path);
     selectedPaths.value.delete(path);
     // Remove all children
+    const normalizedPath = normalizePath(path);
     for (const file of files.value.values()) {
-      if (file.path.startsWith(path + '/')) {
+      if (normalizePath(file.path).startsWith(normalizedPath + '/')) {
         files.value.delete(file.path);
       }
     }
@@ -180,13 +210,20 @@ export const useFileExplorerStore = defineStore('fileExplorer', () => {
   }
 
   function getChildren(path: string): FileItem[] {
+    console.log('[fileExplorerStore] getChildren called for path:', path);
     const children: FileItem[] = [];
+    const normalizedPath = normalizePath(path).replace(/\/+$/, ''); // Remove trailing slashes
+    console.log('[fileExplorerStore] normalizedPath:', normalizedPath);
+    console.log('[fileExplorerStore] total files in store:', files.value.size);
+
     for (const file of files.value.values()) {
-      const parentPath = file.path.substring(0, file.path.lastIndexOf('/'));
-      if (parentPath === path) {
+      const parentPath = getParentPath(file.path);
+      const normalizedParent = normalizePath(parentPath).replace(/\/+$/, ''); // Remove trailing slashes
+      if (normalizedParent === normalizedPath) {
         children.push(file);
       }
     }
+    console.log('[fileExplorerStore] Found children:', children.length);
     return sortFiles(children);
   }
 

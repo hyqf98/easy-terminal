@@ -2,14 +2,22 @@
  * File service - Handles file system IPC calls
  */
 import { invokeCommand } from './base';
-import type { FileItem, DirectoryListOptions, FileOperationResult } from '@/types';
+import type { FileItem, DirectoryListOptions, FileOperationResult, DriveInfo } from '@/types';
+
+/** List available drives (Windows) or root path (Unix) */
+export async function listDrives(): Promise<DriveInfo[]> {
+  return invokeCommand<DriveInfo[]>('list_drives');
+}
 
 /** List directory contents */
 export async function listDirectory(
   path: string,
   options?: DirectoryListOptions
 ): Promise<FileItem[]> {
-  return invokeCommand<FileItem[]>('list_directory', { path, options });
+  console.log('[file.service] listDirectory called with path:', path, 'options:', options);
+  const result = await invokeCommand<FileItem[]>('list_directory', { path, options });
+  console.log('[file.service] listDirectory result:', result);
+  return result;
 }
 
 /** Get file info */

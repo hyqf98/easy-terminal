@@ -48,7 +48,7 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   function setSidebarWidth(width: number): void {
-    settings.value.sidebarWidth = Math.max(100, Math.min(600, width));
+    settings.value.sidebarWidth = Math.max(240, Math.min(600, width));
   }
 
   async function resetSettings(): Promise<void> {
@@ -56,9 +56,7 @@ export const useSettingsStore = defineStore('settings', () => {
       const defaultSettings = await resetSettingsService();
       settings.value = defaultSettings;
       applyTheme();
-    } catch (error) {
-      console.error('Failed to reset settings:', error);
-      // Fallback to local defaults
+    } catch {
       Object.assign(settings.value, DEFAULT_SETTINGS);
       applyTheme();
     }
@@ -89,8 +87,7 @@ export const useSettingsStore = defineStore('settings', () => {
       isLoaded.value = true;
       applyTheme();
       setupSystemThemeListener();
-    } catch (error) {
-      console.error('Failed to load settings:', error);
+    } catch {
       isLoaded.value = true;
       applyTheme();
       setupSystemThemeListener();
@@ -101,8 +98,8 @@ export const useSettingsStore = defineStore('settings', () => {
   async function saveSettings(): Promise<void> {
     try {
       await saveSettingsService(settings.value);
-    } catch (error) {
-      console.error('Failed to save settings:', error);
+    } catch {
+      // Ignore save errors
     }
   }
 

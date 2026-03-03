@@ -117,6 +117,16 @@
   --z-popover: 2000;
   --z-tooltip: 3000;
   --z-context-menu: 4000;
+
+  /* Tab bar colors */
+  --color-tab-bar-bg: #f3f3f3;
+  --color-tab-inactive: #e8e8e8;
+  --color-tab-hover: #ddd;
+  --color-tab-active: #fff;
+  --color-tab-border: #e0e0e0;
+
+  /* Menu colors */
+  --color-menu-bg: #fff;
 }
 
 /* Theme transition - smooth color transitions when switching themes */

@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
-use tracing::info;
+use tracing::{info, error};
 
 use crate::pty::{pty_manager, PtyManager};
 use crate::response::ApiResponse;
@@ -120,16 +120,33 @@ pub async fn close_terminal(session_id: String) -> ApiResponse<()> {
 /// Send input to terminal
 #[tauri::command]
 pub async fn terminal_input(session_id: String, data: String) -> ApiResponse<()> {
-    info!("Sending input to terminal {}: {} bytes", session_id, data.len());
+    info!("[terminal_input] Sending input to terminal {}: {} bytes", session_id, data.len());
 
-    match pty_manager().write_input(&session_id, data.as_bytes()) {
-        Ok(()) => ApiResponse::<()>::ok(),
-        Err(e) => ApiResponse {
+    // Check if session exists first
+    if !pty_manager().session_exists(&session_id) {
+        error!("[terminal_input] Session not found: {}", session_id);
+        return ApiResponse {
             success: false,
             data: None,
-            error: Some(e.to_string()),
+            error: Some(format!("Session not found: {}", session_id)),
             error_code: Some("SESSION_NOT_FOUND".to_string()),
-        },
+        };
+    }
+
+    match pty_manager().write_input(&session_id, data.as_bytes()) {
+        Ok(()) => {
+            info!("[terminal_input] Successfully sent input to terminal {}", session_id);
+            ApiResponse::<()>::ok()
+        }
+        Err(e) => {
+            error!("[terminal_input] Failed to send input to terminal {}: {}", session_id, e);
+            ApiResponse {
+                success: false,
+                data: None,
+                error: Some(e.to_string()),
+                error_code: Some("INPUT_ERROR".to_string()),
+            }
+        }
     }
 }
 

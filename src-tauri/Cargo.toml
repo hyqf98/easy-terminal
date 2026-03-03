@@ -50,6 +50,7 @@ portable-pty = "0.8"
 # File system
 walkdir = "2"
 dirs = "6"
+fs2 = "0.4"
 
 # Utilities
 parking_lot = "0.12"
@@ -65,6 +66,10 @@ base64 = "0.22"
 # Docker
 bollard = "0.18"
 futures-util = "0.3"
+
+# Windows-specific
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3", features = ["fileapi", "winbase"] }
 
 [profile.release]
 lto = true

@@ -5,7 +5,7 @@
  */
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useTerminalStore } from '@/stores';
-import { useTerminal } from '@/composables';
+import { useTerminal, type EditorCommand } from '@/composables';
 import { useShortcuts, DEFAULT_SHORTCUTS } from '@/composables';
 import TabBar from './TabBar.vue';
 import TabContextMenu from './TabContextMenu.vue';
@@ -13,6 +13,7 @@ import SplitContainer from './SplitContainer.vue';
 import TerminalPane from './TerminalPane.vue';
 import SshTerminalPane from './SshTerminalPane.vue';
 import DockerTerminalPane from './DockerTerminalPane.vue';
+import { FileEditorModal } from '@/components/editor';
 import type { SplitDirection, TerminalSession } from '@/types';
 
 withDefaults(defineProps<{
@@ -38,6 +39,13 @@ const contextMenu = ref({
   x: 0,
   y: 0,
   sessionId: null as string | null,
+});
+
+// Editor modal state
+const editorModal = ref({
+  visible: false,
+  filePath: '',
+  editor: '',
 });
 
 // Terminal pane refs for focusing (both local and SSH)
@@ -212,6 +220,20 @@ function handleLocalTitleChange(sessionId: string, title: string): void {
   terminalStore.updateSession(sessionId, { title });
 }
 
+// Handle editor command detection (vim, nano, etc.)
+function handleEditorCommand(command: EditorCommand): void {
+  editorModal.value = {
+    visible: true,
+    filePath: command.filePath,
+    editor: command.editor,
+  };
+}
+
+// Close editor modal
+function closeEditorModal(): void {
+  editorModal.value.visible = false;
+}
+
 // Initialize shortcuts manager
 const { registerShortcut, unregisterShortcut } = useShortcuts();
 
@@ -363,6 +385,7 @@ const contextMenuSession = computed(() => {
             @focus="handlePaneFocus(pane.id)"
             @exit="(code) => console.log('Terminal exited:', code)"
             @title-change="(title) => handleLocalTitleChange(sessionId, title)"
+            @editor-command="handleEditorCommand"
           />
           <!-- SSH terminal pane -->
           <SshTerminalPane
@@ -423,6 +446,15 @@ const contextMenuSession = computed(() => {
       @rename="handleContextMenuRename"
       @copy-cwd="handleContextMenuCopyCwd"
       @hide="hideContextMenu"
+    />
+
+    <!-- File Editor Modal (for vim/nano commands) -->
+    <FileEditorModal
+      :visible="editorModal.visible"
+      :file-path="editorModal.filePath"
+      :editor="editorModal.editor"
+      @close="closeEditorModal"
+      @update:visible="editorModal.visible = $event"
     />
   </div>
 </template>

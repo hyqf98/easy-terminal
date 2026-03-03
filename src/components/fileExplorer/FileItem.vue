@@ -27,10 +27,15 @@ const emit = defineEmits<{
   (e: 'contextmenu', item: IFileItem, event: MouseEvent): void;
   (e: 'toggle', item: IFileItem): void;
   (e: 'rename', item: IFileItem, newName: string): void;
+  (e: 'dragstart', item: IFileItem, event: DragEvent): void;
+  (e: 'dragover', item: IFileItem, event: DragEvent): void;
+  (e: 'drop', item: IFileItem, event: DragEvent): void;
+  (e: 'dragend', item: IFileItem, event: DragEvent): void;
 }>();
 
 const editValue = ref(props.item.name);
 const editInput = ref<HTMLInputElement | null>(null);
+const isDragOver = ref(false);
 
 const indentStyle = computed(() => ({
   paddingLeft: `${props.depth * 16 + 8}px`,
@@ -89,6 +94,40 @@ function finishEdit() {
 function cancelEdit() {
   editValue.value = props.item.name;
 }
+
+// Drag and drop handlers
+function handleDragStart(event: DragEvent) {
+  if (!event.dataTransfer) return;
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', props.item.path);
+  event.dataTransfer.setData('application/json', JSON.stringify(props.item));
+  emit('dragstart', props.item, event);
+}
+
+function handleDragOver(event: DragEvent) {
+  if (props.item.type !== 'directory') return;
+  event.preventDefault();
+  if (!event.dataTransfer) return;
+  event.dataTransfer.dropEffect = 'move';
+  isDragOver.value = true;
+  emit('dragover', props.item, event);
+}
+
+function handleDragLeave(_event: DragEvent) {
+  isDragOver.value = false;
+}
+
+function handleDrop(event: DragEvent) {
+  event.preventDefault();
+  isDragOver.value = false;
+  if (props.item.type !== 'directory') return;
+  emit('drop', props.item, event);
+}
+
+function handleDragEnd(event: DragEvent) {
+  isDragOver.value = false;
+  emit('dragend', props.item, event);
+}
 </script>
 
 <template>
@@ -99,11 +138,18 @@ function cancelEdit() {
       'is-directory': item.type === 'directory',
       'is-hidden': item.isHidden,
       'is-loading': isLoading,
+      'is-drag-over': isDragOver,
     }"
     :style="indentStyle"
+    draggable="true"
     @click="handleClick"
     @dblclick="handleDblClick"
     @contextmenu="handleContextMenu"
+    @dragstart="handleDragStart"
+    @dragover="handleDragOver"
+    @dragleave="handleDragLeave"
+    @drop="handleDrop"
+    @dragend="handleDragEnd"
   >
     <!-- Expand/collapse arrow for directories -->
     <span
@@ -165,6 +211,10 @@ function cancelEdit() {
   user-select: none;
   border-radius: var(--border-radius, 4px);
   transition: background-color 0.1s ease;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .file-item:hover {
@@ -181,6 +231,16 @@ function cancelEdit() {
 
 .file-item.is-hidden {
   opacity: 0.6;
+}
+
+.file-item.is-drag-over {
+  background-color: var(--color-primary-light, rgba(24, 144, 255, 0.2));
+  outline: 2px dashed var(--color-primary, #1890ff);
+  outline-offset: -2px;
+}
+
+.file-item:active {
+  cursor: grabbing;
 }
 
 .expand-arrow {
@@ -254,5 +314,9 @@ function cancelEdit() {
   font-size: 11px;
   color: var(--color-text-3, #999);
   margin-left: auto;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

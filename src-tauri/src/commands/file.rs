@@ -4,8 +4,239 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tracing::info;
 
+#[cfg(windows)]
+use std::os::windows::ffi::OsStrExt;
+
 use crate::error::AppError;
 use crate::response::ApiResponse;
+use fs2;
+
+/// Drive information for multi-root support
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DriveInfo {
+    pub name: String,
+    pub path: String,
+    pub total_space: u64,
+    pub available_space: u64,
+    pub is_removable: bool,
+    pub drive_type: String,
+}
+
+/// List available drives (Windows) or root path (Unix)
+#[tauri::command]
+pub async fn list_drives() -> ApiResponse<Vec<DriveInfo>> {
+    info!("Listing available drives");
+
+    let drives = get_available_drives();
+    ApiResponse::success(drives)
+}
+
+/// Get available drives based on platform
+fn get_available_drives() -> Vec<DriveInfo> {
+    #[cfg(windows)]
+    {
+        get_windows_drives()
+    }
+
+    #[cfg(not(windows))]
+    {
+        get_unix_root()
+    }
+}
+
+/// Get volume label on Windows using Windows API
+#[cfg(windows)]
+fn get_volume_label(drive: &str) -> Option<String> {
+    use std::ffi::OsString;
+    use std::os::windows::ffi::OsStringExt;
+    use winapi::um::fileapi::GetVolumeInformationW;
+
+    let wide_path: Vec<u16> = OsString::from(format!("{}\\", drive))
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+
+    let mut volume_name_buffer = [0u16; 256];
+    let mut filesystem_name_buffer = [0u16; 256];
+
+    let result = unsafe {
+        GetVolumeInformationW(
+            wide_path.as_ptr(),
+            volume_name_buffer.as_mut_ptr(),
+            volume_name_buffer.len() as u32,
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+            filesystem_name_buffer.as_mut_ptr(),
+            filesystem_name_buffer.len() as u32,
+        )
+    };
+
+    if result != 0 {
+        let len = volume_name_buffer.iter().position(|&c| c == 0).unwrap_or(0);
+        if len > 0 {
+            let label = OsString::from_wide(&volume_name_buffer[..len])
+                .to_string_lossy()
+                .to_string();
+            return Some(label);
+        }
+    }
+    None
+}
+
+/// Check if drive is removable on Windows using Windows API
+#[cfg(windows)]
+fn is_removable_drive(drive: &str) -> bool {
+    use std::ffi::OsString;
+    use winapi::um::fileapi::GetDriveTypeW;
+
+    let wide_path: Vec<u16> = OsString::from(format!("{}\\", drive))
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+
+    let drive_type = unsafe { GetDriveTypeW(wide_path.as_ptr()) };
+
+    // DRIVE_REMOVABLE = 2, DRIVE_CDROM = 5, DRIVE_RAMDISK = 6
+    matches!(drive_type, 2 | 5 | 6)
+}
+
+#[cfg(windows)]
+fn get_windows_drives() -> Vec<DriveInfo> {
+    let mut drives = Vec::new();
+
+    // Simple approach: try common drive letters
+    for letter in b'C'..=b'Z' {
+        let drive = format!("{}:\\", letter as char);
+        if std::path::Path::new(&drive).exists() {
+            if let Some(info) = create_drive_info(&drive) {
+                drives.push(info);
+            }
+        }
+    }
+
+    drives
+}
+
+#[cfg(windows)]
+fn create_drive_info(drive: &str) -> Option<DriveInfo> {
+    let path = std::path::Path::new(drive);
+    if !path.exists() {
+        return None;
+    }
+
+    // Get disk space info using fs2 crate
+    let available_space = fs2::available_space(path).unwrap_or(0);
+    let total_space = fs2::total_space(path).unwrap_or(0);
+
+    // Use Windows API to accurately determine if drive is removable
+    let is_removable = is_removable_drive(drive);
+
+    // Get the real volume label using Windows API
+    let volume_label = get_volume_label(drive);
+
+    // Create a friendly name with volume label
+    let drive_letter = drive.trim_end_matches('\\');
+    let name = if let Some(label) = volume_label {
+        if !label.is_empty() {
+            format!("{} ({})", label, drive_letter)
+        } else {
+            format!("本地磁盘 ({})", drive_letter)
+        }
+    } else {
+        format!("本地磁盘 ({})", drive_letter)
+    };
+
+    // Determine drive type string
+    let drive_type = if is_removable {
+        "removable"
+    } else {
+        "fixed"
+    };
+
+    Some(DriveInfo {
+        name,
+        path: drive.to_string(),
+        total_space,
+        available_space,
+        is_removable,
+        drive_type: drive_type.to_string(),
+    })
+}
+
+#[cfg(not(windows))]
+fn get_unix_root() -> Vec<DriveInfo> {
+    let mut drives = Vec::new();
+
+    // Add root path
+    if let Ok(metadata) = std::fs::metadata("/") {
+        let total_space = metadata.is_dir().then(|| {
+            fs2::available_space(std::path::Path::new("/")).ok().unwrap_or(0)
+        }).unwrap_or(0);
+
+        drives.push(DriveInfo {
+            name: "Root (/)".to_string(),
+            path: "/".to_string(),
+            total_space,
+            available_space: total_space, // Simplified
+            is_removable: false,
+            drive_type: "root".to_string(),
+        });
+    }
+
+    // On macOS, also add /Volumes
+    #[cfg(target_os = "macos")]
+    {
+        if let Ok(entries) = std::fs::read_dir("/Volumes") {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    let name = path.file_name()
+                        .map(|n| n.to_string_lossy().to_string())
+                        .unwrap_or_default();
+
+                    drives.push(DriveInfo {
+                        name: format!("{} (/Volumes/{})", name, name),
+                        path: path.to_string_lossy().to_string(),
+                        total_space: 0,
+                        available_space: 0,
+                        is_removable: true,
+                        drive_type: "volume".to_string(),
+                    });
+                }
+            }
+        }
+    }
+
+    // On Linux, check for common mount points
+    #[cfg(target_os = "linux")]
+    {
+        let mount_points = ["/mnt", "/media"];
+        for mount_base in mount_points {
+            if let Ok(entries) = std::fs::read_dir(mount_base) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path.is_dir() {
+                        let name = path.file_name()
+                            .map(|n| n.to_string_lossy().to_string())
+                            .unwrap_or_default();
+
+                        drives.push(DriveInfo {
+                            name: format!("{} ({}/{})", name, mount_base, name),
+                            path: path.to_string_lossy().to_string(),
+                            total_space: 0,
+                            available_space: 0,
+                            is_removable: true,
+                            drive_type: "mount".to_string(),
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    drives
+}
 
 /// File type enumeration
 #[derive(Debug, Clone, Serialize, Deserialize)]

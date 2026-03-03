@@ -4,9 +4,12 @@
  * Supports custom title bar mode with minimize, maximize, close buttons
  */
 import { ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import AppIcon from '@/components/common/AppIcon.vue';
 import { useTheme } from '@/composables';
+
+const { t } = useI18n();
 
 withDefaults(defineProps<{
   title?: string;
@@ -17,7 +20,7 @@ withDefaults(defineProps<{
 });
 
 const emit = defineEmits<{
-  (e: 'menu-click'): void;
+  (e: 'menu-click', event: MouseEvent): void;
   (e: 'theme-click'): void;
 }>();
 
@@ -34,7 +37,6 @@ async function checkMaximized() {
   try {
     isMaximized.value = await appWindow.isMaximized();
   } catch {
-    // Fallback for web mode
     isMaximized.value = false;
   }
 }
@@ -52,7 +54,7 @@ async function handleMinimize() {
   try {
     await appWindow.minimize();
   } catch {
-    console.warn('Minimize not available');
+    // Ignore
   }
 }
 
@@ -61,7 +63,7 @@ async function handleMaximize() {
     await appWindow.toggleMaximize();
     isMaximized.value = await appWindow.isMaximized();
   } catch {
-    console.warn('Maximize not available');
+    // Ignore
   }
 }
 
@@ -69,7 +71,7 @@ async function handleClose() {
   try {
     await appWindow.close();
   } catch {
-    console.warn('Close not available');
+    // Ignore
   }
 }
 
@@ -78,8 +80,9 @@ function handleThemeClick() {
   emit('theme-click');
 }
 
-function handleMenuClick() {
-  emit('menu-click');
+function handleMenuClick(event: MouseEvent) {
+  event.stopPropagation();
+  emit('menu-click', event);
 }
 </script>
 
@@ -90,7 +93,7 @@ function handleMenuClick() {
       <button
         class="header-btn menu-btn"
         @click="handleMenuClick"
-        title="Menu"
+        :title="t('app.menu')"
       >
         <AppIcon name="menu" :size="16" />
       </button>
@@ -111,7 +114,7 @@ function handleMenuClick() {
       <button
         class="header-btn theme-btn"
         @click="handleThemeClick"
-        :title="isDark ? 'Switch to light theme' : 'Switch to dark theme'"
+        :title="isDark ? t('header.switchToLight') : t('header.switchToDark')"
       >
         <AppIcon :name="isDark ? 'sun' : 'moon'" :size="16" />
       </button>
@@ -121,21 +124,21 @@ function handleMenuClick() {
         <button
           class="window-btn minimize-btn"
           @click="handleMinimize"
-          title="Minimize"
+          :title="t('header.minimize')"
         >
           <AppIcon name="minimize" :size="12" />
         </button>
         <button
           class="window-btn maximize-btn"
           @click="handleMaximize"
-          :title="isMaximized ? 'Restore' : 'Maximize'"
+          :title="isMaximized ? t('header.restore') : t('header.maximize')"
         >
           <AppIcon :name="isMaximized ? 'restore' : 'maximize'" :size="12" />
         </button>
         <button
           class="window-btn close-btn"
           @click="handleClose"
-          title="Close"
+          :title="t('header.close')"
         >
           <AppIcon name="close" :size="12" />
         </button>

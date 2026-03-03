@@ -4,8 +4,11 @@
  * Contains file explorer and quick actions
  */
 import { computed, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import AppIcon from '@/components/common/AppIcon.vue';
 import { useSettingsStore } from '@/stores';
+
+const { t } = useI18n();
 
 withDefaults(defineProps<{
   collapsible?: boolean;
@@ -61,7 +64,7 @@ function startResize(event: MouseEvent) {
 
   function onMouseMove(e: MouseEvent) {
     const delta = e.clientX - startX;
-    const newWidth = Math.max(100, Math.min(600, startWidth + delta));
+    const newWidth = Math.max(240, Math.min(600, startWidth + delta));
     localWidth.value = newWidth;
     settingsStore.setSidebarWidth(newWidth);
     emit('resize', newWidth);
@@ -101,28 +104,28 @@ function handleQuickAction(action: string) {
       <div v-if="showQuickActions" class="quick-actions">
         <button
           class="quick-action-btn"
-          title="New Terminal"
+          :title="t('sidebar.newTerminal')"
           @click="handleQuickAction('new-terminal')"
         >
           <AppIcon name="plus" :size="16" />
         </button>
         <button
           class="quick-action-btn"
-          title="SSH Connections"
+          :title="t('sidebar.sshConnections')"
           @click="handleQuickAction('ssh')"
         >
           <AppIcon name="terminal" :size="16" />
         </button>
         <button
           class="quick-action-btn"
-          title="Open Folder"
+          :title="t('sidebar.openFolder')"
           @click="handleQuickAction('open-folder')"
         >
           <AppIcon name="folder" :size="16" />
         </button>
         <button
           class="quick-action-btn"
-          title="Settings"
+          :title="t('sidebar.settings')"
           @click="handleQuickAction('settings')"
         >
           <AppIcon name="settings" :size="16" />
@@ -135,7 +138,7 @@ function handleQuickAction(action: string) {
           <!-- Default placeholder -->
           <div class="placeholder">
             <AppIcon name="folder" :size="24" color="var(--color-text-3)" />
-            <span>File Explorer</span>
+            <span>{{ t('sidebar.fileExplorer') }}</span>
           </div>
         </slot>
       </div>
@@ -152,7 +155,7 @@ function handleQuickAction(action: string) {
     <button
       v-if="collapsible"
       class="collapse-btn"
-      :title="isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+      :title="isCollapsed ? t('sidebar.expand') : t('sidebar.collapse')"
       @click="toggleSidebar"
     >
       <AppIcon
@@ -191,7 +194,7 @@ function handleQuickAction(action: string) {
   display: flex;
   flex-direction: column;
   flex: 1;
-  min-width: 100px;
+  min-width: 240px;
   overflow: hidden;
 }
 
@@ -230,6 +233,24 @@ function handleQuickAction(action: string) {
 .sidebar-main {
   flex: 1;
   overflow: auto;
+}
+
+/* Hide scrollbar when not hovering */
+.sidebar-main:not(:hover)::-webkit-scrollbar {
+  width: 0;
+}
+
+.sidebar-main:hover::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar-main::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-main::-webkit-scrollbar-thumb {
+  background-color: var(--color-scroll, #d5d5d5);
+  border-radius: 4px;
 }
 
 /* Resize handle */

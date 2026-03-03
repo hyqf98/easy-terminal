@@ -85,17 +85,26 @@ pub struct PtySession {
     pub cwd: String,
     /// Output reader thread
     output_reader: Mutex<OutputReader>,
+    /// Cached input writer
+    input_writer: Mutex<Option<Box<dyn Write + Send>>>,
 }
 
 impl PtySession {
     /// Write input to the PTY
     pub fn write_input(&self, data: &[u8]) -> AppResult<()> {
-        let mut writer = self.pair.master.take_writer()
-            .map_err(|e| AppError::Pty(format!("Failed to get writer: {}", e)))?;
+        debug!("[PtySession] write_input called for session {}, {} bytes", self.id, data.len());
+        let mut writer_guard = self.input_writer.lock();
+        if writer_guard.is_none() {
+            debug!("[PtySession] Creating new writer for session {}", self.id);
+            *writer_guard = Some(self.pair.master.take_writer()
+                .map_err(|e| AppError::Pty(format!("Failed to get writer: {}", e)))?);
+        }
+        let writer = writer_guard.as_mut().unwrap();
         writer.write_all(data)
             .map_err(|e| AppError::Pty(format!("Write error: {}", e)))?;
         writer.flush()
             .map_err(|e| AppError::Pty(format!("Flush error: {}", e)))?;
+        debug!("[PtySession] write_input success for session {}", self.id);
         Ok(())
     }
 
@@ -131,17 +140,23 @@ impl PtyManager {
         *self.app_handle.lock() = Some(handle);
     }
 
-    /// Detect default shell
-    fn detect_default_shell() -> String {
+    /// Detect default shell and its arguments
+    fn detect_default_shell() -> (String, Vec<String>) {
         if cfg!(windows) {
-            // Try common Windows shells
+            // Try PowerShell Core first (pwsh), then Windows PowerShell
+            let pwsh_core = "C:\\Program Files\\PowerShell\\7\\pwsh.exe";
+            if std::path::Path::new(pwsh_core).exists() {
+                return (pwsh_core.to_string(), vec!["-NoLogo".to_string()]);
+            }
             let powershell = "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
             if std::path::Path::new(powershell).exists() {
-                return powershell.to_string();
+                return (powershell.to_string(), vec!["-NoLogo".to_string()]);
             }
-            "cmd.exe".to_string()
+            ("cmd.exe".to_string(), vec![])
         } else {
-            std::env::var("SHELL").unwrap_or_else(|_| "/bin/bash".to_string())
+            // On Unix, shells typically don't need special args to suppress logo
+            let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/bash".to_string());
+            (shell, vec![])
         }
     }
 
@@ -164,8 +179,18 @@ impl PtyManager {
             })
             .map_err(|e| AppError::Pty(format!("Failed to open PTY: {}", e)))?;
 
-        // Determine shell
-        let shell = shell.unwrap_or_else(Self::detect_default_shell);
+        // Determine shell and arguments
+        let (shell, shell_args) = if let Some(s) = shell {
+            // User-specified shell: detect if it's PowerShell and add -NoLogo
+            let args = if s.to_lowercase().contains("powershell") || s.to_lowercase().ends_with("pwsh.exe") {
+                vec!["-NoLogo".to_string()]
+            } else {
+                vec![]
+            };
+            (s, args)
+        } else {
+            Self::detect_default_shell()
+        };
 
         // Determine working directory
         let cwd = cwd.unwrap_or_else(|| {
@@ -178,8 +203,11 @@ impl PtyManager {
 
         let session_id = uuid::Uuid::new_v4().to_string();
 
-        // Build command
+        // Build command with arguments
         let mut cmd = CommandBuilder::new(&shell);
+        for arg in &shell_args {
+            cmd.arg(arg);
+        }
         cmd.cwd(&cwd);
 
         // Spawn the shell
@@ -197,6 +225,7 @@ impl PtyManager {
             shell: shell.clone(),
             cwd: cwd.clone(),
             output_reader: Mutex::new(OutputReader::new()),
+            input_writer: Mutex::new(None),
         });
 
         // Start output reader thread

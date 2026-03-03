@@ -23,7 +23,8 @@
         "focus": true,
         "decorations": false,
         "transparent": false,
-        "center": true
+        "center": true,
+        "devtools": true
       }
     ],
     "security": {
