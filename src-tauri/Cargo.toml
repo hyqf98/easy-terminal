@@ -45,7 +45,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # PTY (terminal)
-portable-pty = "0.8"
+portable-pty = "0.9"
 
 # File system
 walkdir = "2"
