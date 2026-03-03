@@ -64,7 +64,7 @@ ssh2 = "0.9"
 base64 = "0.22"
 
 # Docker
-bollard = "0.18"
+bollard = "0.20"
 futures-util = "0.3"
 
 # Windows-specific
