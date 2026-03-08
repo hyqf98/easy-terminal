@@ -42,8 +42,8 @@ importers:
         specifier: ^3.5.13
         version: 3.5.29(typescript@5.6.3)
       vue-i18n:
-        specifier: ^9.14.4
-        version: 9.14.4(vue@3.5.29(typescript@5.6.3))
+        specifier: ^11.3.0
+        version: 11.3.0(vue@3.5.29(typescript@5.6.3))
       xterm:
         specifier: ^5.3.0
         version: 5.3.0
@@ -294,16 +294,20 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@intlify/core-base@9.14.4':
-    resolution: {integrity: sha512-vtZCt7NqWhKEtHa3SD/322DlgP5uR9MqWxnE0y8Q0tjDs9H5Lxhss+b5wv8rmuXRoHKLESNgw9d+EN9ybBbj9g==}
+  '@intlify/core-base@11.3.0':
+    resolution: {integrity: sha512-NNX5jIwF4TJBe7RtSKDMOA6JD9mp2mRcBHAwt2X+Q8PvnZub0yj5YYXlFu2AcESdgQpEv/5Yx2uOCV/yh7YkZg==}
     engines: {node: '>= 16'}
 
-  '@intlify/message-compiler@9.14.4':
-    resolution: {integrity: sha512-vcyCLiVRN628U38c3PbahrhbbXrckrM9zpy0KZVlDk2Z0OnGwv8uQNNXP3twwGtfLsCf4gu3ci6FMIZnPaqZsw==}
+  '@intlify/devtools-types@11.3.0':
+    resolution: {integrity: sha512-G9CNL4WpANWVdUjubOIIS7/D2j/0j+1KJmhBJxHilWNKr9mmt3IjFV3Hq4JoBP23uOoC5ynxz/FHZ42M+YxfGw==}
     engines: {node: '>= 16'}
 
-  '@intlify/shared@9.14.4':
-    resolution: {integrity: sha512-P9zv6i1WvMc9qDBWvIgKkymjY2ptIiQ065PjDv7z7fDqH3J/HBRBN5IoiR46r/ujRcU7hCuSIZWvCAFCyuOYZA==}
+  '@intlify/message-compiler@11.3.0':
+    resolution: {integrity: sha512-RAJp3TMsqohg/Wa7bVF3cChRhecSYBLrTCQSj7j0UtWVFLP+6iEJoE2zb7GU5fp+fmG5kCbUdzhmlAUCWXiUJw==}
+    engines: {node: '>= 16'}
+
+  '@intlify/shared@11.3.0':
+    resolution: {integrity: sha512-LC6P/uay7rXL5zZ5+5iRJfLs/iUN8apu9tm8YqQVmW3Uq3X4A0dOFUIDuAmB7gAC29wTHOS3EiN/IosNSz0eNQ==}
     engines: {node: '>= 16'}
 
   '@isaacs/cliui@8.0.2':
@@ -375,79 +379,66 @@ packages:
     resolution: {integrity: sha512-t4ONHboXi/3E0rT6OZl1pKbl2Vgxf9vJfWgmUoCEVQVxhW6Cw/c8I6hbbu7DAvgp82RKiH7TpLwxnJeKv2pbsw==}
     cpu: [arm]
     os: [linux]
-    libc: [glibc]
 
   '@rollup/rollup-linux-arm-musleabihf@4.59.0':
     resolution: {integrity: sha512-CikFT7aYPA2ufMD086cVORBYGHffBo4K8MQ4uPS/ZnY54GKj36i196u8U+aDVT2LX4eSMbyHtyOh7D7Zvk2VvA==}
     cpu: [arm]
     os: [linux]
-    libc: [musl]
 
   '@rollup/rollup-linux-arm64-gnu@4.59.0':
     resolution: {integrity: sha512-jYgUGk5aLd1nUb1CtQ8E+t5JhLc9x5WdBKew9ZgAXg7DBk0ZHErLHdXM24rfX+bKrFe+Xp5YuJo54I5HFjGDAA==}
     cpu: [arm64]
     os: [linux]
-    libc: [glibc]
 
   '@rollup/rollup-linux-arm64-musl@4.59.0':
     resolution: {integrity: sha512-peZRVEdnFWZ5Bh2KeumKG9ty7aCXzzEsHShOZEFiCQlDEepP1dpUl/SrUNXNg13UmZl+gzVDPsiCwnV1uI0RUA==}
     cpu: [arm64]
     os: [linux]
-    libc: [musl]
 
   '@rollup/rollup-linux-loong64-gnu@4.59.0':
     resolution: {integrity: sha512-gbUSW/97f7+r4gHy3Jlup8zDG190AuodsWnNiXErp9mT90iCy9NKKU0Xwx5k8VlRAIV2uU9CsMnEFg/xXaOfXg==}
     cpu: [loong64]
     os: [linux]
-    libc: [glibc]
 
   '@rollup/rollup-linux-loong64-musl@4.59.0':
     resolution: {integrity: sha512-yTRONe79E+o0FWFijasoTjtzG9EBedFXJMl888NBEDCDV9I2wGbFFfJQQe63OijbFCUZqxpHz1GzpbtSFikJ4Q==}
     cpu: [loong64]
     os: [linux]
-    libc: [musl]
 
   '@rollup/rollup-linux-ppc64-gnu@4.59.0':
     resolution: {integrity: sha512-sw1o3tfyk12k3OEpRddF68a1unZ5VCN7zoTNtSn2KndUE+ea3m3ROOKRCZxEpmT9nsGnogpFP9x6mnLTCaoLkA==}
     cpu: [ppc64]
     os: [linux]
-    libc: [glibc]
 
   '@rollup/rollup-linux-ppc64-musl@4.59.0':
     resolution: {integrity: sha512-+2kLtQ4xT3AiIxkzFVFXfsmlZiG5FXYW7ZyIIvGA7Bdeuh9Z0aN4hVyXS/G1E9bTP/vqszNIN/pUKCk/BTHsKA==}
     cpu: [ppc64]
     os: [linux]
-    libc: [musl]
 
   '@rollup/rollup-linux-riscv64-gnu@4.59.0':
     resolution: {integrity: sha512-NDYMpsXYJJaj+I7UdwIuHHNxXZ/b/N2hR15NyH3m2qAtb/hHPA4g4SuuvrdxetTdndfj9b1WOmy73kcPRoERUg==}
     cpu: [riscv64]
     os: [linux]
-    libc: [glibc]
 
   '@rollup/rollup-linux-riscv64-musl@4.59.0':
     resolution: {integrity: sha512-nLckB8WOqHIf1bhymk+oHxvM9D3tyPndZH8i8+35p/1YiVoVswPid2yLzgX7ZJP0KQvnkhM4H6QZ5m0LzbyIAg==}
     cpu: [riscv64]
     os: [linux]
-    libc: [musl]
 
   '@rollup/rollup-linux-s390x-gnu@4.59.0':
     resolution: {integrity: sha512-oF87Ie3uAIvORFBpwnCvUzdeYUqi2wY6jRFWJAy1qus/udHFYIkplYRW+wo+GRUP4sKzYdmE1Y3+rY5Gc4ZO+w==}
     cpu: [s390x]
     os: [linux]
-    libc: [glibc]
 
   '@rollup/rollup-linux-x64-gnu@4.59.0':
     resolution: {integrity: sha512-3AHmtQq/ppNuUspKAlvA8HtLybkDflkMuLK4DPo77DfthRb71V84/c4MlWJXixZz4uruIH4uaa07IqoAkG64fg==}
     cpu: [x64]
     os: [linux]
-    libc: [glibc]
 
   '@rollup/rollup-linux-x64-musl@4.59.0':
     resolution: {integrity: sha512-2UdiwS/9cTAx7qIUZB/fWtToJwvt0Vbo0zmnYt7ED35KPg13Q0ym1g442THLC7VyI6JfYTP4PiSOWyoMdV2/xg==}
     cpu: [x64]
     os: [linux]
-    libc: [musl]
 
   '@rollup/rollup-openbsd-x64@4.59.0':
     resolution: {integrity: sha512-M3bLRAVk6GOwFlPTIxVBSYKUaqfLrn8l0psKinkCFxl4lQvOSz8ZrKDz2gxcBwHFpci0B6rttydI4IpS4IS/jQ==}
@@ -508,35 +499,30 @@ packages:
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
-    libc: [glibc]
 
   '@tauri-apps/cli-linux-arm64-musl@2.10.0':
     resolution: {integrity: sha512-GUoPdVJmrJRIXFfW3Rkt+eGK9ygOdyISACZfC/bCSfOnGt8kNdQIQr5WRH9QUaTVFIwxMlQyV3m+yXYP+xhSVA==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
-    libc: [musl]
 
   '@tauri-apps/cli-linux-riscv64-gnu@2.10.0':
     resolution: {integrity: sha512-JO7s3TlSxshwsoKNCDkyvsx5gw2QAs/Y2GbR5UE2d5kkU138ATKoPOtxn8G1fFT1aDW4LH0rYAAfBpGkDyJJnw==}
     engines: {node: '>= 10'}
     cpu: [riscv64]
     os: [linux]
-    libc: [glibc]
 
   '@tauri-apps/cli-linux-x64-gnu@2.10.0':
     resolution: {integrity: sha512-Uvh4SUUp4A6DVRSMWjelww0GnZI3PlVy7VS+DRF5napKuIehVjGl9XD0uKoCoxwAQBLctvipyEK+pDXpJeoHng==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
-    libc: [glibc]
 
   '@tauri-apps/cli-linux-x64-musl@2.10.0':
     resolution: {integrity: sha512-AP0KRK6bJuTpQ8kMNWvhIpKUkQJfcPFeba7QshOQZjJ8wOS6emwTN4K5g/d3AbCMo0RRdnZWwu67MlmtJyxC1Q==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
-    libc: [musl]
 
   '@tauri-apps/cli-win32-arm64-msvc@2.10.0':
     resolution: {integrity: sha512-97DXVU3dJystrq7W41IX+82JEorLNY+3+ECYxvXWqkq7DBN6FsA08x/EFGE8N/b0LTOui9X2dvpGGoeZKKV08g==}
@@ -932,6 +918,7 @@ packages:
 
   glob@10.4.5:
     resolution: {integrity: sha512-7Bv8RF0k6xjo7d4A/PxYLbUCfb6c+Vpd2/mB2yRDlew7Jb5hEXiCD9ibfO7wpk8i4sevK6DFny9h7EYbM3/sHg==}
+    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
     hasBin: true
 
   happy-dom@20.8.3:
@@ -1424,8 +1411,8 @@ packages:
   vue-component-type-helpers@2.2.12:
     resolution: {integrity: sha512-YbGqHZ5/eW4SnkPNR44mKVc6ZKQoRs/Rux1sxC6rdwXb4qpbOSYfDr9DsTHolOTGmIKgM9j141mZbBeg05R1pw==}
 
-  vue-i18n@9.14.4:
-    resolution: {integrity: sha512-B934C8yUyWLT0EMud3DySrwSUJI7ZNiWYsEEz2gknTthqKiG4dzWE/WSa8AzCuSQzwBEv4HtG1jZDhgzPfWSKQ==}
+  vue-i18n@11.3.0:
+    resolution: {integrity: sha512-1J+xDfDJTLhDxElkd3+XUhT7FYSZd2b8pa7IRKGxhWH/8yt6PTvi3xmWhGwhYT5EaXdatui11pF2R6tL73/zPA==}
     engines: {node: '>= 16'}
     peerDependencies:
       vue: ^3.0.0
@@ -1639,17 +1626,23 @@ snapshots:
   '@esbuild/win32-x64@0.25.12':
     optional: true
 
-  '@intlify/core-base@9.14.4':
+  '@intlify/core-base@11.3.0':
     dependencies:
-      '@intlify/message-compiler': 9.14.4
-      '@intlify/shared': 9.14.4
+      '@intlify/devtools-types': 11.3.0
+      '@intlify/message-compiler': 11.3.0
+      '@intlify/shared': 11.3.0
 
-  '@intlify/message-compiler@9.14.4':
+  '@intlify/devtools-types@11.3.0':
     dependencies:
-      '@intlify/shared': 9.14.4
+      '@intlify/core-base': 11.3.0
+      '@intlify/shared': 11.3.0
+
+  '@intlify/message-compiler@11.3.0':
+    dependencies:
+      '@intlify/shared': 11.3.0
       source-map-js: 1.2.1
 
-  '@intlify/shared@9.14.4': {}
+  '@intlify/shared@11.3.0': {}
 
   '@isaacs/cliui@8.0.2':
     dependencies:
@@ -2718,10 +2711,11 @@ snapshots:
 
   vue-component-type-helpers@2.2.12: {}
 
-  vue-i18n@9.14.4(vue@3.5.29(typescript@5.6.3)):
+  vue-i18n@11.3.0(vue@3.5.29(typescript@5.6.3)):
     dependencies:
-      '@intlify/core-base': 9.14.4
-      '@intlify/shared': 9.14.4
+      '@intlify/core-base': 11.3.0
+      '@intlify/devtools-types': 11.3.0
+      '@intlify/shared': 11.3.0
       '@vue/devtools-api': 6.6.4
       vue: 3.5.29(typescript@5.6.3)
 
