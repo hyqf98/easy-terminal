@@ -40,7 +40,7 @@
   "devDependencies": {
     "2": "^3.0.0",
     "@tauri-apps/cli": "^2",
-    "@vitejs/plugin-vue": "^5.2.1",
+    "@vitejs/plugin-vue": "^6.0.5",
     "@vitest/coverage-v8": "^4.0.18",
     "@vue/test-utils": "^2.4.6",
     "happy-dom": "^20.7.0",
