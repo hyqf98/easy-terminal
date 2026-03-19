@@ -14,17 +14,10 @@
     "windows": [
       {
         "title": "Easy Terminal",
-        "width": 1024,
-        "height": 768,
-        "minWidth": 640,
-        "minHeight": 480,
+        "width": 800,
+        "height": 600,
         "resizable": true,
-        "fullscreen": false,
-        "focus": true,
-        "decorations": false,
-        "transparent": false,
-        "center": true,
-        "devtools": true
+        "fullscreen": false
       }
     ],
     "security": {
@@ -40,28 +33,6 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "publisher": "Easy Terminal Team",
-    "shortDescription": "A lightweight cross-platform smart terminal manager",
-    "longDescription": "Easy Terminal is a modern terminal management tool that combines intelligent command suggestions, visual file management, and an elegant user interface to provide an efficient command-line operation experience.",
-    "category": "DeveloperTool",
-    "homepage": "https://github.com/hyqf/easy-terminal",
-    "license": "MIT",
-    "licenseFile": "../LICENSE",
-    "windows": {
-      "nsis": {
-        "installMode": "currentUser",
-        "languages": ["SimpChinese", "English"],
-        "displayLanguageSelector": true
-      }
-    },
-    "macOS": {
-      "minimumSystemVersion": "10.13"
-    },
-    "linux": {
-      "deb": {
-        "depends": ["libgtk-3-0", "libwebkit2gtk-4.1-0", "libayatana-appindicator3-1"]
-      }
-    }
-  },
-  "plugins": {}
+    "targets": "all"
+  }
 }
