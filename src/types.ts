@@ -100,6 +100,15 @@ export interface FilePreviewData {
   size: number;
 }
 
+export interface ShortcutBinding {
+  id: string;
+  label: string;
+  description: string;
+  windows: string;
+  darwin: string;
+  linux: string;
+}
+
 export type SuggestionSourceType = 'command' | 'mapping' | 'history';
 
 export interface SuggestionItem {

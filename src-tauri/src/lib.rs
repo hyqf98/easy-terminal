@@ -173,6 +173,16 @@ fn save_ssh_profiles(entries: Vec<settings::SSHProfile>) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn load_shortcuts() -> Result<Vec<settings::ShortcutBinding>, String> {
+    settings::load_shortcuts()
+}
+
+#[tauri::command]
+fn save_shortcuts(entries: Vec<settings::ShortcutBinding>) -> Result<(), String> {
+    settings::save_shortcuts(entries)
+}
+
+#[tauri::command]
 fn get_platform() -> String {
     commands::get_platform()
 }
@@ -260,6 +270,8 @@ pub fn run() {
             save_command_mappings,
             load_ssh_profiles,
             save_ssh_profiles,
+            load_shortcuts,
+            save_shortcuts,
             get_platform,
             get_platforms,
             load_commands,

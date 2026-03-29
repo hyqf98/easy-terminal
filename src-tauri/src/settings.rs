@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
@@ -12,6 +13,21 @@ pub struct AppSettings {
     pub auto_check_update: bool,
     #[serde(default)]
     pub last_update_check: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ShortcutBinding {
+    pub id: String,
+    pub label: String,
+    #[serde(default)]
+    pub description: String,
+    #[serde(default)]
+    pub windows: String,
+    #[serde(default)]
+    pub darwin: String,
+    #[serde(default)]
+    pub linux: String,
 }
 
 fn default_language() -> String {
@@ -170,6 +186,10 @@ fn ssh_profiles_path() -> Result<PathBuf, String> {
     Ok(app_state_dir()?.join("ssh-profiles.json"))
 }
 
+fn shortcuts_path() -> Result<PathBuf, String> {
+    Ok(app_state_dir()?.join("shortcuts.json"))
+}
+
 pub fn load_command_history() -> Result<Vec<CommandHistoryEntry>, String> {
     let path = history_path()?;
     if !path.exists() {
@@ -231,6 +251,35 @@ pub fn load_ssh_profiles() -> Result<Vec<SSHProfile>, String> {
 
 pub fn save_ssh_profiles(entries: Vec<SSHProfile>) -> Result<(), String> {
     let path = ssh_profiles_path()?;
+    let data = serde_json::to_string_pretty(&entries).map_err(|e| e.to_string())?;
+    fs::write(&path, data).map_err(|e| e.to_string())
+}
+
+pub fn load_shortcuts() -> Result<Vec<ShortcutBinding>, String> {
+    let path = shortcuts_path()?;
+    if !path.exists() {
+        return Ok(default_shortcuts());
+    }
+    let data = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    let stored: Vec<ShortcutBinding> = serde_json::from_str(&data).map_err(|e| e.to_string())?;
+
+    let defaults = default_shortcuts();
+    let mut merged: HashMap<String, ShortcutBinding> = defaults
+        .into_iter()
+        .map(|binding| (binding.id.clone(), binding))
+        .collect();
+
+    for binding in stored {
+        merged.insert(binding.id.clone(), binding);
+    }
+
+    let mut values: Vec<ShortcutBinding> = merged.into_values().collect();
+    values.sort_by(|left, right| left.label.cmp(&right.label));
+    Ok(values)
+}
+
+pub fn save_shortcuts(entries: Vec<ShortcutBinding>) -> Result<(), String> {
+    let path = shortcuts_path()?;
     let data = serde_json::to_string_pretty(&entries).map_err(|e| e.to_string())?;
     fs::write(&path, data).map_err(|e| e.to_string())
 }
@@ -306,4 +355,89 @@ fn desktop_command() -> String {
     } else {
         "cd ~/Desktop".to_string()
     }
+}
+
+fn default_shortcuts() -> Vec<ShortcutBinding> {
+    vec![
+        ShortcutBinding {
+            id: "terminal.duplicate".to_string(),
+            label: "复制终端".to_string(),
+            description: "复制当前激活终端到新的画布位置".to_string(),
+            windows: "Ctrl+C".to_string(),
+            darwin: "Cmd+C".to_string(),
+            linux: "Ctrl+C".to_string(),
+        },
+        ShortcutBinding {
+            id: "terminal.paste".to_string(),
+            label: "粘贴终端".to_string(),
+            description: "在画布上创建复制终端".to_string(),
+            windows: "Ctrl+V".to_string(),
+            darwin: "Cmd+V".to_string(),
+            linux: "Ctrl+V".to_string(),
+        },
+        ShortcutBinding {
+            id: "terminal.selectLine".to_string(),
+            label: "选中当前输入行".to_string(),
+            description: "在终端中选中当前正在输入的命令".to_string(),
+            windows: "Ctrl+A".to_string(),
+            darwin: "Cmd+A".to_string(),
+            linux: "Ctrl+A".to_string(),
+        },
+        ShortcutBinding {
+            id: "sidebar.files".to_string(),
+            label: "打开文件管理".to_string(),
+            description: "切换到左侧文件管理面板".to_string(),
+            windows: "Alt+1".to_string(),
+            darwin: "Alt+1".to_string(),
+            linux: "Alt+1".to_string(),
+        },
+        ShortcutBinding {
+            id: "sidebar.commands".to_string(),
+            label: "打开命令管理".to_string(),
+            description: "切换到左侧命令管理面板".to_string(),
+            windows: "Alt+2".to_string(),
+            darwin: "Alt+2".to_string(),
+            linux: "Alt+2".to_string(),
+        },
+        ShortcutBinding {
+            id: "sidebar.history".to_string(),
+            label: "打开历史命令".to_string(),
+            description: "切换到左侧历史命令面板".to_string(),
+            windows: "Alt+3".to_string(),
+            darwin: "Alt+3".to_string(),
+            linux: "Alt+3".to_string(),
+        },
+        ShortcutBinding {
+            id: "sidebar.mappings".to_string(),
+            label: "打开命令映射".to_string(),
+            description: "切换到左侧命令映射面板".to_string(),
+            windows: "Alt+4".to_string(),
+            darwin: "Alt+4".to_string(),
+            linux: "Alt+4".to_string(),
+        },
+        ShortcutBinding {
+            id: "sidebar.ssh".to_string(),
+            label: "打开 SSH 面板".to_string(),
+            description: "切换到左侧 SSH 远程服务面板".to_string(),
+            windows: "Alt+5".to_string(),
+            darwin: "Alt+5".to_string(),
+            linux: "Alt+5".to_string(),
+        },
+        ShortcutBinding {
+            id: "sidebar.shortcuts".to_string(),
+            label: "打开快捷键设置".to_string(),
+            description: "切换到快捷键设置面板".to_string(),
+            windows: "Alt+6".to_string(),
+            darwin: "Alt+6".to_string(),
+            linux: "Alt+6".to_string(),
+        },
+        ShortcutBinding {
+            id: "sidebar.settings".to_string(),
+            label: "打开设置".to_string(),
+            description: "切换到设置面板".to_string(),
+            windows: "Alt+0".to_string(),
+            darwin: "Alt+0".to_string(),
+            linux: "Alt+0".to_string(),
+        },
+    ]
 }

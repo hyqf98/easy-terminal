@@ -7,6 +7,7 @@ type OverlayState = { type: 'edit'; index: number | null } | null;
 export class MappingPanel {
   private container: HTMLDivElement;
   private overlayState: OverlayState = null;
+  private draft: CommandMapping | null = null;
 
   constructor(container: HTMLDivElement, private intelligence: CommandIntelligence) {
     this.container = container;
@@ -67,7 +68,7 @@ export class MappingPanel {
 
     html += '</div>';
     if (this.overlayState) {
-      html += this.renderOverlay(mappings[this.overlayState.index ?? -1] || emptyMapping());
+      html += this.renderOverlay(this.draft || mappings[this.overlayState.index ?? -1] || emptyMapping());
     }
 
     this.body.innerHTML = html;
@@ -119,12 +120,14 @@ export class MappingPanel {
   private bindEvents() {
     this.body.querySelector('#mapping-add')?.addEventListener('click', () => {
       this.overlayState = { type: 'edit', index: null };
+      this.draft = null;
       this.render();
     });
 
     this.body.querySelectorAll<HTMLElement>('[data-mapping-edit]').forEach((button) => {
       button.addEventListener('click', () => {
         this.overlayState = { type: 'edit', index: Number(button.dataset.mappingEdit) };
+        this.draft = null;
         this.render();
       });
     });
@@ -151,6 +154,7 @@ export class MappingPanel {
 
     this.body.querySelector('#mapping-cancel')?.addEventListener('click', () => {
       this.overlayState = null;
+      this.draft = null;
       this.render();
     });
 
@@ -200,6 +204,19 @@ export class MappingPanel {
 
     await this.intelligence.saveMappings(entries);
     this.overlayState = null;
+    this.draft = null;
+    this.render();
+  }
+
+  openCreate(prefill?: Partial<CommandMapping>) {
+    this.overlayState = { type: 'edit', index: null };
+    this.draft = {
+      ...emptyMapping(),
+      ...prefill,
+      id: '',
+      tags: [...(prefill?.tags || [])],
+      examples: [...(prefill?.examples || [])],
+    };
     this.render();
   }
 }

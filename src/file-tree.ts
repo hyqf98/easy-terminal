@@ -13,6 +13,7 @@ interface FileEntry {
 export class FileTree {
   private container: HTMLDivElement;
   private platform = '';
+  private rootPath = '';
   private selectedPaths = new Set<string>();
   private lastClickedPath = '';
   private allVisibleItems: string[] = [];
@@ -60,9 +61,11 @@ export class FileTree {
       this.platform = await invoke<string>('get_os_platform');
       if (this.platform === 'windows') {
         const drives = await invoke<FileEntry[]>('list_drives');
+        this.rootPath = '';
         this.renderMultiRoot(drives);
       } else {
         const home = await invoke<string>('get_home_dir');
+        this.rootPath = home;
         await this.renderLevel(this.body, home, 0);
       }
     } catch (e) {
@@ -445,6 +448,55 @@ export class FileTree {
     this.init();
   }
 
+  async revealPath(path: string) {
+    const normalized = normalizePath(path);
+    if (!normalized) return;
+
+    if (this.platform !== 'windows') {
+      const desiredRoot = normalized.startsWith(this.rootPath || '') ? this.rootPath : '/';
+      if (!this.rootPath || desiredRoot !== this.rootPath) {
+        this.rootPath = desiredRoot;
+        await this.renderLevel(this.body, desiredRoot, 0);
+      }
+    }
+
+    const segments = splitPathSegments(normalized, this.platform);
+    let currentPath = this.platform === 'windows' ? segments[0] : this.rootPath || '/';
+    let currentContainer: HTMLElement = this.body;
+
+    if (this.platform === 'windows') {
+      const rootItem = this.container.querySelector(`[data-path="${CSS.escape(currentPath)}"]`) as HTMLElement | null;
+      if (!rootItem) return;
+      await this.ensureExpanded(rootItem, currentPath, currentContainer);
+      currentContainer = rootItem.parentElement?.querySelector(':scope > .tree-children') as HTMLElement || currentContainer;
+    }
+
+    for (const segment of segments.slice(this.platform === 'windows' ? 1 : startUnixIndex(segments, currentPath))) {
+      currentPath = joinPath(currentPath, segment, this.platform);
+      let item = this.container.querySelector(`[data-path="${CSS.escape(currentPath)}"]`) as HTMLElement | null;
+      if (!item) {
+        await this.renderLevel(currentContainer, parentPath(currentPath, this.platform), depthFromContainer(currentContainer));
+        item = this.container.querySelector(`[data-path="${CSS.escape(currentPath)}"]`) as HTMLElement | null;
+      }
+      if (!item) break;
+
+      if (item.dataset.isDir === 'true') {
+        await this.ensureExpanded(item, currentPath, currentContainer);
+        currentContainer = item.parentElement?.querySelector(':scope > .tree-children') as HTMLElement || currentContainer;
+      }
+    }
+
+    const target = this.container.querySelector(`[data-path="${CSS.escape(normalized)}"]`) as HTMLElement | null;
+    if (target) {
+      this.clearSelectionUI();
+      this.selectedPaths.clear();
+      this.selectedPaths.add(normalized);
+      this.lastClickedPath = normalized;
+      target.classList.add('selected');
+      target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  }
+
   private applyFilter() {
     const query = (this.filterInput?.value || '').trim().toLowerCase();
     const body = this.body;
@@ -533,6 +585,63 @@ export class FileTree {
     });
     this.preFilterExpanded.clear();
   }
+
+  private async ensureExpanded(item: HTMLElement, path: string, parentContainer: HTMLElement) {
+    const children = item.parentElement?.querySelector(':scope > .tree-children') as HTMLElement | null;
+    if (!children) return;
+    const arrow = item.querySelector('.tree-arrow');
+    children.classList.remove('collapsed');
+    arrow?.classList.add('expanded');
+    if (children.children.length === 0) {
+      await this.renderLevel(children, path, depthFromContainer(parentContainer) + 1);
+    }
+  }
+}
+
+function normalizePath(path: string): string {
+  if (/^[A-Za-z]:[\\/]/.test(path)) {
+    const normalized = path.replace(/\//g, '\\');
+    return /^[A-Za-z]:\\$/.test(normalized) ? normalized : normalized.replace(/\\+$/, '');
+  }
+  return path.replace(/\/+$/, '') || '/';
+}
+
+function splitPathSegments(path: string, platform: string): string[] {
+  if (platform === 'windows') {
+    const match = path.match(/^[A-Za-z]:\\/);
+    const root = match?.[0] || '';
+    const rest = path.slice(root.length).split(/\\+/).filter(Boolean);
+    return [root, ...rest];
+  }
+  return path.split('/').filter(Boolean);
+}
+
+function joinPath(base: string, segment: string, platform: string): string {
+  if (platform === 'windows') {
+    return base.endsWith('\\') ? `${base}${segment}` : `${base}\\${segment}`;
+  }
+  if (base === '/') return `/${segment}`;
+  return `${base}/${segment}`;
+}
+
+function parentPath(path: string, platform: string): string {
+  if (platform === 'windows') {
+    return path.replace(/\\[^\\]+$/, '') || path;
+  }
+  return path.replace(/\/[^/]+$/, '') || '/';
+}
+
+function depthFromContainer(container: HTMLElement): number {
+  const parentItem = container.previousElementSibling as HTMLElement | null;
+  if (!parentItem) return 0;
+  const padding = Number.parseInt(parentItem.style.paddingLeft || '8', 10);
+  return Math.max(0, Math.round((padding - 8) / 16) + 1);
+}
+
+function startUnixIndex(_segments: string[], currentPath: string): number {
+  if (currentPath === '/') return 0;
+  const baseSegments = currentPath.split('/').filter(Boolean);
+  return baseSegments.length;
 }
 
 // ===== SVG Icons =====

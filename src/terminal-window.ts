@@ -8,6 +8,7 @@ import type { CanvasController, PtyOutputEvent, SuggestionItem, TerminalLaunchOp
 import { CommandSuggest } from './command-suggest';
 import { resolvePreviewPath } from './command-intercept';
 import { openFilePreview } from './file-preview';
+import type { ShortcutManager } from './shortcut-manager';
 
 const DARK_THEME = {
   background: '#1e1e2e',
@@ -64,6 +65,10 @@ export class TerminalWindow {
   private canvasController: CanvasController;
   private commandSuggest: CommandSuggest;
   private currentLine = '';
+  private cursorPos = 0;
+  private selectionAnchor: number | null = null;
+  private selectionOverlay: HTMLDivElement | null = null;
+  private terminalContextMenu: HTMLDivElement | null = null;
 
   // Drag state
   private isDragging = false;
@@ -97,6 +102,8 @@ export class TerminalWindow {
 
   public onActivate: ((id: string) => void) | null = null;
   public onCommandExecuted: ((command: string, cwd: string) => void | Promise<void>) | null = null;
+  public onCwdChange: ((cwd: string) => void) | null = null;
+  public onAddMappingFromSelection: ((text: string) => void) | null = null;
 
   constructor(
     parentEl: HTMLElement,
@@ -105,7 +112,8 @@ export class TerminalWindow {
     private width: number,
     private height: number,
     canvasController: CanvasController,
-    commandSuggest: CommandSuggest
+    commandSuggest: CommandSuggest,
+    private shortcutManager?: ShortcutManager
   ) {
     this.canvasController = canvasController;
     this.commandSuggest = commandSuggest;
@@ -140,6 +148,7 @@ export class TerminalWindow {
     this.bindResize();
     this.bindTitleRename();
     this.bindActivation();
+    this.bindSelectionContextMenu();
   }
 
   async initPty(options: TerminalLaunchOptions = {}) {
@@ -171,6 +180,8 @@ export class TerminalWindow {
 
     // Track current line for command suggestions
     this.currentLine = '';
+    this.cursorPos = 0;
+    this.clearLineSelection();
 
     this.term.onData(async (data) => {
       try {
@@ -186,6 +197,7 @@ export class TerminalWindow {
     this.term.onTitleChange((title: string) => {
       // Only save cwd path — don't overwrite user's custom title
       this.cwdPath = title.trim();
+      this.onCwdChange?.(this.cwdPath);
     });
 
     // Bind command suggestion to this terminal
@@ -208,6 +220,8 @@ export class TerminalWindow {
       const rawLine = this.currentLine;
       const trimmed = rawLine.trim();
       this.currentLine = '';
+      this.cursorPos = 0;
+      this.clearLineSelection();
       this.commandSuggest.hide();
       this.hideGhostText();
 
@@ -233,18 +247,35 @@ export class TerminalWindow {
       return false;
     }
 
+    if (this.hasLineSelection() && (this.isPrintableInput(data) || data === '\x7f' || data === '\b')) {
+      if (data === '\x7f' || data === '\b') {
+        await this.replaceLineSelection('');
+      } else {
+        await this.replaceLineSelection(data);
+      }
+      this.refreshSuggestions();
+      return true;
+    }
+
     if (data === '\x7f' || data === '\b') {
       // Backspace
-      this.currentLine = this.currentLine.slice(0, -1);
+      if (this.cursorPos > 0) {
+        this.currentLine = `${this.currentLine.slice(0, this.cursorPos - 1)}${this.currentLine.slice(this.cursorPos)}`;
+        this.cursorPos -= 1;
+      }
     } else if (data === '\x03') {
       // Ctrl+C
       this.currentLine = '';
+      this.cursorPos = 0;
+      this.clearLineSelection();
     } else if (data === '\x15') {
       // Ctrl+U - clear line
       this.currentLine = '';
-    } else if (data.length === 1 && data.charCodeAt(0) >= 32) {
-      // Printable character
-      this.currentLine += data;
+      this.cursorPos = 0;
+      this.clearLineSelection();
+    } else if (this.isPrintableInput(data)) {
+      this.currentLine = `${this.currentLine.slice(0, this.cursorPos)}${data}${this.currentLine.slice(this.cursorPos)}`;
+      this.cursorPos += data.length;
     } else if (data === '\t') {
       // Tab - handled by suggestion selector
       return false;
@@ -252,6 +283,10 @@ export class TerminalWindow {
 
     this.refreshSuggestions();
     return false;
+  }
+
+  private isPrintableInput(data: string): boolean {
+    return data.length > 0 && !/[\x00-\x1f\x7f]/.test(data);
   }
 
   private async tryOpenPreview(commandLine: string): Promise<boolean> {
@@ -335,11 +370,17 @@ export class TerminalWindow {
       invoke('write_pty', { sessionId: this.id, data: `${erase}${replacement}` }).catch(console.error);
       const leadingSpaces = this.currentLine.match(/^\s*/)?.[0] || '';
       this.currentLine = `${leadingSpaces}${replacement}`;
+      this.cursorPos = this.currentLine.length;
+      this.clearLineSelection();
       this.refreshSuggestions();
       this.hideGhostText();
     };
 
     this.container.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (this.handleLineEditingShortcut(e)) {
+        return;
+      }
+
       // Tab - accept ghost text if no suggestion popup visible
       if (e.key === 'Tab' && this.ghostText && !this.commandSuggest.isVisible()) {
         e.preventDefault();
@@ -355,6 +396,38 @@ export class TerminalWindow {
         }
       }
     }, true); // capture phase to intercept before xterm
+  }
+
+  private handleLineEditingShortcut(event: KeyboardEvent): boolean {
+    const isPrimaryA = this.shortcutManager
+      ? this.shortcutManager.matches('terminal.selectLine', event)
+      : ((event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'a');
+
+    if (isPrimaryA && this.currentLine) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.selectionAnchor = 0;
+      this.cursorPos = this.currentLine.length;
+      this.updateLineSelectionOverlay();
+      return true;
+    }
+
+    if (event.shiftKey && ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+      event.preventDefault();
+      event.stopPropagation();
+      void this.extendSelection(event.key);
+      return true;
+    }
+
+    if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key) && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.clearLineSelection();
+      void this.moveCursorByKey(event.key);
+      return true;
+    }
+
+    return false;
   }
 
   private positionSuggestPopup() {
@@ -375,6 +448,109 @@ export class TerminalWindow {
     this.commandSuggest.positionAt(terminalBody, pixelX, pixelY);
   }
 
+  private hasLineSelection(): boolean {
+    return this.selectionAnchor !== null && this.selectionAnchor !== this.cursorPos;
+  }
+
+  private getLineSelectionRange(): { start: number; end: number } | null {
+    if (this.selectionAnchor === null || this.selectionAnchor === this.cursorPos) return null;
+    return {
+      start: Math.min(this.selectionAnchor, this.cursorPos),
+      end: Math.max(this.selectionAnchor, this.cursorPos),
+    };
+  }
+
+  private clearLineSelection() {
+    this.selectionAnchor = null;
+    if (this.selectionOverlay) {
+      this.selectionOverlay.style.display = 'none';
+    }
+  }
+
+  private async moveCursorByKey(key: string) {
+    let next = this.cursorPos;
+    if (key === 'ArrowLeft') next = Math.max(0, this.cursorPos - 1);
+    if (key === 'ArrowRight') next = Math.min(this.currentLine.length, this.cursorPos + 1);
+    if (key === 'Home') next = 0;
+    if (key === 'End') next = this.currentLine.length;
+    await this.moveCursorTo(next);
+  }
+
+  private async extendSelection(key: string) {
+    if (!this.currentLine) return;
+    if (this.selectionAnchor === null) {
+      this.selectionAnchor = this.cursorPos;
+    }
+    await this.moveCursorByKey(key);
+    this.updateLineSelectionOverlay();
+  }
+
+  private async moveCursorTo(target: number) {
+    const next = Math.max(0, Math.min(target, this.currentLine.length));
+    const delta = next - this.cursorPos;
+    if (delta === 0) {
+      this.updateLineSelectionOverlay();
+      return;
+    }
+    if (delta > 0) {
+      await invoke('write_pty', { sessionId: this.id, data: '\x1b[C'.repeat(delta) });
+    } else {
+      await invoke('write_pty', { sessionId: this.id, data: '\x1b[D'.repeat(Math.abs(delta)) });
+    }
+    this.cursorPos = next;
+    this.updateLineSelectionOverlay();
+  }
+
+  private async replaceLineSelection(text: string) {
+    const range = this.getLineSelectionRange();
+    if (!range) return;
+
+    await this.moveCursorTo(range.start);
+    if (range.end > range.start) {
+      await invoke('write_pty', { sessionId: this.id, data: '\x1b[3~'.repeat(range.end - range.start) });
+    }
+
+    this.currentLine = `${this.currentLine.slice(0, range.start)}${this.currentLine.slice(range.end)}`;
+    this.cursorPos = range.start;
+    this.clearLineSelection();
+
+    if (text) {
+      await invoke('write_pty', { sessionId: this.id, data: text });
+      this.currentLine = `${this.currentLine.slice(0, this.cursorPos)}${text}${this.currentLine.slice(this.cursorPos)}`;
+      this.cursorPos += text.length;
+    }
+    this.updateLineSelectionOverlay();
+  }
+
+  private updateLineSelectionOverlay() {
+    const range = this.getLineSelectionRange();
+    const terminalBody = this.container.querySelector('.terminal-body') as HTMLElement | null;
+    if (!range || !terminalBody || !this.currentLine) {
+      if (this.selectionOverlay) this.selectionOverlay.style.display = 'none';
+      return;
+    }
+
+    if (!this.selectionOverlay) {
+      this.selectionOverlay = document.createElement('div');
+      this.selectionOverlay.className = 'line-selection-overlay';
+      terminalBody.appendChild(this.selectionOverlay);
+    }
+
+    const buffer = this.term.buffer.active;
+    const rowHeight = terminalBody.clientHeight / this.term.rows;
+    const colWidth = terminalBody.clientWidth / this.term.cols;
+    const promptStartX = Math.max(0, buffer.cursorX - this.cursorPos);
+    const left = (promptStartX + range.start) * colWidth;
+    const width = Math.max(colWidth * (range.end - range.start), 2);
+    const top = buffer.cursorY * rowHeight;
+
+    this.selectionOverlay.style.left = `${left}px`;
+    this.selectionOverlay.style.top = `${top}px`;
+    this.selectionOverlay.style.width = `${width}px`;
+    this.selectionOverlay.style.height = `${Math.max(rowHeight, 18)}px`;
+    this.selectionOverlay.style.display = 'block';
+  }
+
   private extractTitleFromOsc(data: string) {
     const oscRegex = /\x1b\](0|2);([^\x07\x1b]*)(?:\x07|\x1b\\)/g;
     let match;
@@ -385,6 +561,7 @@ export class TerminalWindow {
     if (lastTitle) {
       // Save raw cwd path (don't update title bar — user can rename)
       this.cwdPath = lastTitle.trim();
+      this.onCwdChange?.(this.cwdPath);
     }
   }
 
@@ -417,6 +594,58 @@ export class TerminalWindow {
     `;
     parent.appendChild(el);
     return el;
+  }
+
+  private bindSelectionContextMenu() {
+    const terminalBody = this.container.querySelector('.terminal-body') as HTMLDivElement;
+    document.addEventListener('click', (event) => {
+      if (!(event.target as HTMLElement).closest('.terminal-selection-menu')) {
+        this.closeTerminalContextMenu();
+      }
+    });
+
+    terminalBody.addEventListener('contextmenu', (event) => {
+      const selected = this.term.getSelection().trim();
+      if (!selected) return;
+      event.preventDefault();
+      event.stopPropagation();
+      this.showTerminalContextMenu(event.clientX, event.clientY, selected);
+    });
+  }
+
+  private showTerminalContextMenu(x: number, y: number, selected: string) {
+    this.closeTerminalContextMenu();
+    const menu = document.createElement('div');
+    menu.className = 'context-menu terminal-selection-menu';
+    menu.style.left = `${x}px`;
+    menu.style.top = `${y}px`;
+    menu.innerHTML = `
+      <div class="context-menu-item" data-terminal-copy>复制文本</div>
+      <div class="context-menu-item" data-terminal-map>添加为命令映射</div>
+    `;
+
+    menu.querySelector('[data-terminal-copy]')?.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(selected);
+      } catch (error) {
+        console.error('clipboard write failed', error);
+      }
+      this.closeTerminalContextMenu();
+    });
+
+    menu.querySelector('[data-terminal-map]')?.addEventListener('click', () => {
+      this.onAddMappingFromSelection?.(selected);
+      this.closeTerminalContextMenu();
+    });
+
+    document.body.appendChild(menu);
+    this.terminalContextMenu = menu;
+  }
+
+  private closeTerminalContextMenu() {
+    if (!this.terminalContextMenu) return;
+    this.terminalContextMenu.remove();
+    this.terminalContextMenu = null;
   }
 
   private bindActivation() {
@@ -703,6 +932,7 @@ export class TerminalWindow {
 
   async close() {
     this.commandSuggest.hide();
+    this.closeTerminalContextMenu();
     if (this.id) {
       try {
         await invoke('kill_pty', { sessionId: this.id });

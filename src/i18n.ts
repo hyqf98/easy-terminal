@@ -13,6 +13,7 @@ const messages: Record<Lang, Record<string, string>> = {
     'sidebar.history': '历史命令',
     'sidebar.mappings': '命令映射',
     'sidebar.ssh': 'SSH 远程',
+    'sidebar.shortcuts': '快捷键',
     'sidebar.settings': '设置',
 
     // Settings
@@ -170,6 +171,10 @@ const messages: Record<Lang, Record<string, string>> = {
     'ssh.required': '名称、主机和用户不能为空',
     'ssh.command': '连接命令',
     'ssh.detailEmpty': '从左侧选择一个服务器，后续在画布上新建终端会自动连接',
+
+    // Shortcut
+    'shortcut.title': '快捷键设置',
+    'shortcut.summary': '当前平台：{0}，修改后立即生效',
   },
 
   'en-US': {
@@ -179,6 +184,7 @@ const messages: Record<Lang, Record<string, string>> = {
     'sidebar.history': 'History',
     'sidebar.mappings': 'Mappings',
     'sidebar.ssh': 'SSH',
+    'sidebar.shortcuts': 'Shortcuts',
     'sidebar.settings': 'Settings',
 
     // Settings
@@ -336,6 +342,10 @@ const messages: Record<Lang, Record<string, string>> = {
     'ssh.required': 'Name, host, and user are required',
     'ssh.command': 'Connect Command',
     'ssh.detailEmpty': 'Select a server on the left. New canvas terminals will auto-connect to it.',
+
+    // Shortcut
+    'shortcut.title': 'Shortcut Settings',
+    'shortcut.summary': 'Current platform: {0}. Changes apply immediately.',
   },
 };
 

@@ -10,6 +10,8 @@ import { HistoryPanel } from './history-panel';
 import { MappingPanel } from './mapping-panel';
 import { SSHPanel } from './ssh-panel';
 import { AppUpdater } from './app-update';
+import { ShortcutManager } from './shortcut-manager';
+import { ShortcutPanel } from './shortcut-panel';
 import { t, onLangChange } from './i18n';
 import { invoke } from '@tauri-apps/api/core';
 import './styles.css';
@@ -42,29 +44,37 @@ window.addEventListener('DOMContentLoaded', async () => {
   const panelHistory = document.getElementById('panel-history')! as HTMLDivElement;
   const panelMappings = document.getElementById('panel-mappings')! as HTMLDivElement;
   const panelSsh = document.getElementById('panel-ssh')! as HTMLDivElement;
+  const panelShortcuts = document.getElementById('panel-shortcuts')! as HTMLDivElement;
 
   const intelligence = new CommandIntelligence();
   const commandSuggest = new CommandSuggest(intelligence);
   await commandSuggest.init();
   const updater = new AppUpdater();
+  const shortcutManager = new ShortcutManager();
+  await shortcutManager.init();
   let announcedUpdateVersion = '';
 
   // Canvas
   const canvas = new Canvas(viewport, canvasEl, selectionRect);
 
   // Terminal Manager
-  const terminalManager = new TerminalManager(canvasEl, canvas, commandSuggest, async (command, cwd) => {
+  const terminalManager = new TerminalManager(canvasEl, canvas, commandSuggest, shortcutManager, async (command, cwd) => {
     await intelligence.recordHistory(command, cwd);
   });
   canvas.getSnapTargets = (excludeId) => terminalManager.getSnapTargets(excludeId);
 
   // Sidebar (three-column layout)
-  new Sidebar(sidebarContainer, panelArea);
+  const sidebar = new Sidebar(sidebarContainer, panelArea);
 
   // File Tree Panel
   const fileTree = new FileTree(panelFiles);
   fileTree.onOpenTerminal = (dirPath: string) => {
     terminalManager.createTerminalAt(50, 50, 700, 450, dirPath);
+  };
+  terminalManager.onActiveTerminalCwdChange = (cwd) => {
+    if (cwd) {
+      void fileTree.revealPath(cwd);
+    }
   };
 
   // Settings Panel
@@ -94,12 +104,23 @@ window.addEventListener('DOMContentLoaded', async () => {
     return sent;
   });
 
-  new MappingPanel(panelMappings, intelligence);
+  const mappingPanel = new MappingPanel(panelMappings, intelligence);
+  terminalManager.onAddMappingFromSelection = (text) => {
+    mappingPanel.openCreate({
+      trigger: text.slice(0, 24),
+      command: text,
+      description: '从终端选中文本快速创建',
+      hint: text,
+    });
+    sidebar.openTab('mappings');
+  };
 
   const sshPanel = new SSHPanel(panelSsh);
   sshPanel.onProfilesChange = (profiles) => {
     terminalManager.setSshProfiles(profiles);
   };
+
+  new ShortcutPanel(panelShortcuts, shortcutManager);
   sshPanel.onSelectionChange = (profile, profiles) => {
     terminalManager.setSshProfiles(profiles);
     terminalManager.setPendingSshProfile(profile);
@@ -187,7 +208,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.addEventListener('keydown', (e) => {
     const activeEl = document.activeElement;
     if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') && !activeEl.classList.contains('xterm-helper-textarea')) return;
-    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key === 'c' || e.key === 'C')) {
+    if (shortcutManager.matches('terminal.duplicate', e)) {
       if (!terminalManager.getActiveId()) return;
       const copied = terminalManager.copyActiveTerminal();
       if (!copied) return;
@@ -196,13 +217,21 @@ window.addEventListener('DOMContentLoaded', async () => {
       terminalManager.onTerminalCopied?.();
       return;
     }
-    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key === 'v' || e.key === 'V')) {
+    if (shortcutManager.matches('terminal.paste', e)) {
       if (!terminalManager.hasCopiedTerminal()) return;
 
       e.preventDefault();
       e.stopPropagation();
       const pos = terminalManager.getPastePosition();
       void terminalManager.pasteTerminal(pos.x, pos.y);
+      return;
     }
+    if (shortcutManager.matches('sidebar.files', e)) { e.preventDefault(); sidebar.openTab('files'); return; }
+    if (shortcutManager.matches('sidebar.commands', e)) { e.preventDefault(); sidebar.openTab('commands'); return; }
+    if (shortcutManager.matches('sidebar.history', e)) { e.preventDefault(); sidebar.openTab('history'); return; }
+    if (shortcutManager.matches('sidebar.mappings', e)) { e.preventDefault(); sidebar.openTab('mappings'); return; }
+    if (shortcutManager.matches('sidebar.ssh', e)) { e.preventDefault(); sidebar.openTab('ssh'); return; }
+    if (shortcutManager.matches('sidebar.shortcuts', e)) { e.preventDefault(); sidebar.openTab('shortcuts'); return; }
+    if (shortcutManager.matches('sidebar.settings', e)) { e.preventDefault(); sidebar.openTab('settings'); return; }
   }, true); // capture phase to intercept before xterm
 });

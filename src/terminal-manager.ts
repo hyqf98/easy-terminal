@@ -1,6 +1,7 @@
 import { TerminalWindow } from './terminal-window';
 import { CommandSuggest } from './command-suggest';
 import { buildSshStartupCommand } from './command-intercept';
+import type { ShortcutManager } from './shortcut-manager';
 import type { CanvasController, Rect, SSHProfile, SnapTarget, TerminalLaunchOptions } from './types';
 
 export class TerminalManager {
@@ -16,19 +17,24 @@ export class TerminalManager {
   private zCounter = 1;
   private pendingSshProfile: SSHProfile | null = null;
   private sshProfiles: SSHProfile[] = [];
+  private shortcutManager?: ShortcutManager;
 
   /** Called when Ctrl+C successfully copies a terminal (for toast) */
   public onTerminalCopied: (() => void) | null = null;
+  public onActiveTerminalCwdChange: ((cwd: string) => void) | null = null;
+  public onAddMappingFromSelection: ((text: string) => void) | null = null;
 
   constructor(
     canvasEl: HTMLElement,
     canvasController: CanvasController,
     commandSuggest: CommandSuggest,
+    shortcutManager: ShortcutManager | undefined,
     private onCommandExecuted: ((command: string, cwd: string) => void | Promise<void>) | null = null
   ) {
     this.canvasEl = canvasEl;
     this.canvasController = canvasController;
     this.commandSuggest = commandSuggest;
+    this.shortcutManager = shortcutManager;
   }
 
   async createTerminal(x: number, y: number, w: number, h: number, options: TerminalLaunchOptions = {}) {
@@ -40,11 +46,18 @@ export class TerminalManager {
       w,
       h,
       this.canvasController,
-      this.commandSuggest
+      this.commandSuggest,
+      this.shortcutManager
     );
     await tw.initPty(launchOptions);
     tw.onActivate = (id) => this.focusTerminal(id);
     tw.onCommandExecuted = (command, currentCwd) => this.onCommandExecuted?.(command, currentCwd);
+    tw.onCwdChange = (cwd) => {
+      if (this.activeId === tw.getId() && launchOptions.mode !== 'ssh') {
+        this.onActiveTerminalCwdChange?.(cwd);
+      }
+    };
+    tw.onAddMappingFromSelection = (text) => this.onAddMappingFromSelection?.(text);
 
     this.terminals.set(tw.getId(), tw);
     this.focusTerminal(tw.getId());
@@ -94,6 +107,9 @@ export class TerminalManager {
     if (tw) {
       tw.setZIndex(++this.zCounter);
       tw.focus();
+      if (tw.getLaunchOptions().mode !== 'ssh') {
+        this.onActiveTerminalCwdChange?.(tw.getCwd());
+      }
     }
   }
 
@@ -102,6 +118,7 @@ export class TerminalManager {
       const tw = this.terminals.get(this.activeId);
       if (tw) tw.blur();
       this.activeId = null;
+      this.onActiveTerminalCwdChange?.('');
     }
   }
 

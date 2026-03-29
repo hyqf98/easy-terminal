@@ -16,6 +16,7 @@ export class Sidebar {
     this.addTab('history', historyIcon(), t('sidebar.history'));
     this.addTab('mappings', mappingIcon(), t('sidebar.mappings'));
     this.addTab('ssh', sshIcon(), t('sidebar.ssh'));
+    this.addTab('shortcuts', shortcutIcon(), t('sidebar.shortcuts'));
     this.addTab('settings', gearIcon(), t('sidebar.settings'));
 
     const spacer = document.createElement('div');
@@ -32,6 +33,7 @@ export class Sidebar {
         history: t('sidebar.history'),
         mappings: t('sidebar.mappings'),
         ssh: t('sidebar.ssh'),
+        shortcuts: t('sidebar.shortcuts'),
         settings: t('sidebar.settings'),
       };
       this.tabs.forEach((btn, id) => {
@@ -71,6 +73,14 @@ export class Sidebar {
     });
   }
 
+  openTab(tab: string) {
+    if (this.activeTab === tab) {
+      this.panelArea.classList.add('open');
+      return;
+    }
+    this.switchTab(tab);
+  }
+
   private collapse() {
     this.activeTab = '';
     this.panelArea.classList.remove('open');
@@ -108,4 +118,8 @@ function mappingIcon(): string {
 
 function sshIcon(): string {
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path><path d="M5 5v14"></path></svg>`;
+}
+
+function shortcutIcon(): string {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 8h10"></path><path d="M4 8h2"></path><path d="M4 16h16"></path><path d="M8 12h8"></path></svg>`;
 }
