@@ -1,5 +1,9 @@
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import { open } from '@tauri-apps/plugin-dialog';
 import { t } from './i18n';
+import type { SSHProfile, TerminalLaunchOptions } from './types';
 
 interface FileEntry {
   name: string;
@@ -10,47 +14,157 @@ interface FileEntry {
   icon: string;
 }
 
+interface TerminalContext {
+  cwd: string;
+  launchOptions: TerminalLaunchOptions;
+}
+
+interface TransferProgressPayload {
+  direction: 'upload' | 'download';
+  status: 'starting' | 'progress' | 'success' | 'error';
+  fileName: string;
+  detail: string;
+  transferredBytes: number;
+  totalBytes: number;
+  progressPercent: number;
+}
+
+type FileTreeSource =
+  | { kind: 'local' }
+  | { kind: 'remote'; profileId: string; home: string };
+
+type SortKey = 'name' | 'modified' | 'size';
+type SortDirection = 'asc' | 'desc';
+
 export class FileTree {
   private container: HTMLDivElement;
   private platform = '';
+  private source: FileTreeSource = { kind: 'local' };
   private rootPath = '';
+  private currentPath = '';
   private selectedPaths = new Set<string>();
   private lastClickedPath = '';
   private allVisibleItems: string[] = [];
   private contextMenu: HTMLDivElement | null = null;
-  private filterInput: HTMLInputElement | null = null;
   private filterTimer: ReturnType<typeof setTimeout> | null = null;
   private preFilterExpanded = new Map<string, boolean>();
   private createModal: HTMLDivElement | null = null;
+  private sshProfiles: SSHProfile[] = [];
+  private remoteHomeCache = new Map<string, string>();
+  private sortKey: SortKey = 'name';
+  private sortDirection: SortDirection = 'asc';
+  private transferBar: HTMLDivElement | null = null;
+  private transferHideTimer: number | null = null;
+  private activeDropTargetPath = '';
 
   public onOpenTerminal?: (dirPath: string) => void;
 
   constructor(container: HTMLDivElement) {
     this.container = container;
+    this.renderShell();
+    this.bindShellEvents();
+    this.createTransferBar();
+    void this.bindTransferEvents();
+    void this.bindWindowDragDrop();
+    void this.init();
+  }
+
+  setSshProfiles(profiles: SSHProfile[]) {
+    this.sshProfiles = profiles.map((profile) => ({ ...profile }));
+  }
+
+  async syncToTerminal(context: TerminalContext | null) {
+    if (!context) {
+      await this.ensureLocalRoot();
+      return;
+    }
+
+    const cwd = context.cwd || '';
+    if (context.launchOptions.mode === 'ssh' && context.launchOptions.profileId) {
+      const profile = this.sshProfiles.find((entry) => entry.id === context.launchOptions.profileId);
+      if (!profile) return;
+      await this.switchToRemote(profile, cwd);
+      return;
+    }
+
+    await this.switchToLocal(cwd);
+  }
+
+  async revealPath(path: string) {
+    if (!path) return;
+    if (this.source.kind !== 'local') {
+      await this.switchToLocal(path);
+      return;
+    }
+    await this.revealCurrentPath(path);
+  }
+
+  async refresh() {
+    if (this.source.kind === 'remote') {
+      const profile = this.getCurrentRemoteProfile();
+      if (!profile) return;
+      await this.switchToRemote(profile, this.currentPath || this.rootPath);
+      return;
+    }
+    await this.switchToLocal(this.currentPath || this.rootPath);
+  }
+
+  private renderShell() {
     this.container.innerHTML = `
       <div class="panel-header">
         <h2>${folderHeaderSvg()} ${t('file.title')}</h2>
       </div>
+      <div class="file-tree-toolbar">
+        <div class="file-tree-source-badge" id="file-tree-source-badge">Local</div>
+        <div class="file-tree-current-path" id="file-tree-current-path">/</div>
+      </div>
       <div class="file-tree-filter" id="file-tree-filter">
         <input type="text" class="file-filter-input" placeholder="${t('file.filterPlaceholder')}" spellcheck="false" />
+        <select class="file-sort-select" id="file-sort-select">
+          <option value="name">名称</option>
+          <option value="modified">时间</option>
+          <option value="size">大小</option>
+        </select>
+        <button class="file-sort-order-btn" id="file-sort-order-btn" title="切换排序方向">↓</button>
       </div>
-      <div class="panel-body" id="file-tree-body"></div>
+      <div class="file-tree-columns">
+        <span class="file-col-name">名称</span>
+        <span class="file-col-modified">修改时间</span>
+        <span class="file-col-size">大小</span>
+      </div>
+      <div class="panel-body">
+        <div class="file-tree" id="file-tree-body"></div>
+      </div>
     `;
+  }
 
-    this.filterInput = this.container.querySelector('.file-filter-input') as HTMLInputElement;
-    this.filterInput.addEventListener('input', () => {
+  private bindShellEvents() {
+    const filterInput = this.container.querySelector('.file-filter-input') as HTMLInputElement;
+    const sortSelect = this.container.querySelector('#file-sort-select') as HTMLSelectElement;
+    const sortDirectionBtn = this.container.querySelector('#file-sort-order-btn') as HTMLButtonElement;
+
+    filterInput.addEventListener('input', () => {
       if (this.filterTimer) clearTimeout(this.filterTimer);
       this.filterTimer = setTimeout(() => this.applyFilter(), 150);
     });
 
-    document.addEventListener('click', (e) => {
-      if (!(e.target as HTMLElement).closest('.file-tree') && !(e.target as HTMLElement).closest('.context-menu')) {
+    sortSelect.addEventListener('change', () => {
+      this.sortKey = sortSelect.value as SortKey;
+      this.refresh().catch(console.error);
+    });
+
+    sortDirectionBtn.addEventListener('click', () => {
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+      sortDirectionBtn.textContent = this.sortDirection === 'asc' ? '↑' : '↓';
+      this.refresh().catch(console.error);
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!(event.target as HTMLElement).closest('.file-tree') && !(event.target as HTMLElement).closest('.context-menu')) {
         this.clearSelection();
         this.closeContextMenu();
       }
     });
-
-    this.init();
   }
 
   private get body(): HTMLDivElement {
@@ -60,61 +174,97 @@ export class FileTree {
   private async init() {
     try {
       this.platform = await invoke<string>('get_os_platform');
-      if (this.platform === 'windows') {
-        const drives = await invoke<FileEntry[]>('list_drives');
-        this.rootPath = '';
-        this.renderMultiRoot(drives);
-      } else {
-        const home = await invoke<string>('get_home_dir');
-        this.rootPath = home;
-        await this.renderLevel(this.body, home, 0);
-      }
-    } catch (e) {
-      console.error('Failed to init file tree:', e);
+      await this.ensureLocalRoot();
+    } catch (error) {
+      console.error('Failed to init file tree:', error);
     }
   }
 
-  private renderMultiRoot(drives: FileEntry[]) {
+  private async ensureLocalRoot() {
+    await this.switchToLocal(this.currentPath && this.source.kind === 'local' ? this.currentPath : '');
+  }
+
+  private async switchToLocal(revealPath = '') {
+    this.source = { kind: 'local' };
+    this.selectedPaths.clear();
+    this.lastClickedPath = '';
+
+    if (this.platform === 'windows') {
+      this.rootPath = '';
+      this.currentPath = normalizePath(revealPath);
+      await this.renderMultiRoot();
+      if (revealPath) {
+        await this.revealCurrentPath(revealPath);
+      }
+    } else {
+      const home = await invoke<string>('get_home_dir');
+      const normalizedTarget = normalizePath(revealPath || home);
+      this.rootPath = normalizedTarget.startsWith(home) ? home : '/';
+      this.currentPath = normalizedTarget;
+      await this.renderLevel(this.body, this.rootPath, 0);
+      if (revealPath) {
+        await this.revealCurrentPath(revealPath);
+      }
+    }
+
+    this.updateContextHeader();
+  }
+
+  private async switchToRemote(profile: SSHProfile, revealPath = '') {
+    const home = this.remoteHomeCache.get(profile.id)
+      || await invoke<string>('get_remote_home', { profile, profiles: this.sshProfiles });
+    this.remoteHomeCache.set(profile.id, home);
+    this.source = { kind: 'remote', profileId: profile.id, home };
+
+    const normalizedTarget = normalizeRemotePath(revealPath || home);
+    this.rootPath = normalizedTarget.startsWith(home) ? home : '/';
+    this.currentPath = normalizedTarget;
+    this.selectedPaths.clear();
+    this.lastClickedPath = '';
+
+    await this.renderLevel(this.body, this.rootPath, 0);
+    if (revealPath) {
+      await this.revealCurrentPath(revealPath);
+    }
+
+    this.updateContextHeader();
+  }
+
+  private updateContextHeader() {
+    const sourceBadge = this.container.querySelector('#file-tree-source-badge') as HTMLDivElement | null;
+    const pathLabel = this.container.querySelector('#file-tree-current-path') as HTMLDivElement | null;
+    if (!sourceBadge || !pathLabel) return;
+
+    if (this.source.kind === 'remote') {
+      const profile = this.getCurrentRemoteProfile();
+      sourceBadge.textContent = profile ? `SSH · ${profile.name}` : 'SSH';
+      sourceBadge.dataset.source = 'remote';
+    } else {
+      sourceBadge.textContent = this.platform === 'windows' ? 'Local · Windows' : 'Local';
+      sourceBadge.dataset.source = 'local';
+    }
+
+    pathLabel.textContent = this.currentPath || this.rootPath || '/';
+    pathLabel.title = pathLabel.textContent;
+  }
+
+  private async renderMultiRoot() {
+    const drives = await invoke<FileEntry[]>('list_drives');
     this.body.innerHTML = '';
     this.allVisibleItems = [];
-    for (const drive of drives) {
-      const item = this.createDriveRoot(drive);
-      this.body.appendChild(item);
+    this.sortEntries(drives).forEach((drive) => {
+      this.body.appendChild(this.createDriveRoot(drive));
       this.allVisibleItems.push(drive.path);
-    }
+    });
   }
 
   private createDriveRoot(drive: FileEntry): HTMLDivElement {
     const wrapper = document.createElement('div');
     wrapper.className = 'tree-node';
 
-    const item = document.createElement('div');
-    item.className = 'tree-item tree-drive-root';
-    item.dataset.path = drive.path;
-    item.dataset.isDir = 'true';
-    item.style.paddingLeft = '8px';
-
-    // Arrow
-    const arrow = document.createElement('span');
-    arrow.className = 'tree-arrow';
-    arrow.innerHTML = chevronSvg();
-    item.appendChild(arrow);
-
-    // Drive icon
-    const icon = document.createElement('span');
-    icon.className = 'tree-icon';
-    icon.innerHTML = driveIconSvg();
-    item.appendChild(icon);
-
-    // Name
-    const name = document.createElement('span');
-    name.className = 'tree-name';
-    name.textContent = drive.name;
-    item.appendChild(name);
-
+    const item = this.createTreeItemElement(drive, 0, true);
     wrapper.appendChild(item);
 
-    // Children container
     const children = document.createElement('div');
     children.className = 'tree-children collapsed';
     wrapper.appendChild(children);
@@ -124,47 +274,30 @@ export class FileTree {
 
     const toggleExpand = async () => {
       expanded = !expanded;
-      arrow.classList.toggle('expanded', expanded);
+      item.querySelector('.tree-arrow')?.classList.toggle('expanded', expanded);
       this.setChildrenExpanded(children, drive.path, expanded);
-      if (!loaded) {
+      if (expanded && !loaded) {
         loaded = true;
         await this.renderLevel(children, drive.path, 1);
       }
     };
 
-    arrow.addEventListener('click', async (e) => { e.stopPropagation(); await toggleExpand(); });
-
-    // Click to select and toggle expand
-    item.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      this.handleClick(drive.path, e.shiftKey);
+    item.querySelector('.tree-arrow')?.addEventListener('click', async (event) => {
+      event.stopPropagation();
       await toggleExpand();
     });
-
-    // Right-click
-    item.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (!this.selectedPaths.has(drive.path)) {
-        this.clearSelection();
-        this.selectedPaths.add(drive.path);
-        item.classList.add('selected');
-      }
-      this.showContextMenu(e.clientX, e.clientY, drive);
+    item.addEventListener('click', async (event) => {
+      event.stopPropagation();
+      this.handleClick(drive.path, event.shiftKey);
+      this.currentPath = drive.path;
+      await toggleExpand();
+      this.updateContextHeader();
     });
-
-    // Drop target
-    item.addEventListener('dragover', (e) => { e.preventDefault(); item.classList.add('drop-target'); });
-    item.addEventListener('dragleave', () => { item.classList.remove('drop-target'); });
-    item.addEventListener('drop', async (e) => {
-      e.preventDefault();
-      item.classList.remove('drop-target');
-      try {
-        const data = e.dataTransfer!.getData('text/plain');
-        const sources: string[] = JSON.parse(data);
-        await invoke('move_entries', { sources, destDir: drive.path });
-        this.refresh();
-      } catch (err) { console.error('Move failed:', err); }
+    item.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      this.selectSinglePath(drive.path, item);
+      this.showContextMenu(event.clientX, event.clientY, drive);
     });
 
     return wrapper;
@@ -172,47 +305,55 @@ export class FileTree {
 
   private async renderLevel(parent: HTMLElement, dirPath: string, depth: number) {
     try {
-      const entries = await invoke<FileEntry[]>('read_dir', { path: dirPath });
+      const entries = await this.loadEntries(dirPath);
       parent.innerHTML = '';
-      for (const entry of entries) {
-        this.allVisibleItems.push(entry.path);
-      }
-      for (const entry of entries) {
-        const item = this.createItem(entry, depth);
-        parent.appendChild(item);
-      }
-    } catch (e) {
-      console.error('read_dir error:', e);
-      parent.innerHTML = `<div style="padding:8px;color:var(--text-muted);font-size:12px;">Failed to load</div>`;
+      this.allVisibleItems = this.allVisibleItems.filter((path) => !path.startsWith(`${dirPath}/`) && !path.startsWith(`${dirPath}\\`));
+      entries.forEach((entry) => this.allVisibleItems.push(entry.path));
+      entries.forEach((entry) => parent.appendChild(this.createItem(entry, depth)));
+    } catch (error) {
+      console.error('read dir error:', error);
+      parent.innerHTML = `<div class="file-no-results">Failed to load: ${escapeHtml(String(error))}</div>`;
     }
+  }
+
+  private async loadEntries(dirPath: string): Promise<FileEntry[]> {
+    let entries: FileEntry[];
+    if (this.source.kind === 'remote') {
+      const profile = this.getCurrentRemoteProfile();
+      if (!profile) return [];
+      entries = await invoke<FileEntry[]>('read_remote_dir', {
+        profile,
+        path: dirPath,
+        profiles: this.sshProfiles,
+      });
+    } else {
+      entries = await invoke<FileEntry[]>('read_dir', { path: dirPath });
+    }
+
+    return this.sortEntries(entries);
+  }
+
+  private sortEntries(entries: FileEntry[]): FileEntry[] {
+    const sorted = [...entries];
+    const direction = this.sortDirection === 'asc' ? 1 : -1;
+    sorted.sort((left, right) => {
+      if (left.is_dir !== right.is_dir) return Number(right.is_dir) - Number(left.is_dir);
+      if (this.sortKey === 'modified') {
+        return (left.modified - right.modified) * direction;
+      }
+      if (this.sortKey === 'size') {
+        return (left.size - right.size) * direction;
+      }
+      return left.name.localeCompare(right.name, 'zh-CN') * direction;
+    });
+    return sorted;
   }
 
   private createItem(entry: FileEntry, depth: number): HTMLDivElement {
     const wrapper = document.createElement('div');
     wrapper.className = 'tree-node';
 
-    const item = document.createElement('div');
-    item.className = 'tree-item';
-    if (this.selectedPaths.has(entry.path)) item.classList.add('selected');
-    item.dataset.path = entry.path;
-    item.dataset.isDir = String(entry.is_dir);
-    item.style.paddingLeft = `${depth * 16 + 8}px`;
-
-    const arrow = document.createElement('span');
-    arrow.className = 'tree-arrow' + (entry.is_dir ? '' : ' empty');
-    arrow.innerHTML = entry.is_dir ? chevronSvg() : '';
-    item.appendChild(arrow);
-
-    const icon = document.createElement('span');
-    icon.className = 'tree-icon';
-    icon.innerHTML = entry.is_dir ? folderIconSvg() : fileIconSvg(entry.icon);
-    item.appendChild(icon);
-
-    const name = document.createElement('span');
-    name.className = 'tree-name';
-    name.textContent = entry.name;
-    item.appendChild(name);
-
+    const item = this.createTreeItemElement(entry, depth);
     wrapper.appendChild(item);
 
     if (entry.is_dir) {
@@ -222,73 +363,109 @@ export class FileTree {
 
       let loaded = false;
       let expanded = false;
-
-      arrow.addEventListener('click', async (e) => {
-        e.stopPropagation();
+      const toggleExpand = async () => {
         expanded = !expanded;
-        arrow.classList.toggle('expanded', expanded);
+        item.querySelector('.tree-arrow')?.classList.toggle('expanded', expanded);
         this.setChildrenExpanded(children, entry.path, expanded);
-        if (!loaded) {
+        if (expanded && !loaded) {
           loaded = true;
           await this.renderLevel(children, entry.path, depth + 1);
         }
+      };
+
+      item.querySelector('.tree-arrow')?.addEventListener('click', async (event) => {
+        event.stopPropagation();
+        await toggleExpand();
       });
-
-      // Click on directory: select + toggle expand
-      item.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        this.handleClick(entry.path, e.shiftKey);
-        expanded = !expanded;
-        arrow.classList.toggle('expanded', expanded);
-        this.setChildrenExpanded(children, entry.path, expanded);
-        if (!loaded) {
-          loaded = true;
-          await this.renderLevel(children, entry.path, depth + 1);
-        }
+      item.addEventListener('click', async (event) => {
+        event.stopPropagation();
+        this.handleClick(entry.path, event.shiftKey);
+        this.currentPath = entry.path;
+        await toggleExpand();
+        this.updateContextHeader();
       });
     } else {
-      // Click on file: select only
-      item.addEventListener('click', (e) => { e.stopPropagation(); this.handleClick(entry.path, e.shiftKey); });
+      item.addEventListener('click', (event) => {
+        event.stopPropagation();
+        this.handleClick(entry.path, event.shiftKey);
+        this.currentPath = entry.path;
+        this.updateContextHeader();
+      });
     }
 
-    item.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (!this.selectedPaths.has(entry.path)) {
-        this.clearSelection();
-        this.selectedPaths.add(entry.path);
-        item.classList.add('selected');
-      }
-      this.showContextMenu(e.clientX, e.clientY, entry);
+    item.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      this.selectSinglePath(entry.path, item);
+      this.showContextMenu(event.clientX, event.clientY, entry);
     });
 
-    item.draggable = true;
-    item.addEventListener('dragstart', (e) => {
-      if (!this.selectedPaths.has(entry.path)) {
-        this.clearSelection();
-        this.selectedPaths.add(entry.path);
-        item.classList.add('selected');
-      }
-      e.dataTransfer!.setData('text/plain', JSON.stringify([...this.selectedPaths]));
-      e.dataTransfer!.effectAllowed = 'move';
-    });
-
-    if (entry.is_dir) {
-      item.addEventListener('dragover', (e) => { e.preventDefault(); item.classList.add('drop-target'); });
-      item.addEventListener('dragleave', () => { item.classList.remove('drop-target'); });
-      item.addEventListener('drop', async (e) => {
-        e.preventDefault();
-        item.classList.remove('drop-target');
-        try {
-          const data = e.dataTransfer!.getData('text/plain');
-          const sources: string[] = JSON.parse(data);
-          await invoke('move_entries', { sources, destDir: entry.path });
-          this.refresh();
-        } catch (err) { console.error('Move failed:', err); }
+    if (this.source.kind === 'local') {
+      item.draggable = true;
+      item.addEventListener('dragstart', (event) => {
+        if (!this.selectedPaths.has(entry.path)) {
+          this.selectSinglePath(entry.path, item);
+        }
+        event.dataTransfer?.setData('text/plain', JSON.stringify([...this.selectedPaths]));
+        if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
       });
+
+      if (entry.is_dir) {
+        item.addEventListener('dragover', (event) => {
+          event.preventDefault();
+          item.classList.add('drop-target');
+        });
+        item.addEventListener('dragleave', () => item.classList.remove('drop-target'));
+        item.addEventListener('drop', async (event) => {
+          event.preventDefault();
+          item.classList.remove('drop-target');
+          try {
+            const data = event.dataTransfer?.getData('text/plain') || '';
+            const sources: string[] = JSON.parse(data);
+            await invoke('move_entries', { sources, destDir: entry.path });
+            await this.refresh();
+          } catch (error) {
+            console.error('Move failed:', error);
+          }
+        });
+      }
     }
 
     return wrapper;
+  }
+
+  private createTreeItemElement(entry: FileEntry, depth: number, isDriveRoot = false): HTMLDivElement {
+    const item = document.createElement('div');
+    item.className = 'tree-item';
+    item.dataset.path = entry.path;
+    item.dataset.isDir = String(entry.is_dir);
+    item.style.paddingLeft = `${depth * 16 + 8}px`;
+    if (this.selectedPaths.has(entry.path)) item.classList.add('selected');
+
+    const arrow = document.createElement('span');
+    arrow.className = `tree-arrow${entry.is_dir ? '' : ' empty'}`;
+    arrow.innerHTML = entry.is_dir ? chevronSvg() : '';
+
+    const icon = document.createElement('span');
+    icon.className = 'tree-icon';
+    icon.innerHTML = isDriveRoot ? driveIconSvg() : (entry.is_dir ? folderIconSvg() : fileIconSvg(entry.icon));
+
+    const name = document.createElement('span');
+    name.className = 'tree-name';
+    name.textContent = entry.name;
+
+    const modified = document.createElement('span');
+    modified.className = 'tree-modified';
+    modified.textContent = formatModified(entry.modified);
+    modified.title = modified.textContent;
+
+    const size = document.createElement('span');
+    size.className = 'tree-size';
+    size.textContent = entry.is_dir ? '目录' : formatBytes(entry.size);
+    size.title = size.textContent;
+
+    item.append(arrow, icon, name, modified, size);
+    return item;
   }
 
   private handleClick(path: string, shiftKey: boolean) {
@@ -299,28 +476,43 @@ export class FileTree {
         const [lo, hi] = startIdx < endIdx ? [startIdx, endIdx] : [endIdx, startIdx];
         this.clearSelectionUI();
         this.selectedPaths.clear();
-        for (let i = lo; i <= hi; i++) {
-          this.selectedPaths.add(this.allVisibleItems[i]);
-          const el = this.container.querySelector(`[data-path="${CSS.escape(this.allVisibleItems[i])}"]`);
-          if (el) { el.classList.add('selected'); el.classList.add('shift-selected'); }
+        for (let index = lo; index <= hi; index += 1) {
+          const targetPath = this.allVisibleItems[index];
+          this.selectedPaths.add(targetPath);
+          const el = this.container.querySelector(`[data-path="${CSS.escape(targetPath)}"]`);
+          if (el) {
+            el.classList.add('selected', 'shift-selected');
+          }
         }
       }
     } else {
       this.clearSelectionUI();
       this.selectedPaths.clear();
       this.selectedPaths.add(path);
-      const el = this.container.querySelector(`[data-path="${CSS.escape(path)}"]`);
-      if (el) el.classList.add('selected');
+      this.container.querySelector(`[data-path="${CSS.escape(path)}"]`)?.classList.add('selected');
     }
+
     this.lastClickedPath = path;
     this.closeContextMenu();
   }
 
-  private clearSelection() { this.clearSelectionUI(); this.selectedPaths.clear(); this.lastClickedPath = ''; }
+  private selectSinglePath(path: string, item: HTMLElement) {
+    this.clearSelectionUI();
+    this.selectedPaths.clear();
+    this.selectedPaths.add(path);
+    this.lastClickedPath = path;
+    item.classList.add('selected');
+  }
+
+  private clearSelection() {
+    this.clearSelectionUI();
+    this.selectedPaths.clear();
+    this.lastClickedPath = '';
+  }
 
   private clearSelectionUI() {
-    this.container.querySelectorAll('.tree-item.selected, .tree-item.shift-selected').forEach((el) => {
-      el.classList.remove('selected', 'shift-selected');
+    this.container.querySelectorAll('.tree-item.selected, .tree-item.shift-selected').forEach((element) => {
+      element.classList.remove('selected', 'shift-selected');
     });
   }
 
@@ -331,35 +523,42 @@ export class FileTree {
     menu.style.left = `${x}px`;
     menu.style.top = `${y}px`;
 
-    const dirPath = entry.is_dir ? entry.path : entry.path.replace(/[\\/][^\\/]+$/, '');
-
-    if (entry.is_dir) {
-      menu.appendChild(this.menuItem(t('file.openInTerminal'), terminalSvg(), async () => {
-        this.onOpenTerminal?.(entry.path);
+    if (this.source.kind === 'remote') {
+      menu.appendChild(this.menuItem('下载到本地', downloadSvg(), async () => {
+        await this.downloadSelectedRemoteEntries();
+        this.closeContextMenu();
+      }));
+      menu.appendChild(this.menuItem('刷新目录', refreshSvg(), async () => {
+        await this.refresh();
+        this.closeContextMenu();
+      }));
+    } else {
+      const dirPath = entry.is_dir ? entry.path : parentPath(entry.path, this.platform);
+      if (entry.is_dir) {
+        menu.appendChild(this.menuItem(t('file.openInTerminal'), terminalSvg(), async () => {
+          this.onOpenTerminal?.(entry.path);
+          this.closeContextMenu();
+        }));
+        menu.appendChild(this.menuSeparator());
+      }
+      menu.appendChild(this.menuItem(t('file.newFile'), filePlusSvg(), () => {
+        this.openCreateDialog(dirPath, false);
+        this.closeContextMenu();
+      }));
+      menu.appendChild(this.menuItem(t('file.newFolder'), folderPlusSvg(), () => {
+        this.openCreateDialog(dirPath, true);
         this.closeContextMenu();
       }));
       menu.appendChild(this.menuSeparator());
+      menu.appendChild(this.menuItem(t('file.rename'), renameSvg(), () => {
+        this.startRename(entry);
+        this.closeContextMenu();
+      }));
+      menu.appendChild(this.menuItem(`${t('file.delete')} (${this.selectedPaths.size})`, trashSvg(), async () => {
+        await this.deleteSelected();
+        this.closeContextMenu();
+      }, true));
     }
-
-    menu.appendChild(this.menuItem(t('file.newFile'), filePlusSvg(), async () => {
-      this.openCreateDialog(dirPath, false);
-      this.closeContextMenu();
-    }));
-    menu.appendChild(this.menuItem(t('file.newFolder'), folderPlusSvg(), async () => {
-      this.openCreateDialog(dirPath, true);
-      this.closeContextMenu();
-    }));
-    menu.appendChild(this.menuSeparator());
-    menu.appendChild(this.menuItem(t('file.rename'), renameSvg(), () => {
-      this.startRename(entry);
-      this.closeContextMenu();
-    }));
-
-    const count = this.selectedPaths.size;
-    menu.appendChild(this.menuItem(`${t('file.delete')} (${count})`, trashSvg(), async () => {
-      await this.deleteSelected();
-      this.closeContextMenu();
-    }, true));
 
     document.body.appendChild(menu);
     this.contextMenu = menu;
@@ -371,23 +570,26 @@ export class FileTree {
 
   private menuItem(label: string, icon: string, action: () => void, danger = false): HTMLDivElement {
     const item = document.createElement('div');
-    item.className = 'context-menu-item' + (danger ? ' danger' : '');
+    item.className = `context-menu-item${danger ? ' danger' : ''}`;
     item.innerHTML = `${icon}<span>${label}</span>`;
     item.addEventListener('click', action);
     return item;
   }
 
   private menuSeparator(): HTMLDivElement {
-    const sep = document.createElement('div');
-    sep.className = 'context-menu-separator';
-    return sep;
+    const separator = document.createElement('div');
+    separator.className = 'context-menu-separator';
+    return separator;
   }
 
   private closeContextMenu() {
-    if (this.contextMenu) { this.contextMenu.remove(); this.contextMenu = null; }
+    if (!this.contextMenu) return;
+    this.contextMenu.remove();
+    this.contextMenu = null;
   }
 
   private openCreateDialog(parentDir: string, isDir: boolean) {
+    if (this.source.kind === 'remote') return;
     this.closeCreateDialog();
 
     const overlay = document.createElement('div');
@@ -408,17 +610,12 @@ export class FileTree {
     `;
 
     const input = overlay.querySelector('#file-create-name') as HTMLInputElement;
-    const confirmButton = overlay.querySelector('#file-create-confirm') as HTMLButtonElement;
-    const cancelButton = overlay.querySelector('#file-create-cancel') as HTMLButtonElement;
-
-    confirmButton.addEventListener('click', async () => {
+    overlay.querySelector('#file-create-confirm')?.addEventListener('click', async () => {
       await this.submitCreate(parentDir, isDir, input.value);
     });
-    cancelButton.addEventListener('click', () => this.closeCreateDialog());
+    overlay.querySelector('#file-create-cancel')?.addEventListener('click', () => this.closeCreateDialog());
     overlay.addEventListener('click', (event) => {
-      if (event.target === overlay) {
-        this.closeCreateDialog();
-      }
+      if (event.target === overlay) this.closeCreateDialog();
     });
     input.addEventListener('keydown', async (event) => {
       if (event.key === 'Enter') {
@@ -439,14 +636,14 @@ export class FileTree {
   private async submitCreate(parentDir: string, isDir: boolean, rawName: string) {
     const name = rawName.trim();
     if (!name) return;
-    const sep = parentDir.includes('\\') ? '\\' : '/';
-    const fullPath = parentDir + sep + name;
+    const separator = parentDir.includes('\\') ? '\\' : '/';
+    const fullPath = `${parentDir.replace(/[\\/]+$/, '')}${separator}${name}`;
     try {
       await invoke(isDir ? 'create_dir' : 'create_file', { path: fullPath });
       this.closeCreateDialog();
-      this.refresh();
-    } catch (e) {
-      alert(t('file.createFailed', String(e)));
+      await this.refresh();
+    } catch (error) {
+      alert(t('file.createFailed', String(error)));
     }
   }
 
@@ -457,9 +654,10 @@ export class FileTree {
   }
 
   private startRename(entry: FileEntry) {
+    if (this.source.kind === 'remote') return;
     const item = this.container.querySelector(`[data-path="${CSS.escape(entry.path)}"]`);
     if (!item) return;
-    const nameEl = item.querySelector('.tree-name') as HTMLSpanElement;
+    const nameEl = item.querySelector('.tree-name') as HTMLSpanElement | null;
     if (!nameEl) return;
 
     const input = document.createElement('input');
@@ -473,68 +671,63 @@ export class FileTree {
       const newName = input.value.trim();
       if (newName && newName !== entry.name) {
         const sep = entry.path.includes('\\') ? '\\' : '/';
-        const parentPath = entry.path.replace(/[\\/][^\\/]+$/, '');
-        const newPath = parentPath + sep + newName;
+        const parentDir = parentPath(entry.path, this.platform);
+        const newPath = `${parentDir}${sep}${newName}`;
         try {
           await invoke('rename_entry', { oldPath: entry.path, newPath });
-          this.refresh();
-        } catch (e) { alert(t('file.renameFailed', String(e))); this.refresh(); }
-      } else { this.refresh(); }
+        } catch (error) {
+          alert(t('file.renameFailed', String(error)));
+        }
+      }
+      await this.refresh();
     };
 
-    input.addEventListener('blur', finish);
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
-      if (e.key === 'Escape') { input.value = entry.name; input.blur(); }
+    input.addEventListener('blur', () => { void finish(); });
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') { event.preventDefault(); input.blur(); }
+      if (event.key === 'Escape') { input.value = entry.name; input.blur(); }
     });
   }
 
   private async deleteSelected() {
+    if (this.source.kind === 'remote') return;
     const paths = [...this.selectedPaths];
     if (paths.length === 0) return;
-    const msg = paths.length === 1
+    const message = paths.length === 1
       ? t('file.confirmDelete', paths[0].split(/[\\/]/).pop() || '')
       : t('file.confirmDeleteMulti', String(paths.length));
-    if (!confirm(msg)) return;
+    if (!confirm(message)) return;
     try {
       await invoke('delete_entries', { paths });
       this.selectedPaths.clear();
-      this.refresh();
-    } catch (e) { alert(t('file.deleteFailed', String(e))); }
+      await this.refresh();
+    } catch (error) {
+      alert(t('file.deleteFailed', String(error)));
+    }
   }
 
-  async refresh() {
-    this.init();
-  }
-
-  async revealPath(path: string) {
-    const normalized = normalizePath(path);
+  private async revealCurrentPath(path: string) {
+    const normalized = this.source.kind === 'remote' ? normalizeRemotePath(path) : normalizePath(path);
     if (!normalized) return;
 
-    if (this.platform !== 'windows') {
-      const desiredRoot = normalized.startsWith(this.rootPath || '') ? this.rootPath : '/';
-      if (!this.rootPath || desiredRoot !== this.rootPath) {
-        this.rootPath = desiredRoot;
-        await this.renderLevel(this.body, desiredRoot, 0);
-      }
-    }
-
-    const segments = splitPathSegments(normalized, this.platform);
-    let currentPath = this.platform === 'windows' ? segments[0] : this.rootPath || '/';
+    const segments = splitPathSegments(normalized, this.source.kind === 'remote' ? 'unix' : this.platform);
+    let currentPath = this.platform === 'windows' && this.source.kind === 'local'
+      ? segments[0]
+      : this.rootPath || '/';
     let currentContainer: HTMLElement = this.body;
 
-    if (this.platform === 'windows') {
+    if (this.platform === 'windows' && this.source.kind === 'local') {
       const rootItem = this.container.querySelector(`[data-path="${CSS.escape(currentPath)}"]`) as HTMLElement | null;
       if (!rootItem) return;
       await this.ensureExpanded(rootItem, currentPath, currentContainer);
       currentContainer = rootItem.parentElement?.querySelector(':scope > .tree-children') as HTMLElement || currentContainer;
     }
 
-    for (const segment of segments.slice(this.platform === 'windows' ? 1 : startUnixIndex(segments, currentPath))) {
-      currentPath = joinPath(currentPath, segment, this.platform);
+    for (const segment of segments.slice(this.platform === 'windows' && this.source.kind === 'local' ? 1 : startUnixIndex(segments, currentPath))) {
+      currentPath = joinPath(currentPath, segment, this.source.kind === 'remote' ? 'unix' : this.platform);
       let item = this.container.querySelector(`[data-path="${CSS.escape(currentPath)}"]`) as HTMLElement | null;
       if (!item) {
-        await this.renderLevel(currentContainer, parentPath(currentPath, this.platform), depthFromContainer(currentContainer));
+        await this.renderLevel(currentContainer, parentPath(currentPath, this.source.kind === 'remote' ? 'unix' : this.platform), depthFromContainer(currentContainer));
         item = this.container.querySelector(`[data-path="${CSS.escape(currentPath)}"]`) as HTMLElement | null;
       }
       if (!item) break;
@@ -553,21 +746,20 @@ export class FileTree {
       this.lastClickedPath = normalized;
       target.classList.add('selected');
       target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      this.currentPath = normalized;
+      this.updateContextHeader();
     }
   }
 
   private applyFilter() {
-    const query = (this.filterInput?.value || '').trim().toLowerCase();
+    const query = (this.container.querySelector('.file-filter-input') as HTMLInputElement | null)?.value.trim().toLowerCase() || '';
     const body = this.body;
-    const noResults = body.querySelector('.file-no-results');
-    if (noResults) noResults.remove();
+    body.querySelector('.file-no-results')?.remove();
 
-    // Collect all tree-item elements
     const allItems = body.querySelectorAll('.tree-item') as NodeListOf<HTMLElement>;
-
     if (!query) {
       this.restoreFilterState();
-      allItems.forEach(el => { el.style.display = ''; });
+      allItems.forEach((element) => { element.style.display = ''; });
       return;
     }
 
@@ -581,49 +773,43 @@ export class FileTree {
       });
     }
 
-    // Build a set of matched paths and their ancestor paths
     const matchedPaths = new Set<string>();
-    allItems.forEach(el => {
-      const name = (el.querySelector('.tree-name')?.textContent || '').toLowerCase();
+    allItems.forEach((element) => {
+      const name = (element.querySelector('.tree-name')?.textContent || '').toLowerCase();
       if (name.includes(query)) {
-        const path = el.dataset.path || '';
+        const path = element.dataset.path || '';
         matchedPaths.add(path);
-        // Mark all ancestors
-        let parent = el.parentElement;
+        let parent = element.parentElement;
         while (parent && parent !== body) {
           if (parent.classList.contains('tree-node')) {
-            const pItem = parent.querySelector(':scope > .tree-item') as HTMLElement;
-            if (pItem?.dataset.path) matchedPaths.add(pItem.dataset.path);
+            const parentItem = parent.querySelector(':scope > .tree-item') as HTMLElement | null;
+            if (parentItem?.dataset.path) matchedPaths.add(parentItem.dataset.path);
           }
           parent = parent.parentElement;
         }
       }
     });
 
-    // Apply visibility
-    allItems.forEach(el => {
-      const path = el.dataset.path || '';
-      el.style.display = matchedPaths.has(path) ? '' : 'none';
+    allItems.forEach((element) => {
+      element.style.display = matchedPaths.has(element.dataset.path || '') ? '' : 'none';
     });
 
-    // Show children containers of matched dirs
-    body.querySelectorAll<HTMLElement>('.tree-children').forEach((el) => {
-      const elH = el as HTMLElement;
-      const siblingItem = elH.previousElementSibling as HTMLElement;
-      if (siblingItem && matchedPaths.has(siblingItem.dataset.path || '')) {
-        elH.style.display = '';
-        elH.classList.remove('collapsed');
-        siblingItem.querySelector('.tree-arrow')?.classList.add('expanded');
+    body.querySelectorAll<HTMLElement>('.tree-children').forEach((children) => {
+      const parentItem = children.previousElementSibling as HTMLElement | null;
+      if (parentItem && matchedPaths.has(parentItem.dataset.path || '')) {
+        children.style.display = '';
+        children.classList.remove('collapsed');
+        parentItem.querySelector('.tree-arrow')?.classList.add('expanded');
       } else {
-        elH.style.display = 'none';
+        children.style.display = 'none';
       }
     });
 
     if (matchedPaths.size === 0) {
-      const msg = document.createElement('div');
-      msg.className = 'file-no-results';
-      msg.textContent = t('file.noResults');
-      body.appendChild(msg);
+      const empty = document.createElement('div');
+      empty.className = 'file-no-results';
+      empty.textContent = t('file.noResults');
+      body.appendChild(empty);
     }
   }
 
@@ -648,11 +834,164 @@ export class FileTree {
   private async ensureExpanded(item: HTMLElement, path: string, parentContainer: HTMLElement) {
     const children = item.parentElement?.querySelector(':scope > .tree-children') as HTMLElement | null;
     if (!children) return;
-    const arrow = item.querySelector('.tree-arrow');
     children.classList.remove('collapsed');
-    arrow?.classList.add('expanded');
+    item.querySelector('.tree-arrow')?.classList.add('expanded');
     if (children.children.length === 0) {
       await this.renderLevel(children, path, depthFromContainer(parentContainer) + 1);
+    }
+  }
+
+  private getCurrentRemoteProfile(): SSHProfile | null {
+    if (this.source.kind !== 'remote') return null;
+    const { profileId } = this.source;
+    return this.sshProfiles.find((profile) => profile.id === profileId) || null;
+  }
+
+  private async downloadSelectedRemoteEntries() {
+    if (this.source.kind !== 'remote') return;
+    const profile = this.getCurrentRemoteProfile();
+    if (!profile) return;
+    const remotePaths = [...this.selectedPaths];
+    if (remotePaths.length === 0) return;
+
+    const localDir = await open({
+      title: '选择本地下载目录',
+      directory: true,
+      multiple: false,
+    });
+    if (!localDir || Array.isArray(localDir)) return;
+
+    await invoke('download_remote_entries', {
+      profile,
+      remotePaths,
+      localDir,
+      profiles: this.sshProfiles,
+    });
+  }
+
+  private async uploadLocalEntriesToRemote(localPaths: string[], remoteDir: string) {
+    if (this.source.kind !== 'remote') return;
+    const profile = this.getCurrentRemoteProfile();
+    if (!profile || localPaths.length === 0) return;
+
+    try {
+      await invoke('upload_local_entries', {
+        profile,
+        localPaths,
+        remoteDir,
+        profiles: this.sshProfiles,
+      });
+      await this.refresh();
+    } catch (error) {
+      this.updateTransferBar({
+        direction: 'upload',
+        status: 'error',
+        fileName: localPaths[0] || '',
+        detail: `上传失败: ${String(error)}`,
+        transferredBytes: 0,
+        totalBytes: 0,
+        progressPercent: 0,
+      });
+    }
+  }
+
+  private createTransferBar() {
+    if (this.transferBar) return;
+    const bar = document.createElement('div');
+    bar.className = 'file-transfer-bar hidden';
+    bar.innerHTML = `
+      <div class="file-transfer-head">
+        <span class="file-transfer-title">传输任务</span>
+        <span class="file-transfer-percent">0%</span>
+      </div>
+      <div class="file-transfer-detail">等待任务</div>
+      <div class="file-transfer-track">
+        <div class="file-transfer-fill"></div>
+      </div>
+    `;
+    document.body.appendChild(bar);
+    this.transferBar = bar;
+  }
+
+  private async bindTransferEvents() {
+    await listen<TransferProgressPayload>('file-transfer-progress', ({ payload }) => {
+      this.updateTransferBar(payload);
+    });
+  }
+
+  private updateTransferBar(payload: TransferProgressPayload) {
+    if (!this.transferBar) return;
+    if (this.transferHideTimer !== null) {
+      window.clearTimeout(this.transferHideTimer);
+      this.transferHideTimer = null;
+    }
+
+    this.transferBar.classList.remove('hidden', 'error', 'success');
+    this.transferBar.classList.toggle('error', payload.status === 'error');
+    this.transferBar.classList.toggle('success', payload.status === 'success');
+
+    const title = this.transferBar.querySelector('.file-transfer-title') as HTMLSpanElement;
+    const percent = this.transferBar.querySelector('.file-transfer-percent') as HTMLSpanElement;
+    const detail = this.transferBar.querySelector('.file-transfer-detail') as HTMLDivElement;
+    const fill = this.transferBar.querySelector('.file-transfer-fill') as HTMLDivElement;
+
+    title.textContent = payload.direction === 'upload' ? '远程上传' : '远程下载';
+    percent.textContent = `${payload.progressPercent}%`;
+    detail.textContent = `${payload.detail} · ${shortName(payload.fileName)} · ${formatBytes(payload.transferredBytes)} / ${formatBytes(payload.totalBytes)}`;
+    fill.style.width = `${Math.max(0, Math.min(payload.progressPercent, 100))}%`;
+
+    if (payload.status === 'success' || payload.status === 'error') {
+      this.transferHideTimer = window.setTimeout(() => {
+        this.transferBar?.classList.add('hidden');
+      }, 2800);
+    }
+  }
+
+  private async bindWindowDragDrop() {
+    const appWindow = getCurrentWindow();
+    await appWindow.onDragDropEvent(async (event) => {
+      if (this.source.kind !== 'remote') return;
+
+      if (event.payload.type === 'leave') {
+        this.highlightDropTarget('');
+        return;
+      }
+
+      if (event.payload.type === 'enter' || event.payload.type === 'over') {
+        const target = this.resolveDropTargetFromPoint(event.payload.position.x, event.payload.position.y);
+        this.highlightDropTarget(target);
+        return;
+      }
+
+      if (event.payload.type === 'drop') {
+        const target = this.resolveDropTargetFromPoint(event.payload.position.x, event.payload.position.y)
+          || this.currentPath
+          || this.rootPath;
+        this.highlightDropTarget('');
+        await this.uploadLocalEntriesToRemote(event.payload.paths, target);
+      }
+    });
+  }
+
+  private resolveDropTargetFromPoint(physicalX: number, physicalY: number): string {
+    const scale = window.devicePixelRatio || 1;
+    const element = document.elementFromPoint(physicalX / scale, physicalY / scale) as HTMLElement | null;
+    const item = element?.closest('.tree-item') as HTMLElement | null;
+    if (!item || !this.container.contains(item)) return '';
+    const path = item.dataset.path || '';
+    if (!path) return '';
+    if (item.dataset.isDir === 'true') return path;
+    return parentPath(path, 'unix');
+  }
+
+  private highlightDropTarget(path: string) {
+    if (this.activeDropTargetPath === path) return;
+    if (this.activeDropTargetPath) {
+      this.container.querySelector(`[data-path="${CSS.escape(this.activeDropTargetPath)}"]`)?.classList.remove('drop-target');
+    }
+    this.activeDropTargetPath = path;
+    if (path) {
+      this.container.querySelector(`[data-path="${CSS.escape(path)}"]`)?.classList.add('drop-target');
     }
   }
 }
@@ -662,11 +1001,18 @@ function escapeHtml(value: string): string {
 }
 
 function normalizePath(path: string): string {
+  if (!path) return '';
   if (/^[A-Za-z]:[\\/]/.test(path)) {
     const normalized = path.replace(/\//g, '\\');
     return /^[A-Za-z]:\\$/.test(normalized) ? normalized : normalized.replace(/\\+$/, '');
   }
   return path.replace(/\/+$/, '') || '/';
+}
+
+function normalizeRemotePath(path: string): string {
+  if (!path) return '/';
+  const normalized = path.replace(/\\/g, '/');
+  return normalized === '/' ? '/' : normalized.replace(/\/+$/, '') || '/';
 }
 
 function splitPathSegments(path: string, platform: string): string[] {
@@ -703,11 +1049,40 @@ function depthFromContainer(container: HTMLElement): number {
 
 function startUnixIndex(_segments: string[], currentPath: string): number {
   if (currentPath === '/') return 0;
-  const baseSegments = currentPath.split('/').filter(Boolean);
-  return baseSegments.length;
+  return currentPath.split('/').filter(Boolean).length;
 }
 
-// ===== SVG Icons =====
+function formatModified(value: number): string {
+  if (!value) return '-';
+  try {
+    return new Intl.DateTimeFormat('zh-CN', {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(value * 1000));
+  } catch {
+    return '-';
+  }
+}
+
+function formatBytes(size: number): string {
+  if (!size) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let value = size;
+  let index = 0;
+  while (value >= 1024 && index < units.length - 1) {
+    value /= 1024;
+    index += 1;
+  }
+  return `${value >= 100 || index === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[index]}`;
+}
+
+function shortName(path: string): string {
+  if (!path) return '-';
+  return path.split(/[\\/]/).filter(Boolean).pop() || path;
+}
+
 function folderHeaderSvg(): string {
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`;
 }
@@ -726,9 +1101,19 @@ function folderIconSvg(): string {
 
 function fileIconSvg(iconType: string): string {
   const colors: Record<string, string> = {
-    typescript: '#3178c6', javascript: '#f7df1e', rust: '#dea584', python: '#3572a5',
-    css: '#563d7c', html: '#e34c26', json: '#a6e3a1', markdown: '#585b70',
-    config: '#585b70', image: '#f38ba8', executable: '#a6e3a1', archive: '#f9e2af', file: '#585b70',
+    typescript: '#3178c6',
+    javascript: '#f7df1e',
+    rust: '#dea584',
+    python: '#3572a5',
+    css: '#563d7c',
+    html: '#e34c26',
+    json: '#a6e3a1',
+    markdown: '#585b70',
+    config: '#585b70',
+    image: '#f38ba8',
+    executable: '#a6e3a1',
+    archive: '#f9e2af',
+    file: '#585b70',
   };
   const color = colors[iconType] || colors.file;
   return `<svg viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>`;
@@ -752,4 +1137,12 @@ function renameSvg(): string {
 
 function trashSvg(): string {
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
+}
+
+function downloadSvg(): string {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`;
+}
+
+function refreshSvg(): string {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.13-3.36L23 10"></path><path d="M20.49 15A9 9 0 0 1 6.36 18.36L1 14"></path></svg>`;
 }

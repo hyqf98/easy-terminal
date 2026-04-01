@@ -34,6 +34,10 @@ export class ShortcutManager {
     this.emit();
   }
 
+  async loadDefaultBindings(): Promise<ShortcutBinding[]> {
+    return invoke<ShortcutBinding[]>('load_default_shortcuts');
+  }
+
   matches(actionId: string, event: KeyboardEvent): boolean {
     const binding = this.bindings.find((item) => item.id === actionId);
     if (!binding) return false;

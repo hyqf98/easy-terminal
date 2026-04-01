@@ -13,7 +13,9 @@ import { AppUpdater } from './app-update';
 import { ShortcutManager } from './shortcut-manager';
 import { ShortcutPanel } from './shortcut-panel';
 import { t, onLangChange } from './i18n';
+import { defaultWindowIcon } from '@tauri-apps/api/app';
 import { invoke } from '@tauri-apps/api/core';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import './styles.css';
 
 function showToast(message: string) {
@@ -46,6 +48,20 @@ window.addEventListener('DOMContentLoaded', async () => {
   const panelMappings = document.getElementById('panel-mappings')! as HTMLDivElement;
   const panelSsh = document.getElementById('panel-ssh')! as HTMLDivElement;
   const panelShortcuts = document.getElementById('panel-shortcuts')! as HTMLDivElement;
+  const titlebar = document.getElementById('app-titlebar')! as HTMLDivElement;
+  const resizeHandles = Array.from(document.querySelectorAll<HTMLElement>('[data-resize-direction]'));
+  const appWin = getCurrentWindow();
+  let hint: HTMLDivElement | null = null;
+  let hintDismissed = false;
+
+  try {
+    const icon = await defaultWindowIcon();
+    if (icon) {
+      await appWin.setIcon(icon);
+    }
+  } catch (error) {
+    console.error('window icon init failed', error);
+  }
 
   const intelligence = new CommandIntelligence();
   const commandSuggest = new CommandSuggest(intelligence);
@@ -63,11 +79,37 @@ window.addEventListener('DOMContentLoaded', async () => {
     await intelligence.recordHistory(command, cwd);
   });
   canvas.getSnapTargets = (excludeId) => terminalManager.getSnapTargets(excludeId);
+  canvas.onCanvasContextMenu = (cvs, clientX, clientY) => {
+    const items: Array<{ label: string; action: () => void }> = [];
+    if (terminalManager.getTerminalCount() > 0) {
+      items.push({
+        label: '一键对齐终端',
+        action: () => {
+          const rect = viewport.getBoundingClientRect();
+          terminalManager.alignAll({ w: rect.width, h: rect.height });
+          canvas.resetView();
+        },
+      });
+    }
+    items.push({
+      label: '新建终端',
+      action: () => {
+        terminalManager.createTerminal(80, 80, 700, 450);
+      },
+    });
+    cvs.showCanvasMenu(clientX, clientY, items);
+  };
 
   // Sidebar (three-column layout)
   const sidebar = new Sidebar(sidebarContainer, panelArea);
+  const updateCanvasHintVisibility = () => {
+    if (!hint) return;
+    const layout = appBody.dataset.layout || 'canvas';
+    hint.classList.toggle('hidden', layout !== 'canvas' || hintDismissed);
+  };
   const updateLayoutMode = (tab: string | null) => {
-    appBody.dataset.layout = (tab === 'files' || tab === 'ssh') ? 'files' : tab ? 'workspace' : 'canvas';
+    appBody.dataset.layout = tab === 'files' ? 'files' : tab ? 'workspace' : 'canvas';
+    updateCanvasHintVisibility();
   };
   sidebar.onTabChange = updateLayoutMode;
   updateLayoutMode(sidebar.getActiveTab() || null);
@@ -77,10 +119,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   fileTree.onOpenTerminal = (dirPath: string) => {
     terminalManager.createTerminalAt(50, 50, 700, 450, dirPath);
   };
-  terminalManager.onActiveTerminalCwdChange = (cwd) => {
-    if (cwd) {
-      void fileTree.revealPath(cwd);
-    }
+  terminalManager.onActiveTerminalChange = (context) => {
+    void fileTree.syncToTerminal(context);
   };
 
   // Settings Panel
@@ -124,33 +164,41 @@ window.addEventListener('DOMContentLoaded', async () => {
   const sshPanel = new SSHPanel(panelSsh);
   sshPanel.onProfilesChange = (profiles) => {
     terminalManager.setSshProfiles(profiles);
+    fileTree.setSshProfiles(profiles);
   };
 
   new ShortcutPanel(panelShortcuts, shortcutManager);
   sshPanel.onSelectionChange = (profile, profiles) => {
     terminalManager.setSshProfiles(profiles);
+    fileTree.setSshProfiles(profiles);
     terminalManager.setPendingSshProfile(profile);
   };
   sshPanel.onConnect = async (profile, profiles) => {
     terminalManager.setSshProfiles(profiles);
-    hint.classList.add('hidden');
+    fileTree.setSshProfiles(profiles);
+    hintDismissed = true;
+    updateCanvasHintVisibility();
     await terminalManager.createSshTerminal(profile);
   };
 
   // Hint
-  const hint = document.createElement('div');
+  hint = document.createElement('div');
   hint.className = 'canvas-hint';
   hint.textContent = t('hint.canvas');
   document.body.appendChild(hint);
+  updateCanvasHintVisibility();
 
   // Update hint on language change
   onLangChange(() => {
+    if (!hint) return;
     hint.textContent = t('hint.canvas');
+    updateCanvasHintVisibility();
   });
 
   // Hide hint after first terminal is created
   canvas.onTerminalCreate = (x, y, w, h) => {
-    hint.classList.add('hidden');
+    hintDismissed = true;
+    updateCanvasHintVisibility();
     terminalManager.createTerminal(x, y, w, h);
   };
 
@@ -158,7 +206,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   try {
     const saved = await invoke<Array<{ x: number; y: number; w: number; h: number; title: string; cwd: string }>>('load_terminal_state');
     if (saved.length > 0) {
-      hint.classList.add('hidden');
+      hintDismissed = true;
+      updateCanvasHintVisibility();
       for (const s of saved) {
         await terminalManager.createTerminal(s.x, s.y, s.w, s.h, { cwd: s.cwd || undefined, mode: 'local' });
       }
@@ -168,7 +217,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Save terminal state before window closes
-  const appWin = (window as any).__TAURI__.window.getCurrentWindow();
   appWin.onCloseRequested(async () => {
     try {
       const states = terminalManager.getTerminalStates();
@@ -178,15 +226,72 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // App window controls
-  document.getElementById('app-minimize')?.addEventListener('click', () => {
-    appWin.minimize();
+  // App window controls — use mousedown to avoid WebKit backdrop-filter compositing issues
+  // where click events may never fire on buttons inside a backdrop-filter container
+  const bindControl = (id: string, fn: () => void) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      if (e.button !== 0) return;
+      e.preventDefault();
+      fn();
+    });
+  };
+  bindControl('app-minimize', () => {
+    void appWin.minimize().catch((error) => {
+      console.error('window minimize failed', error);
+    });
   });
-  document.getElementById('app-maximize')?.addEventListener('click', async () => {
-    await (await appWin.isMaximized() ? appWin.unmaximize() : appWin.maximize());
+  bindControl('app-maximize', () => {
+    void appWin.toggleMaximize().catch((error) => {
+      console.error('window maximize toggle failed', error);
+    });
   });
-  document.getElementById('app-close')?.addEventListener('click', () => {
-    appWin.close();
+  bindControl('app-close', () => {
+    // Save terminal state before closing
+    try {
+      const states = terminalManager.getTerminalStates();
+      void invoke('save_terminal_state', { sessions: states });
+    } catch { /* ignore save errors */ }
+    // Use destroy() to force-close (bypasses onCloseRequested lifecycle)
+    void appWin.destroy().catch((error) => {
+      console.error('window destroy failed, falling back to close', error);
+      void appWin.close().catch((e) => console.error('window close also failed', e));
+    });
+  });
+
+  const startWindowDrag = async (event: MouseEvent) => {
+    if (event.button !== 0) return;
+    if ((event.target as HTMLElement).closest('.app-window-controls')) return;
+    try {
+      await appWin.startDragging();
+    } catch (error) {
+      console.error('window drag failed', error);
+    }
+  };
+
+  titlebar.addEventListener('mousedown', (event) => {
+    void startWindowDrag(event);
+  });
+  titlebar.addEventListener('dblclick', (event) => {
+    if ((event.target as HTMLElement).closest('.app-window-controls')) return;
+    void appWin.toggleMaximize().catch((error) => {
+      console.error('titlebar maximize toggle failed', error);
+    });
+  });
+
+  resizeHandles.forEach((handle) => {
+    handle.addEventListener('mousedown', (event) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const direction = handle.dataset.resizeDirection;
+      if (!direction) return;
+      void appWin.startResizeDragging(direction as Parameters<typeof appWin.startResizeDragging>[0]).catch((error) => {
+        console.error('window resize drag failed', error);
+      });
+    });
   });
 
   // Track mouse position on canvas for Ctrl+V terminal placement
@@ -204,7 +309,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     if ((e.target as HTMLElement).closest('.terminal-window')) return;
     terminalManager.blurActive();
   });
-
+  viewport.addEventListener('wheel', (e) => {
+    if ((e.target as HTMLElement).closest('.terminal-window')) return;
+    terminalManager.hideTransientUi();
+  }, { passive: true });
   // Toast notification when terminal is copied via Ctrl+C
   terminalManager.onTerminalCopied = () => {
     showToast(t('terminal.copied'));

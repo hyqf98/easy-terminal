@@ -7,9 +7,11 @@ export class CommandSuggest {
   private detailPopup: HTMLDivElement | null = null;
   private activeIndex: number | null = null;
   private filteredItems: SuggestionItem[] = [];
+  private temporaryItems: SuggestionItem[] = [];
   private visible = false;
 
   public onSelect?: (item: SuggestionItem) => void;
+  public onActiveChange?: (item: SuggestionItem | null) => void;
 
   constructor(private intelligence: CommandIntelligence) {}
 
@@ -29,12 +31,24 @@ export class CommandSuggest {
     return this.intelligence.getGhostSuggestion(input);
   }
 
+  getGhostSuggestionForItem(input: string, item: SuggestionItem | null): GhostSuggestion | null {
+    return this.intelligence.getGhostSuggestionForItem(input, item);
+  }
+
   getSuggestions(input: string): SuggestionItem[] {
     return this.intelligence.getSuggestionItems(input);
   }
 
   resolveExecution(input: string): ExecutionResolution {
     return this.intelligence.resolveExecution(input);
+  }
+
+  getActiveItem(): SuggestionItem | null {
+    return this.activeIndex === null ? null : this.filteredItems[this.activeIndex] || null;
+  }
+
+  getVisibleItems(): SuggestionItem[] {
+    return [...this.filteredItems];
   }
 
   update(input: string): boolean {
@@ -44,6 +58,7 @@ export class CommandSuggest {
       return false;
     }
 
+    this.temporaryItems = [];
     this.filteredItems = this.intelligence.getSuggestionItems(trimmed);
     if (this.filteredItems.length === 0) {
       this.hide();
@@ -55,15 +70,38 @@ export class CommandSuggest {
     return true;
   }
 
-  hide() {
+  showTemporaryItems(items: SuggestionItem[]): boolean {
+    if (items.length === 0) {
+      this.hide();
+      return false;
+    }
+
+    this.temporaryItems = [...items];
+    this.filteredItems = [...items];
+    this.activeIndex = null;
+    this.show();
+    this.emitActiveChange();
+    return true;
+  }
+
+  clearTemporaryItems() {
+    if (this.temporaryItems.length === 0) return;
+    this.temporaryItems = [];
+  }
+
+  hide(notifyActiveChange = true) {
     if (this.popup) {
       this.popup.remove();
       this.popup = null;
     }
     this.hideDetail();
+    this.temporaryItems = [];
     this.filteredItems = [];
     this.activeIndex = null;
     this.visible = false;
+    if (notifyActiveChange) {
+      this.emitActiveChange();
+    }
   }
 
   isVisible(): boolean {
@@ -74,38 +112,36 @@ export class CommandSuggest {
     if (!this.popup) return;
 
     const rect = terminalEl.getBoundingClientRect();
-    let left = rect.left + cursorX;
-    let top = rect.top + cursorY + 12;
-    const popupWidth = Math.max(280, Math.min(420, rect.width * 0.62));
+    const cursorScreenX = rect.left + Math.max(0, cursorX);
+    const cursorScreenY = rect.top + Math.max(0, cursorY);
+    const popupWidth = Math.min(520, Math.max(320, window.innerWidth * 0.26));
+    const gap = 4;
 
-    // Calculate available space below and above the cursor
-    const spaceBelow = window.innerHeight - top - 8;
-    const spaceAbove = rect.top + cursorY - 8;
-    const preferBelow = spaceBelow >= spaceAbove;
+    // Always prefer below cursor; only flip above when near bottom
+    const spaceBelow = window.innerHeight - cursorScreenY - gap;
+    const minPopupHeight = 120;
+    const preferBelow = spaceBelow >= minPopupHeight;
 
+    let top: number;
     let maxH: number;
     if (preferBelow) {
-      maxH = Math.min(320, Math.max(160, spaceBelow));
+      top = cursorScreenY + gap;
+      maxH = Math.min(320, Math.max(120, spaceBelow - gap));
     } else {
-      // Flip above: position popup above the cursor line
-      maxH = Math.min(320, Math.max(160, spaceAbove));
-      top = Math.max(8, top - maxH - 24);
+      const spaceAbove = cursorScreenY - gap;
+      maxH = Math.min(320, Math.max(120, spaceAbove));
+      top = Math.max(8, cursorScreenY - maxH - gap);
+    }
+
+    let left = cursorScreenX;
+    if (left + popupWidth > window.innerWidth) {
+      left = Math.max(8, window.innerWidth - popupWidth - 8);
     }
 
     this.popup.style.minWidth = '240px';
-    this.popup.style.maxWidth = `${popupWidth}px`;
+    this.popup.style.width = `${popupWidth}px`;
+    this.popup.style.maxWidth = `${Math.min(popupWidth, window.innerWidth - 16)}px`;
     this.popup.style.maxHeight = `${maxH}px`;
-
-    if (left + popupWidth > window.innerWidth) {
-      left = window.innerWidth - popupWidth - 8;
-    }
-    if (left < 8) left = 8;
-
-    // Final clamp: ensure popup stays in viewport
-    if (top + maxH > window.innerHeight) {
-      top = Math.max(8, window.innerHeight - maxH - 8);
-    }
-
     this.popup.style.left = `${left}px`;
     this.popup.style.top = `${top}px`;
   }
@@ -121,6 +157,7 @@ export class CommandSuggest {
           : Math.min(this.activeIndex + 1, this.filteredItems.length - 1);
         this.highlightActive();
         this.showDetail(this.activeIndex === null ? null : this.filteredItems[this.activeIndex]);
+        this.emitActiveChange();
         return true;
       case 'ArrowUp':
         e.preventDefault();
@@ -133,6 +170,7 @@ export class CommandSuggest {
         }
         this.highlightActive();
         this.showDetail(this.activeIndex === null ? null : this.filteredItems[this.activeIndex]);
+        this.emitActiveChange();
         return true;
       case 'Enter':
         if (this.activeIndex !== null && this.filteredItems[this.activeIndex]) {
@@ -177,6 +215,11 @@ export class CommandSuggest {
           <span class="cmd-suggest-title">${escapeHtml(item.title)}</span>
           ${item.description || item.subtitle ? `<span class="cmd-suggest-inline-note">(${escapeHtml(item.description || item.subtitle)})</span>` : ''}
         </div>
+        <div class="cmd-suggest-meta-line">
+          <span class="cmd-chip">${escapeHtml(item.sourceLabel)}</span>
+          ${item.matchedField ? `<span class="cmd-chip">${escapeHtml(item.matchedField)}</span>` : ''}
+          ${item.language ? `<span class="cmd-chip">${escapeHtml(item.language)}</span>` : ''}
+        </div>
       </div>
     `).join('')}
     `;
@@ -197,6 +240,7 @@ export class CommandSuggest {
         this.activeIndex = index;
         this.highlightActive();
         this.showDetail(this.filteredItems[index]);
+        this.emitActiveChange();
       });
     });
 
@@ -205,19 +249,28 @@ export class CommandSuggest {
 
   private selectItem(item: SuggestionItem) {
     this.onSelect?.(item);
-    this.hide();
+    this.hide(false);
+  }
+
+  private emitActiveChange() {
+    this.onActiveChange?.(this.activeIndex === null ? null : this.filteredItems[this.activeIndex] || null);
   }
 
   private highlightActive() {
     if (!this.popup) return;
-    this.popup.querySelectorAll('.cmd-suggest-item').forEach((element, index) => {
-      element.classList.toggle('active', this.activeIndex !== null && index === this.activeIndex);
+    this.popup.querySelectorAll<HTMLElement>('.cmd-suggest-item').forEach((element, index) => {
+      const isActive = this.activeIndex !== null && index === this.activeIndex;
+      element.classList.toggle('active', isActive);
+      if (isActive) {
+        element.scrollIntoView({ block: 'nearest' });
+      }
     });
   }
 
   private showDetail(item: SuggestionItem | null) {
     this.hideDetail();
     if (!item || !this.popup) return;
+    if (item.type === 'completion') return;
 
     const popup = document.createElement('div');
     popup.className = 'cmd-detail-popup simple';

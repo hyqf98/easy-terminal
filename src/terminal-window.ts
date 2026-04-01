@@ -8,13 +8,14 @@ import type { CanvasController, PtyOutputEvent, SuggestionItem, TerminalLaunchOp
 import { CommandSuggest } from './command-suggest';
 import { resolvePreviewPath } from './command-intercept';
 import { openFilePreview } from './file-preview';
+import { parseCommandLine } from './shell-parse';
 import type { ShortcutManager } from './shortcut-manager';
 
 const DARK_THEME = {
   background: '#1a1b2e',
   foreground: '#a9b1d6',
   cursor: '#c0caf5',
-  selectionBackground: '#2f3347',
+  selectionBackground: 'rgba(122, 162, 247, 0.28)',
   black: '#15161e',
   red: '#f7768e',
   green: '#9ece6a',
@@ -37,7 +38,7 @@ const LIGHT_THEME = {
   background: '#ffffff',
   foreground: '#1d1d1f',
   cursor: '#0071e3',
-  selectionBackground: '#e0e0e5',
+  selectionBackground: 'rgba(0, 113, 227, 0.18)',
   black: '#1d1d1f',
   red: '#ff3b30',
   green: '#34c759',
@@ -60,7 +61,7 @@ const WARM_THEME = {
   background: '#f2ece4',
   foreground: '#2f2923',
   cursor: '#0d7a6d',
-  selectionBackground: '#e0d8cc',
+  selectionBackground: 'rgba(13, 122, 109, 0.18)',
   black: '#51473d',
   red: '#c05621',
   green: '#2f855a',
@@ -85,6 +86,24 @@ function getTermTheme(theme: string) {
   return DARK_THEME;
 }
 
+interface CompletionEntry {
+  name: string;
+  path: string;
+  is_dir: boolean;
+}
+
+interface CompletionCandidate extends CompletionEntry {
+  displayValue: string;
+}
+
+interface PathCompletionContext {
+  command: string;
+  fragment: string;
+  insertPrefix: string;
+  replaceFrom: number;
+  directoriesOnly: boolean;
+}
+
 export class TerminalWindow {
   private id = '';
   private container: HTMLDivElement;
@@ -100,6 +119,16 @@ export class TerminalWindow {
   private selectionOverlays: HTMLDivElement[] = [];
   private terminalContextMenu: HTMLDivElement | null = null;
   private currentGhostText = '';
+  private currentGhostReplacement = '';
+  private currentGhostPreserveLeadingWhitespace = false;
+  private overlaySyncFrame: number | null = null;
+  private lastOverlayPositionStale = false;
+  private lastTabAt = 0;
+  private lastTabSignature = '';
+  private homeDirCache: string | null = null;
+  private passwordQueue: string[] = [];
+  private acceptedUnknownHost = false;
+  private passwordPromptBuffer = '';
 
   // Drag state
   private isDragging = false;
@@ -148,6 +177,7 @@ export class TerminalWindow {
     this.canvasController = canvasController;
     this.commandSuggest = commandSuggest;
     this.container = this.buildDOM(parentEl);
+    this.container.dataset.initStage = 'dom';
     const baseFontSize = this.calcFontSize(this.width, this.height);
     const themeName = document.documentElement.getAttribute('data-theme') || 'dark';
     this.term = new Terminal({
@@ -159,14 +189,8 @@ export class TerminalWindow {
       lineHeight: 1.2,
       cursorBlink: true,
       cursorStyle: 'bar',
-      allowTransparency: true,
     });
-    this.fitAddon = new FitAddon();
-    this.term.loadAddon(this.fitAddon);
-    this.term.loadAddon(new WebLinksAddon());
-
-    const body = this.container.querySelector('.terminal-body') as HTMLDivElement;
-    this.term.open(body);
+    this.container.dataset.initStage = 'terminal';
 
     this.boundDragMove = this.onDragMove.bind(this);
     this.boundDragEnd = this.onDragEnd.bind(this);
@@ -180,10 +204,32 @@ export class TerminalWindow {
     this.bindActivation();
     this.bindSelectionContextMenu();
     this.bindLineSelection();
+    this.container.dataset.initStage = 'bindings';
+
+    this.fitAddon = new FitAddon();
+    this.term.loadAddon(this.fitAddon);
+    this.term.loadAddon(new WebLinksAddon());
+    this.container.dataset.initStage = 'addons';
+
+    try {
+      const unicode = this.term.unicode as { activeVersion?: string } | undefined;
+      if (unicode && typeof unicode.activeVersion === 'string') {
+        unicode.activeVersion = '11';
+      }
+    } catch {
+      // Unicode 11 is optional; keep terminal usable when unavailable.
+    }
+
+    const body = this.container.querySelector('.terminal-body') as HTMLDivElement;
+    this.term.open(body);
+    this.container.dataset.initStage = 'opened';
   }
 
   async initPty(options: TerminalLaunchOptions = {}) {
     this.launchOptions = { mode: 'local', ...options };
+    this.passwordQueue = [...(this.launchOptions.passwordSequence || [])];
+    this.acceptedUnknownHost = false;
+    this.passwordPromptBuffer = '';
     this.fitAddon.fit();
     const cols = this.term.cols;
     const rows = this.term.rows;
@@ -195,12 +241,16 @@ export class TerminalWindow {
       if (event.payload.session_id === sessionId) {
         const data = event.payload.data;
         this.extractTitleFromOsc(data);
-        this.term.write(data);
+        this.handleSshHandshakeOutput(data);
+        this.term.write(data, () => {
+          this.scheduleOverlayReposition();
+        });
       }
     });
 
     sessionId = await invoke<string>('create_pty', { cols, rows, cwd: this.launchOptions.cwd || null });
     this.id = sessionId;
+    this.container.dataset.sessionId = sessionId;
 
     // Save initial cwd if provided
     if (this.launchOptions.cwd) {
@@ -247,12 +297,18 @@ export class TerminalWindow {
 
   /** Track what the user is typing to drive suggestions */
   private async handleTerminalInput(data: string): Promise<boolean> {
+    // In TUI mode (alternate screen buffer), don't track line input or show suggestions
+    if (this.isInAltBuffer()) {
+      return false;
+    }
+
     if (data === '\r') {
       const rawLine = this.currentLine;
       const trimmed = rawLine.trim();
       this.currentLine = '';
       this.cursorPos = 0;
       this.lineStartCell = null;
+      this.lastOverlayPositionStale = false;
       this.clearLineSelection();
       this.commandSuggest.hide();
       this.hideGhostText();
@@ -300,12 +356,14 @@ export class TerminalWindow {
       this.currentLine = '';
       this.cursorPos = 0;
       this.lineStartCell = null;
+      this.lastOverlayPositionStale = false;
       this.clearLineSelection();
     } else if (data === '\x15') {
       // Ctrl+U - clear line
       this.currentLine = '';
       this.cursorPos = 0;
       this.lineStartCell = null;
+      this.lastOverlayPositionStale = false;
       this.clearLineSelection();
     } else if (this.isPrintableInput(data)) {
       this.ensureLineStartCell();
@@ -332,7 +390,32 @@ export class TerminalWindow {
   }
 
   private refreshSuggestions() {
+    if (this.isInAltBuffer()) {
+      this.commandSuggest.hide();
+      this.hideGhostText();
+      return;
+    }
+    if (this.lastOverlayPositionStale) {
+      this.commandSuggest.hide();
+      this.hideGhostText();
+      return;
+    }
+    // Check if cursor position matches our tracked position before showing suggestions
+    if (this.currentLine.trim() && this.lineStartCell !== null) {
+      const metrics = this.getOverlayMetrics();
+      if (metrics) {
+        const expectedCell = this.lineStartCell + this.cursorPos;
+        const actualCell = metrics.cursorY * metrics.cols + metrics.cursorX;
+        if (Math.abs(expectedCell - actualCell) > 3) {
+          this.lastOverlayPositionStale = true;
+          this.commandSuggest.hide();
+          this.hideGhostText();
+          return;
+        }
+      }
+    }
     if (this.currentLine.trim()) {
+      this.commandSuggest.clearTemporaryItems();
       const hasSuggestions = this.commandSuggest.update(this.currentLine);
       if (hasSuggestions) {
         this.positionSuggestPopup();
@@ -345,17 +428,52 @@ export class TerminalWindow {
   }
 
   private updateGhostText() {
-    const ghost = this.commandSuggest.getGhostSuggestion(this.currentLine);
+    const visibleItems = this.commandSuggest.getVisibleItems();
+    const activeItem = this.commandSuggest.getActiveItem();
+    const ghost = visibleItems.length > 0
+      ? this.commandSuggest.getGhostSuggestionForItem(this.currentLine, activeItem || visibleItems[0])
+      : this.commandSuggest.getGhostSuggestion(this.currentLine);
     if (!ghost || !ghost.text.trim()) {
       this.hideGhostText();
       return;
     }
     this.currentGhostText = ghost.text;
+    const acceptance = this.resolveGhostAcceptance(ghost.item, ghost.text);
+    this.currentGhostReplacement = acceptance.value;
+    this.currentGhostPreserveLeadingWhitespace = acceptance.preserveLeadingWhitespace;
+    this.showGhostText(ghost.text);
+  }
+
+  private updateGhostTextForItem(item: SuggestionItem | null) {
+    if (!item) {
+      this.updateGhostText();
+      return;
+    }
+
+    const ghost = this.commandSuggest.getGhostSuggestionForItem(this.currentLine, item);
+    if (!ghost || !ghost.text.trim()) {
+      this.hideGhostText();
+      return;
+    }
+
+    this.currentGhostText = ghost.text;
+    const acceptance = this.resolveGhostAcceptance(ghost.item, ghost.text);
+    this.currentGhostReplacement = acceptance.value;
+    this.currentGhostPreserveLeadingWhitespace = acceptance.preserveLeadingWhitespace;
     this.showGhostText(ghost.text);
   }
 
   private showGhostText(text: string) {
+    if (this.isInAltBuffer()) {
+      this.hideGhostText();
+      return;
+    }
     const terminalBody = this.container.querySelector('.terminal-body') as HTMLDivElement;
+    const metrics = this.getOverlayMetrics();
+    if (!metrics || this.cursorPos !== this.currentLine.length) {
+      this.hideGhostText();
+      return;
+    }
 
     if (!this.ghostOverlay) {
       this.ghostOverlay = document.createElement('div');
@@ -363,12 +481,23 @@ export class TerminalWindow {
       terminalBody.appendChild(this.ghostOverlay);
     }
 
-    this.ghostOverlay.innerHTML = `<span class="ghost-text-value">${escapeHtml(text)}</span>`;
-    this.ghostOverlay.style.display = 'inline-flex';
+    const left = metrics.offsetX + metrics.cursorX * metrics.colWidth;
+    const top = metrics.offsetY + metrics.cursorY * metrics.rowHeight;
+
+    this.ghostOverlay.textContent = text;
+    this.ghostOverlay.style.left = `${left}px`;
+    this.ghostOverlay.style.top = `${top}px`;
+    this.ghostOverlay.style.maxWidth = `${Math.max(metrics.terminalBody.clientWidth - left - 12, 64)}px`;
+    this.ghostOverlay.style.fontFamily = this.term.options.fontFamily || 'monospace';
+    this.ghostOverlay.style.fontSize = `${this.term.options.fontSize || 14}px`;
+    this.ghostOverlay.style.lineHeight = String(this.term.options.lineHeight || 1.2);
+    this.ghostOverlay.style.display = 'block';
   }
 
   private hideGhostText() {
     this.currentGhostText = '';
+    this.currentGhostReplacement = '';
+    this.currentGhostPreserveLeadingWhitespace = false;
     if (this.ghostOverlay) {
       this.ghostOverlay.style.display = 'none';
     }
@@ -377,30 +506,45 @@ export class TerminalWindow {
   private async acceptGhostText() {
     const ghost = this.currentGhostText;
     if (!ghost) return;
+    const replacement = this.currentGhostReplacement;
+    const preserveLeadingWhitespace = this.currentGhostPreserveLeadingWhitespace;
+    if (replacement) {
+      this.commandSuggest.hide(false);
+      await this.replaceCurrentInput(replacement, preserveLeadingWhitespace);
+      return;
+    }
+
     this.hideGhostText();
-    this.commandSuggest.hide();
+    this.commandSuggest.hide(false);
     await invoke('write_pty', { sessionId: this.id, data: ghost });
     this.currentLine += ghost;
     this.cursorPos = this.currentLine.length;
+    this.lineStartCell = null;
+    this.scheduleSuggestionRefresh();
   }
 
   private bindCommandSuggest() {
     // When user selects a command from suggestions
     this.commandSuggest.onSelect = (item: SuggestionItem) => {
-      const replacement = item.type === 'mapping' ? item.executeText : item.insertText;
-      const partial = this.currentLine.trimStart().split(/\s/)[0];
-      const erase = partial ? '\b \b'.repeat(partial.length) : '';
-      invoke('write_pty', { sessionId: this.id, data: `${erase}${replacement}` }).catch(console.error);
-      const leadingSpaces = this.currentLine.match(/^\s*/)?.[0] || '';
-      this.currentLine = `${leadingSpaces}${replacement}`;
-      this.cursorPos = this.currentLine.length;
-      this.clearLineSelection();
-      this.refreshSuggestions();
-      this.hideGhostText();
+      void this.replaceCurrentInput(this.resolveSuggestionReplacement(item), item.type === 'completion');
+    };
+    this.commandSuggest.onActiveChange = (item) => {
+      this.updateGhostTextForItem(item);
     };
 
     this.container.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (this.handleClipboardShortcut(e)) {
+        return;
+      }
+
       if (this.handleLineEditingShortcut(e)) {
+        return;
+      }
+
+      if (e.key === 'Tab' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        void this.handleTabCompletion(false);
         return;
       }
 
@@ -413,6 +557,406 @@ export class TerminalWindow {
         return;
       }
     }, true); // capture phase to intercept before xterm
+  }
+
+  private resolveSuggestionReplacement(item: SuggestionItem): string {
+    switch (item.type) {
+      case 'history':
+        return item.executeText || item.insertText;
+      case 'mapping':
+        return item.executeText;
+      case 'completion':
+        return item.insertText || item.executeText || item.usage;
+      case 'command':
+      default:
+        return item.usage || item.insertText || item.executeText;
+    }
+  }
+
+  private resolveGhostAcceptance(item: SuggestionItem, ghostText: string): {
+    value: string;
+    preserveLeadingWhitespace: boolean;
+  } {
+    const replacement = this.resolveSuggestionReplacement(item);
+    const trimmedInput = this.currentLine.trimStart();
+    const normalizedInput = normalizeSuggestionValue(trimmedInput);
+    const normalizedReplacement = normalizeSuggestionValue(replacement);
+
+    if (item.type === 'completion') {
+      return {
+        value: replacement,
+        preserveLeadingWhitespace: true,
+      };
+    }
+
+    if (!trimmedInput) {
+      return {
+        value: replacement,
+        preserveLeadingWhitespace: false,
+      };
+    }
+
+    if (normalizedReplacement && !normalizedReplacement.startsWith(normalizedInput)) {
+      return {
+        value: replacement,
+        preserveLeadingWhitespace: false,
+      };
+    }
+
+    return {
+      value: `${trimmedInput}${ghostText}`,
+      preserveLeadingWhitespace: false,
+    };
+  }
+
+  private async replaceCurrentInput(nextValue: string, preserveLeadingWhitespace = false) {
+    if (!this.id) return;
+    const leadingSpaces = this.currentLine.match(/^\s*/)?.[0] || '';
+    const replacement = preserveLeadingWhitespace ? nextValue : `${leadingSpaces}${nextValue}`;
+    await this.moveCursorTo(this.currentLine.length);
+    await invoke('write_pty', { sessionId: this.id, data: '\x15' });
+    await invoke('write_pty', { sessionId: this.id, data: replacement });
+    this.currentLine = replacement;
+    this.cursorPos = replacement.length;
+    this.lineStartCell = null;
+    this.clearLineSelection();
+    this.hideGhostText();
+    this.scheduleSuggestionRefresh();
+  }
+
+  private scheduleSuggestionRefresh() {
+    this.cancelOverlaySync();
+    this.overlaySyncFrame = window.requestAnimationFrame(() => {
+      this.overlaySyncFrame = null;
+      this.lineStartCell = null;
+      this.refreshSuggestions();
+    });
+  }
+
+  private isInAltBuffer(): boolean {
+    try {
+      return this.term.buffer.active.type === 'alternate';
+    } catch {
+      return false;
+    }
+  }
+
+  private scheduleOverlayReposition() {
+    this.cancelOverlaySync();
+    this.overlaySyncFrame = window.requestAnimationFrame(() => {
+      this.overlaySyncFrame = null;
+      if (this.isInAltBuffer()) {
+        this.lineStartCell = null;
+        this.hideGhostText();
+        this.commandSuggest.hide();
+        return;
+      }
+      if (!this.currentLine.trim()) {
+        this.lineStartCell = null;
+        this.hideGhostText();
+        this.commandSuggest.hide();
+        return;
+      }
+      // Detect TUI apps that don't use alternate screen buffer (e.g., Claude CLI).
+      // When a TUI moves the cursor, the expected cell (based on our line tracking)
+      // won't match the actual cursor position — suppress overlays in that case.
+      if (this.lineStartCell !== null) {
+        const metrics = this.getOverlayMetrics();
+        if (metrics) {
+          const expectedCell = this.lineStartCell + this.cursorPos;
+          const actualCell = metrics.cursorY * metrics.cols + metrics.cursorX;
+          if (Math.abs(expectedCell - actualCell) > 3) {
+            this.lastOverlayPositionStale = true;
+            this.lineStartCell = null;
+            this.hideGhostText();
+            this.commandSuggest.hide();
+            return;
+          }
+        }
+      }
+      this.lineStartCell = null;
+      if (this.commandSuggest.isVisible()) {
+        this.positionSuggestPopup();
+      }
+      this.updateGhostText();
+    });
+  }
+
+  private cancelOverlaySync() {
+    if (this.overlaySyncFrame !== null) {
+      window.cancelAnimationFrame(this.overlaySyncFrame);
+      this.overlaySyncFrame = null;
+    }
+  }
+
+  private async handleTabCompletion(shiftKey: boolean) {
+    if (shiftKey) return;
+
+    const activeItem = this.commandSuggest.getActiveItem();
+    if (activeItem?.type === 'completion') {
+      await this.replaceCurrentInput(this.resolveSuggestionReplacement(activeItem), true);
+      return;
+    }
+
+    const pathContext = this.resolvePathCompletionContext();
+    if (pathContext) {
+      const handled = await this.handlePathCompletion(pathContext);
+      if (handled) return;
+    }
+
+    if (activeItem) {
+      await this.replaceCurrentInput(this.resolveSuggestionReplacement(activeItem), false);
+      return;
+    }
+
+    if (this.currentGhostText && this.cursorPos === this.currentLine.length) {
+      await this.acceptGhostText();
+      return;
+    }
+
+    const suggestions = this.commandSuggest.getSuggestions(this.currentLine.trimStart());
+    if (suggestions.length > 0) {
+      await this.replaceCurrentInput(
+        this.resolveSuggestionReplacement(suggestions[0]),
+        suggestions[0].type === 'completion'
+      );
+    }
+  }
+
+  private resolvePathCompletionContext(): PathCompletionContext | null {
+    if (this.cursorPos !== this.currentLine.length) return null;
+
+    const trimmed = this.currentLine.trimStart();
+    if (!trimmed) return null;
+
+    const args = parseCommandLine(trimmed);
+    const command = args[0] || '';
+    if (!['cd', 'ls', 'll', 'dir'].includes(command)) return null;
+
+    const endsWithSpace = /\s$/.test(this.currentLine);
+    const fragment = endsWithSpace ? '' : (args[args.length - 1] || '');
+    const replaceFrom = fragment ? this.currentLine.lastIndexOf(fragment) : this.currentLine.length;
+
+    return {
+      command,
+      fragment: fragment === command ? '' : fragment,
+      insertPrefix: fragment ? '' : (endsWithSpace ? '' : ' '),
+      replaceFrom,
+      directoriesOnly: command === 'cd',
+    };
+  }
+
+  private async handlePathCompletion(context: PathCompletionContext): Promise<boolean> {
+    const candidates = await this.loadPathCompletionCandidates(context);
+    if (candidates.length === 0) {
+      return false;
+    }
+
+    const now = Date.now();
+    const signature = `${this.currentLine}|${context.command}|${context.fragment}`;
+    const isDoubleTab = now - this.lastTabAt < 420 && this.lastTabSignature === signature;
+    this.lastTabAt = now;
+    this.lastTabSignature = signature;
+
+    if (isDoubleTab) {
+      const items = candidates.map((candidate) => this.createCompletionSuggestion(context, candidate));
+      if (this.commandSuggest.showTemporaryItems(items)) {
+        this.positionSuggestPopup();
+        this.updateGhostText();
+      }
+      return true;
+    }
+
+    const typedName = basenameLike(context.fragment);
+    const commonName = commonStringPrefix(candidates.map((candidate) => candidate.name));
+    if (candidates.length === 1) {
+      await this.applyCompletionCandidate(context, candidates[0]);
+      return true;
+    }
+
+    if (commonName && commonName.length > typedName.length) {
+      const prefix = stripBasenamePreserveSeparator(context.fragment);
+      const separator = this.getPathSeparator(candidates[0].displayValue || context.fragment || this.cwdPath);
+      const nextValue = `${prefix}${commonName}`;
+      const trailing = candidates.every((candidate) => candidate.is_dir && candidate.name === commonName) ? separator : '';
+      await this.replaceCurrentInput(
+        `${this.currentLine.slice(0, context.replaceFrom)}${context.insertPrefix}${nextValue}${trailing}`,
+        true
+      );
+      return true;
+    }
+
+    return true;
+  }
+
+  private async loadPathCompletionCandidates(context: PathCompletionContext): Promise<CompletionCandidate[]> {
+    const target = await this.resolveCompletionTarget(context.fragment);
+    if (!target) return [];
+
+    try {
+      const entries = await invoke<CompletionEntry[]>('read_dir', { path: target.dirPath });
+      return entries
+        .filter((entry) => !context.directoriesOnly || entry.is_dir)
+        .filter((entry) => !target.namePrefix || entry.name.toLowerCase().startsWith(target.namePrefix.toLowerCase()))
+        .map((entry) => ({
+          ...entry,
+          displayValue: `${target.displayPrefix}${entry.name}${entry.is_dir ? target.separator : ' '}`,
+        }))
+        .sort((left, right) =>
+          Number(right.is_dir) - Number(left.is_dir)
+          || left.name.localeCompare(right.name, 'zh-CN'));
+    } catch (error) {
+      console.error('path completion failed', error);
+      return [];
+    }
+  }
+
+  private async resolveCompletionTarget(fragment: string): Promise<{
+    dirPath: string;
+    displayPrefix: string;
+    namePrefix: string;
+    separator: string;
+  } | null> {
+    const homeDir = await this.getHomeDir();
+    const cwd = this.cwdPath || homeDir;
+    const expanded = expandHomeLike(fragment, homeDir);
+    const separator = this.getPathSeparator(expanded || cwd);
+    if (/^[a-zA-Z]:$/.test(expanded)) {
+      return {
+        dirPath: `${expanded}\\`,
+        displayPrefix: `${fragment}\\`,
+        namePrefix: '',
+        separator: '\\',
+      };
+    }
+    const isAbsolute = this.isAbsolutePath(expanded);
+    const endsWithSeparator = /[\\/]+$/.test(expanded);
+    const namePrefix = expanded && !endsWithSeparator ? basenameLike(expanded) : '';
+    const displayPrefix = fragment ? stripBasenamePreserveSeparator(fragment) : '';
+    const searchDir = expanded
+      ? (endsWithSeparator ? expanded : dirnameLike(expanded))
+      : cwd;
+
+    const dirPath = !searchDir
+      ? (isAbsolute ? rootLike(expanded) : cwd)
+      : (this.isAbsolutePath(searchDir) ? searchDir : joinLike(cwd, searchDir, separator));
+
+    return {
+      dirPath: dirPath || cwd,
+      displayPrefix,
+      namePrefix,
+      separator,
+    };
+  }
+
+  private createCompletionSuggestion(context: PathCompletionContext, candidate: CompletionCandidate): SuggestionItem {
+    const replacement = `${this.currentLine.slice(0, context.replaceFrom)}${context.insertPrefix}${candidate.displayValue}`;
+    return {
+      id: `completion:${candidate.path}`,
+      type: 'completion',
+      title: candidate.name,
+      subtitle: candidate.path,
+      description: candidate.is_dir ? 'Directory' : 'File',
+      insertText: replacement,
+      executeText: replacement,
+      usage: replacement,
+      hint: candidate.displayValue,
+      examples: [],
+      aliases: [],
+      tags: [context.command],
+      category: 'completion',
+      sourceLabel: 'Completion',
+      score: candidate.is_dir ? 16 : 8,
+      language: 'path',
+    };
+  }
+
+  private async applyCompletionCandidate(context: PathCompletionContext, candidate: CompletionCandidate) {
+    await this.replaceCurrentInput(
+      `${this.currentLine.slice(0, context.replaceFrom)}${context.insertPrefix}${candidate.displayValue}`,
+      true
+    );
+  }
+
+  private async getHomeDir(): Promise<string> {
+    if (!this.homeDirCache) {
+      this.homeDirCache = await invoke<string>('get_home_dir');
+    }
+    return this.homeDirCache;
+  }
+
+  private getPathSeparator(value: string): string {
+    return value.includes('\\') ? '\\' : '/';
+  }
+
+  private isAbsolutePath(value: string): boolean {
+    return /^[a-zA-Z]:[\\/]/.test(value) || value.startsWith('/') || value.startsWith('\\\\');
+  }
+
+  private handleClipboardShortcut(event: KeyboardEvent): boolean {
+    const matchesCopy = this.shortcutManager
+      ? this.shortcutManager.matches('terminal.copyText', event)
+      : ((event.ctrlKey || event.metaKey) && event.shiftKey && !event.altKey && event.key.toLowerCase() === 'c');
+    const matchesPaste = this.shortcutManager
+      ? this.shortcutManager.matches('terminal.pasteText', event)
+      : ((event.ctrlKey || event.metaKey) && event.shiftKey && !event.altKey && event.key.toLowerCase() === 'v');
+
+    if (matchesCopy) {
+      event.preventDefault();
+      event.stopPropagation();
+      void this.copySelectionOrLine();
+      return true;
+    }
+
+    if (matchesPaste) {
+      event.preventDefault();
+      event.stopPropagation();
+      void this.pasteClipboardText();
+      return true;
+    }
+
+    return false;
+  }
+
+  private async copySelectionOrLine() {
+    const selected = this.term.getSelection().trim();
+    const lineSelection = this.getLineSelectionText();
+    const fallback = this.currentLine.trim() ? this.currentLine : '';
+    const text = selected || lineSelection || fallback;
+    if (!text) return;
+
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (error) {
+      console.error('clipboard write failed', error);
+    }
+  }
+
+  private async pasteClipboardText() {
+    if (!this.id) return;
+
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text) return;
+      await invoke('write_pty', { sessionId: this.id, data: text });
+
+      if (/[\r\n]/.test(text)) {
+        this.currentLine = '';
+        this.cursorPos = 0;
+        this.lineStartCell = null;
+        this.clearLineSelection();
+        this.commandSuggest.hide();
+        this.hideGhostText();
+        return;
+      }
+
+      this.ensureLineStartCell();
+      this.currentLine = `${this.currentLine.slice(0, this.cursorPos)}${text}${this.currentLine.slice(this.cursorPos)}`;
+      this.cursorPos += text.length;
+      this.refreshSuggestions();
+    } catch (error) {
+      console.error('clipboard read failed', error);
+    }
   }
 
   private handleLineEditingShortcut(event: KeyboardEvent): boolean {
@@ -446,12 +990,6 @@ export class TerminalWindow {
     }
 
     if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key) && !event.ctrlKey && !event.metaKey && !event.altKey) {
-      // Let ArrowRight pass through when at end of line with no ghost text,
-      // so zsh autosuggestions can be accepted natively
-      if (event.key === 'ArrowRight' && !event.shiftKey && this.cursorPos >= this.currentLine.length && !this.currentGhostText) {
-        this.clearLineSelection();
-        return false;
-      }
       event.preventDefault();
       event.stopPropagation();
       this.clearLineSelection();
@@ -465,13 +1003,8 @@ export class TerminalWindow {
   private positionSuggestPopup() {
     const metrics = this.getOverlayMetrics();
     if (!metrics) return;
-
-    const cursorCell = this.getCursorCell(metrics);
-    const cursorX = this.mod(cursorCell, metrics.cols);
-    const cursorY = Math.floor(cursorCell / metrics.cols);
-    const pixelX = metrics.offsetX + cursorX * metrics.colWidth;
-    const pixelY = metrics.offsetY + (cursorY + 1.7) * metrics.rowHeight;
-
+    const pixelX = metrics.offsetX + metrics.cursorX * metrics.colWidth;
+    const pixelY = metrics.offsetY + (metrics.cursorY + 1) * metrics.rowHeight;
     this.commandSuggest.positionAt(metrics.terminalBody, pixelX, pixelY);
   }
 
@@ -485,6 +1018,12 @@ export class TerminalWindow {
       start: Math.min(this.selectionAnchor, this.cursorPos),
       end: Math.max(this.selectionAnchor, this.cursorPos),
     };
+  }
+
+  private getLineSelectionText(): string {
+    const range = this.getLineSelectionRange();
+    if (!range) return '';
+    return this.currentLine.slice(range.start, range.end);
   }
 
   private clearLineSelection() {
@@ -603,6 +1142,26 @@ export class TerminalWindow {
       // Save raw cwd path (don't update title bar — user can rename)
       this.cwdPath = lastTitle.trim();
       this.onCwdChange?.(this.cwdPath);
+    }
+  }
+
+  private handleSshHandshakeOutput(data: string) {
+    if (this.launchOptions.mode !== 'ssh') return;
+
+    this.passwordPromptBuffer = `${this.passwordPromptBuffer}${data}`.slice(-2048);
+    const normalized = this.passwordPromptBuffer.toLowerCase();
+
+    if (!this.acceptedUnknownHost && normalized.includes('continue connecting (yes/no')) {
+      this.acceptedUnknownHost = true;
+      invoke('write_pty', { sessionId: this.id, data: 'yes\r' }).catch(console.error);
+      return;
+    }
+
+    if (/(password|passphrase).*:\s*$/.test(normalized) && this.passwordQueue.length > 0) {
+      const nextPassword = this.passwordQueue.shift();
+      if (!nextPassword) return;
+      invoke('write_pty', { sessionId: this.id, data: `${nextPassword}\r` }).catch(console.error);
+      this.passwordPromptBuffer = '';
     }
   }
 
@@ -1035,6 +1594,7 @@ export class TerminalWindow {
   }
 
   async close() {
+    this.cancelOverlaySync();
     this.commandSuggest.hide();
     this.closeTerminalContextMenu();
     this.selectionOverlays.forEach((overlay) => overlay.remove());
@@ -1076,6 +1636,12 @@ export class TerminalWindow {
     this.container.classList.remove('focused');
   }
 
+  hideTransientUi() {
+    this.cancelOverlaySync();
+    this.commandSuggest.hide();
+    this.hideGhostText();
+  }
+
   getCwd(): string {
     return this.cwdPath;
   }
@@ -1104,6 +1670,16 @@ export class TerminalWindow {
     };
   }
 
+  setRect(x: number, y: number, w: number, h: number) {
+    this.container.style.left = `${x}px`;
+    this.container.style.top = `${y}px`;
+    this.container.style.width = `${w}px`;
+    this.container.style.height = `${h}px`;
+    this.isMaximized = false;
+    this.savedRect = null;
+    this.updateFontSizeAndFit();
+  }
+
   setTheme(theme: string) {
     this.term.options.theme = getTermTheme(theme);
   }
@@ -1121,8 +1697,8 @@ export class TerminalWindow {
   private calcFontSize(w: number, h: number): number {
     const area = w * h;
     const refArea = 700 * 450;
-    const scale = Math.sqrt(area / refArea);
-    return Math.max(8, Math.min(26, Math.round(14 * scale)));
+    const scale = Math.pow(area / refArea, 0.35);
+    return Math.max(8, Math.min(20, Math.round(12 * scale)));
   }
 
   private updateFontSizeAndFit() {
@@ -1190,10 +1766,6 @@ export class TerminalWindow {
     return this.lineStartCell;
   }
 
-  private getCursorCell(metrics: { cols: number; cursorX: number; cursorY: number }): number {
-    return this.getLineStartCell(metrics) + this.cursorPos;
-  }
-
   private ensureSelectionOverlayCount(count: number, terminalBody: HTMLElement) {
     while (this.selectionOverlays.length < count) {
       const overlay = document.createElement('div');
@@ -1209,6 +1781,72 @@ export class TerminalWindow {
   }
 }
 
-function escapeHtml(value: string): string {
-  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function basenameLike(value: string): string {
+  const trimmed = value.replace(/[\\/]+$/, '');
+  if (!trimmed) return '';
+  const parts = trimmed.split(/[\\/]/);
+  return parts[parts.length - 1] || '';
+}
+
+function dirnameLike(value: string): string {
+  const trimmed = value.replace(/[\\/]+$/, '');
+  if (!trimmed) return '';
+
+  const unixRoot = trimmed.startsWith('/') ? '/' : '';
+  const windowsRootMatch = trimmed.match(/^[a-zA-Z]:[\\/]/);
+  const windowsRoot = windowsRootMatch ? windowsRootMatch[0].slice(0, 3) : '';
+  const index = Math.max(trimmed.lastIndexOf('/'), trimmed.lastIndexOf('\\'));
+  if (index < 0) return '';
+  if (unixRoot && index === 0) return '/';
+  if (windowsRoot && index < windowsRoot.length) return windowsRoot;
+  return trimmed.slice(0, index);
+}
+
+function stripBasenamePreserveSeparator(value: string): string {
+  if (!value) return '';
+  if (/[\\/]+$/.test(value)) return value;
+  const index = Math.max(value.lastIndexOf('/'), value.lastIndexOf('\\'));
+  return index >= 0 ? value.slice(0, index + 1) : '';
+}
+
+function joinLike(base: string, segment: string, separator: string): string {
+  if (!segment) return base;
+  if (!base) return segment;
+  return `${base.replace(/[\\/]+$/, '')}${separator}${segment.replace(/^[\\/]+/, '')}`;
+}
+
+function rootLike(value: string): string {
+  if (value.startsWith('/')) return '/';
+  const windowsRoot = value.match(/^[a-zA-Z]:[\\/]/);
+  if (windowsRoot) return windowsRoot[0].slice(0, 3);
+  return '';
+}
+
+function expandHomeLike(value: string, homeDir: string): string {
+  if (value === '~') return homeDir;
+  if (value === '~/' || value === '~\\') {
+    const separator = homeDir.includes('\\') ? '\\' : '/';
+    return `${homeDir.replace(/[\\/]+$/, '')}${separator}`;
+  }
+  if (value.startsWith('~/') || value.startsWith('~\\')) {
+    const separator = homeDir.includes('\\') ? '\\' : '/';
+    return joinLike(homeDir, value.slice(2), separator);
+  }
+  return value;
+}
+
+function commonStringPrefix(values: string[]): string {
+  if (values.length === 0) return '';
+  let prefix = values[0];
+  for (let index = 1; index < values.length; index += 1) {
+    while (prefix && !values[index].startsWith(prefix)) {
+      prefix = prefix.slice(0, -1);
+    }
+    if (!prefix) return '';
+  }
+  return prefix;
+}
+
+function normalizeSuggestionValue(value: string): string {
+  return value.trim().replace(/\s+/g, ' ').toLowerCase();
 }

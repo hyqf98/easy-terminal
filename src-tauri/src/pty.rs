@@ -1,6 +1,8 @@
 use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
 use std::collections::HashMap;
+use std::fs;
 use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Emitter};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -66,27 +68,10 @@ function global:prompt {
             c.arg("-NoExit");
             c.arg("-Command");
             c.arg(prompt_script.trim());
-            if let Some(ref dir) = cwd {
-                let p = std::path::Path::new(dir);
-                if p.is_dir() {
-                    c.cwd(p);
-                }
-            }
+            apply_cwd(&mut c, cwd.as_deref());
             c
         } else {
-            let mut c = CommandBuilder::new_default_prog();
-            c.env(
-                "PROMPT_COMMAND",
-                r#"printf "\033]0;%s\007" "$PWD""#,
-            );
-            c.env("PS1", r#"\[\e]0;\w\a\]\w $ "#);
-            if let Some(ref dir) = cwd {
-                let p = std::path::Path::new(dir);
-                if p.is_dir() {
-                    c.cwd(p);
-                }
-            }
-            c
+            build_unix_command(cwd.as_deref())?
         };
 
         let child = pair.slave.spawn_command(cmd).map_err(|e| e.to_string())?;
@@ -165,4 +150,81 @@ function global:prompt {
             Err("Session not found".into())
         }
     }
+}
+
+fn apply_cwd(command: &mut CommandBuilder, cwd: Option<&str>) {
+    if let Some(dir) = cwd {
+        let p = Path::new(dir);
+        if p.is_dir() {
+            command.cwd(p);
+        }
+    }
+}
+
+fn build_unix_command(cwd: Option<&str>) -> Result<CommandBuilder, String> {
+    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
+    let shell_name = Path::new(&shell)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("sh");
+
+    if shell_name == "zsh" {
+        let zdotdir = ensure_easy_terminal_zdotdir()?;
+        let mut c = CommandBuilder::new(&shell);
+        c.arg("-i");
+        c.env("ZDOTDIR", zdotdir);
+        c.env("EASY_TERMINAL", "1");
+        apply_cwd(&mut c, cwd);
+        return Ok(c);
+    }
+
+    let mut c = CommandBuilder::new_default_prog();
+    c.env("PROMPT_COMMAND", r#"printf "\033]0;%s\007" "$PWD""#);
+    c.env("PS1", r#"\[\e]0;\w\a\]\w $ "#);
+    c.env("EASY_TERMINAL", "1");
+    apply_cwd(&mut c, cwd);
+    Ok(c)
+}
+
+fn ensure_easy_terminal_zdotdir() -> Result<PathBuf, String> {
+    let home = dirs::home_dir().ok_or("Cannot determine home directory")?;
+    let dir = home.join(".easy-terminal").join("zdotdir");
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+
+    let zshrc = dir.join(".zshrc");
+    let content = r#"
+export EASY_TERMINAL=1
+
+if [ -f "$HOME/.zshrc" ]; then
+  source "$HOME/.zshrc"
+fi
+
+if typeset -f autosuggest-disable >/dev/null 2>&1; then
+  autosuggest-disable >/dev/null 2>&1
+fi
+if typeset -f _zsh_autosuggest_clear >/dev/null 2>&1; then
+  _zsh_autosuggest_clear >/dev/null 2>&1
+fi
+typeset -g ZSH_AUTOSUGGEST_DISABLED=1
+typeset -ga ZSH_AUTOSUGGEST_STRATEGY
+ZSH_AUTOSUGGEST_STRATEGY=()
+POSTDISPLAY=
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=8'
+
+autoload -Uz add-zsh-hook >/dev/null 2>&1 || true
+if typeset -f add-zsh-hook >/dev/null 2>&1; then
+  _easy_terminal_precmd() { print -Pn "\e]0;%~\a" }
+  add-zsh-hook precmd _easy_terminal_precmd
+fi
+
+autoload -Uz add-zle-hook-widget >/dev/null 2>&1 || true
+if typeset -f add-zle-hook-widget >/dev/null 2>&1; then
+  _easy_terminal_clear_postdisplay() { POSTDISPLAY= }
+  add-zle-hook-widget line-init _easy_terminal_clear_postdisplay >/dev/null 2>&1 || true
+  add-zle-hook-widget keymap-select _easy_terminal_clear_postdisplay >/dev/null 2>&1 || true
+fi
+"#;
+
+    fs::write(zshrc, content).map_err(|e| e.to_string())?;
+    Ok(dir)
 }

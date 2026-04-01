@@ -22,6 +22,12 @@ pub struct ShortcutBinding {
     pub label: String,
     #[serde(default)]
     pub description: String,
+    #[serde(default = "default_shortcut_category")]
+    pub category: String,
+    #[serde(default = "default_shortcut_editable")]
+    pub editable: bool,
+    #[serde(default = "default_shortcut_deletable")]
+    pub deletable: bool,
     #[serde(default)]
     pub windows: String,
     #[serde(default)]
@@ -34,6 +40,18 @@ fn default_language() -> String {
     "zh-CN".to_string()
 }
 
+fn default_shortcut_category() -> String {
+    "workspace".to_string()
+}
+
+fn default_shortcut_editable() -> bool {
+    true
+}
+
+fn default_shortcut_deletable() -> bool {
+    false
+}
+
 fn default_auto_check_update() -> bool {
     true
 }
@@ -41,7 +59,7 @@ fn default_auto_check_update() -> bool {
 impl Default for AppSettings {
     fn default() -> Self {
         Self {
-            theme: "dark".to_string(),
+            theme: "light".to_string(),
             language: default_language(),
             auto_check_update: default_auto_check_update(),
             last_update_check: String::new(),
@@ -204,7 +222,8 @@ pub fn load_command_history() -> Result<Vec<CommandHistoryEntry>, String> {
         return Ok(Vec::new());
     }
     let data = fs::read_to_string(&path).map_err(|e| e.to_string())?;
-    serde_json::from_str(&data).map_err(|e| e.to_string())
+    let entries = serde_json::from_str(&data).map_err(|e| e.to_string())?;
+    Ok(normalize_history_entries(entries))
 }
 
 pub fn save_command_history(entries: Vec<CommandHistoryEntry>) -> Result<(), String> {
@@ -214,14 +233,25 @@ pub fn save_command_history(entries: Vec<CommandHistoryEntry>) -> Result<(), Str
 }
 
 pub fn record_command_history(entry: CommandHistoryEntry) -> Result<Vec<CommandHistoryEntry>, String> {
-    let mut entries = load_command_history()?;
+    let mut entries = normalize_history_entries(load_command_history()?);
+    let normalized_command = normalize_history_value(&entry.command);
+    let normalized_cwd = normalize_history_value(&entry.cwd);
 
-    if let Some(existing) = entries.iter_mut().find(|item| item.command == entry.command && item.cwd == entry.cwd) {
+    if let Some(existing) = entries.iter_mut().find(|item| {
+        normalize_history_value(&item.command) == normalized_command
+            && normalize_history_value(&item.cwd) == normalized_cwd
+    }) {
+        existing.command = normalized_command.clone();
+        existing.cwd = normalized_cwd.clone();
         existing.timestamp = entry.timestamp;
         existing.count += 1;
         existing.id = entry.id;
     } else {
-        entries.push(entry);
+        entries.push(CommandHistoryEntry {
+            command: normalized_command,
+            cwd: normalized_cwd,
+            ..entry
+        });
     }
 
     entries.sort_by(|left, right| right.timestamp.cmp(&left.timestamp));
@@ -231,6 +261,47 @@ pub fn record_command_history(entry: CommandHistoryEntry) -> Result<Vec<CommandH
 
     save_command_history(entries.clone())?;
     Ok(entries)
+}
+
+fn normalize_history_entries(entries: Vec<CommandHistoryEntry>) -> Vec<CommandHistoryEntry> {
+    let mut merged: Vec<CommandHistoryEntry> = Vec::new();
+
+    for mut entry in entries {
+        entry.command = normalize_history_value(&entry.command);
+        entry.cwd = normalize_history_value(&entry.cwd);
+
+        if entry.command.is_empty() {
+            continue;
+        }
+
+        if let Some(existing) = merged.iter_mut().find(|item| {
+            normalize_history_value(&item.command) == entry.command
+                && normalize_history_value(&item.cwd) == entry.cwd
+        }) {
+            existing.count += entry.count.max(1);
+            if entry.timestamp >= existing.timestamp {
+                existing.timestamp = entry.timestamp;
+                existing.id = entry.id.clone();
+            }
+        } else {
+            merged.push(entry);
+        }
+    }
+
+    merged.sort_by(|left, right| right.timestamp.cmp(&left.timestamp));
+    if merged.len() > 200 {
+        merged.truncate(200);
+    }
+    merged
+}
+
+fn normalize_history_value(value: &str) -> String {
+    value
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .trim()
+        .to_string()
 }
 
 pub fn load_command_mappings() -> Result<Vec<CommandMapping>, String> {
@@ -290,6 +361,10 @@ pub fn save_shortcuts(entries: Vec<ShortcutBinding>) -> Result<(), String> {
     let path = shortcuts_path()?;
     let data = serde_json::to_string_pretty(&entries).map_err(|e| e.to_string())?;
     fs::write(&path, data).map_err(|e| e.to_string())
+}
+
+pub fn default_shortcuts_public() -> Vec<ShortcutBinding> {
+    default_shortcuts()
 }
 
 fn default_command_mappings() -> Vec<CommandMapping> {
@@ -369,24 +444,55 @@ fn default_shortcuts() -> Vec<ShortcutBinding> {
     vec![
         ShortcutBinding {
             id: "terminal.duplicate".to_string(),
-            label: "复制终端".to_string(),
+            label: "复制终端实例".to_string(),
             description: "复制当前激活终端到新的画布位置".to_string(),
+            category: "terminal".to_string(),
+            editable: true,
+            deletable: false,
             windows: "Ctrl+C".to_string(),
             darwin: "Cmd+C".to_string(),
             linux: "Ctrl+C".to_string(),
         },
         ShortcutBinding {
             id: "terminal.paste".to_string(),
-            label: "粘贴终端".to_string(),
+            label: "粘贴终端实例".to_string(),
             description: "在画布上创建复制终端".to_string(),
+            category: "terminal".to_string(),
+            editable: true,
+            deletable: false,
             windows: "Ctrl+V".to_string(),
             darwin: "Cmd+V".to_string(),
             linux: "Ctrl+V".to_string(),
         },
         ShortcutBinding {
+            id: "terminal.copyText".to_string(),
+            label: "复制终端文本".to_string(),
+            description: "复制终端选中文本，若没有选中则复制当前输入行".to_string(),
+            category: "terminal".to_string(),
+            editable: true,
+            deletable: false,
+            windows: "Ctrl+Shift+C".to_string(),
+            darwin: "Cmd+Shift+C".to_string(),
+            linux: "Ctrl+Shift+C".to_string(),
+        },
+        ShortcutBinding {
+            id: "terminal.pasteText".to_string(),
+            label: "粘贴终端文本".to_string(),
+            description: "将系统剪贴板文本粘贴到当前终端".to_string(),
+            category: "terminal".to_string(),
+            editable: true,
+            deletable: false,
+            windows: "Ctrl+Shift+V".to_string(),
+            darwin: "Cmd+Shift+V".to_string(),
+            linux: "Ctrl+Shift+V".to_string(),
+        },
+        ShortcutBinding {
             id: "terminal.selectLine".to_string(),
             label: "选中当前输入行".to_string(),
             description: "在终端中选中当前正在输入的命令".to_string(),
+            category: "terminal".to_string(),
+            editable: true,
+            deletable: false,
             windows: "Ctrl+A".to_string(),
             darwin: "Cmd+A".to_string(),
             linux: "Ctrl+A".to_string(),
@@ -395,6 +501,9 @@ fn default_shortcuts() -> Vec<ShortcutBinding> {
             id: "sidebar.files".to_string(),
             label: "打开文件管理".to_string(),
             description: "切换到左侧文件管理面板".to_string(),
+            category: "navigation".to_string(),
+            editable: true,
+            deletable: false,
             windows: "Alt+1".to_string(),
             darwin: "Alt+1".to_string(),
             linux: "Alt+1".to_string(),
@@ -403,6 +512,9 @@ fn default_shortcuts() -> Vec<ShortcutBinding> {
             id: "sidebar.commands".to_string(),
             label: "打开命令管理".to_string(),
             description: "切换到左侧命令管理面板".to_string(),
+            category: "navigation".to_string(),
+            editable: true,
+            deletable: false,
             windows: "Alt+2".to_string(),
             darwin: "Alt+2".to_string(),
             linux: "Alt+2".to_string(),
@@ -411,6 +523,9 @@ fn default_shortcuts() -> Vec<ShortcutBinding> {
             id: "sidebar.history".to_string(),
             label: "打开历史命令".to_string(),
             description: "切换到左侧历史命令面板".to_string(),
+            category: "navigation".to_string(),
+            editable: true,
+            deletable: false,
             windows: "Alt+3".to_string(),
             darwin: "Alt+3".to_string(),
             linux: "Alt+3".to_string(),
@@ -419,6 +534,9 @@ fn default_shortcuts() -> Vec<ShortcutBinding> {
             id: "sidebar.mappings".to_string(),
             label: "打开命令映射".to_string(),
             description: "切换到左侧命令映射面板".to_string(),
+            category: "navigation".to_string(),
+            editable: true,
+            deletable: false,
             windows: "Alt+4".to_string(),
             darwin: "Alt+4".to_string(),
             linux: "Alt+4".to_string(),
@@ -427,6 +545,9 @@ fn default_shortcuts() -> Vec<ShortcutBinding> {
             id: "sidebar.ssh".to_string(),
             label: "打开 SSH 面板".to_string(),
             description: "切换到左侧 SSH 远程服务面板".to_string(),
+            category: "navigation".to_string(),
+            editable: true,
+            deletable: false,
             windows: "Alt+5".to_string(),
             darwin: "Alt+5".to_string(),
             linux: "Alt+5".to_string(),
@@ -435,6 +556,9 @@ fn default_shortcuts() -> Vec<ShortcutBinding> {
             id: "sidebar.shortcuts".to_string(),
             label: "打开快捷键设置".to_string(),
             description: "切换到快捷键设置面板".to_string(),
+            category: "navigation".to_string(),
+            editable: true,
+            deletable: false,
             windows: "Alt+6".to_string(),
             darwin: "Alt+6".to_string(),
             linux: "Alt+6".to_string(),
@@ -443,6 +567,9 @@ fn default_shortcuts() -> Vec<ShortcutBinding> {
             id: "sidebar.settings".to_string(),
             label: "打开设置".to_string(),
             description: "切换到设置面板".to_string(),
+            category: "navigation".to_string(),
+            editable: true,
+            deletable: false,
             windows: "Alt+0".to_string(),
             darwin: "Alt+0".to_string(),
             linux: "Alt+0".to_string(),

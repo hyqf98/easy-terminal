@@ -9,14 +9,23 @@
   </head>
 
   <body>
-    <div id="app-titlebar" data-tauri-drag-region>
-      <span class="app-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="4 17 10 11 4 5"></polyline>
-          <line x1="12" y1="19" x2="20" y2="19"></line>
-        </svg>
-        Easy Terminal
-      </span>
+    <div id="app-resize-handles" aria-hidden="true">
+      <div class="app-resize-handle app-resize-handle-n" data-resize-direction="North"></div>
+      <div class="app-resize-handle app-resize-handle-s" data-resize-direction="South"></div>
+      <div class="app-resize-handle app-resize-handle-e" data-resize-direction="East"></div>
+      <div class="app-resize-handle app-resize-handle-w" data-resize-direction="West"></div>
+      <div class="app-resize-handle app-resize-handle-ne" data-resize-direction="NorthEast"></div>
+      <div class="app-resize-handle app-resize-handle-nw" data-resize-direction="NorthWest"></div>
+      <div class="app-resize-handle app-resize-handle-se" data-resize-direction="SouthEast"></div>
+      <div class="app-resize-handle app-resize-handle-sw" data-resize-direction="SouthWest"></div>
+    </div>
+    <div id="app-titlebar">
+      <div class="app-titlebar-drag">
+        <span class="app-title">
+          <img src="/src/assets/app-icon.svg" alt="Easy Terminal" />
+          Easy Terminal
+        </span>
+      </div>
       <div class="app-window-controls">
         <button class="app-btn-minimize" id="app-minimize" title="Minimize"></button>
         <button class="app-btn-maximize" id="app-maximize" title="Maximize"></button>

@@ -17,6 +17,8 @@ export class Canvas implements CanvasController {
 
   public onTerminalCreate?: (x: number, y: number, w: number, h: number) => void;
   public getSnapTargets: ((excludeId?: string) => SnapTarget[]) | null = null;
+  public onCanvasContextMenu?: ((canvas: Canvas, clientX: number, clientY: number) => void) | null = null;
+  public getViewportSize: (() => { w: number; h: number }) | null = null;
 
   constructor(
     viewport: HTMLDivElement,
@@ -45,6 +47,13 @@ export class Canvas implements CanvasController {
 
   getPan(): { x: number; y: number } {
     return { x: this.panX, y: this.panY };
+  }
+
+  resetView() {
+    this.panX = 0;
+    this.panY = 0;
+    this.zoom = 1.0;
+    this.applyTransform();
   }
 
   snapPoint(x: number, y: number, excludeId?: string): SnapPoint {
@@ -123,8 +132,14 @@ export class Canvas implements CanvasController {
   private bindEvents() {
     this.viewport.addEventListener('wheel', this.onWheel.bind(this), { passive: false });
     this.viewport.addEventListener('mousedown', this.onMouseDown.bind(this));
+    this.viewport.addEventListener('contextmenu', this.onContextMenu.bind(this));
     window.addEventListener('mousemove', this.onMouseMove.bind(this));
     window.addEventListener('mouseup', this.onMouseUp.bind(this));
+    document.addEventListener('click', (ev: MouseEvent) => {
+      if (!(ev.target as HTMLElement).closest('.canvas-context-menu')) {
+        this.closeCanvasMenu();
+      }
+    });
   }
 
   private createGuide(kind: 'vertical' | 'horizontal'): HTMLDivElement {
@@ -135,22 +150,52 @@ export class Canvas implements CanvasController {
   }
 
   private onWheel(e: WheelEvent) {
-    if ((e.target as HTMLElement).closest('.json-editor-overlay')) return;
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+    if (target.closest('.json-editor-overlay')) return;
+
+    const isOverTerminal = !!target.closest('.terminal-window');
+
+    // Ctrl+wheel: always zoom canvas centered on mouse cursor
+    if (e.ctrlKey) {
+      e.preventDefault();
+      this.handleZoomAtMouse(e);
+      return;
+    }
+
+    // If over a terminal and a terminal is focused, let terminal handle its own scroll
+    if (isOverTerminal && document.querySelector('.terminal-window.focused')) {
+      return;
+    }
+
+    // Otherwise: pan canvas
     e.preventDefault();
     if (e.shiftKey) {
       this.panX -= e.deltaY;
-    } else if (e.ctrlKey) {
-      const delta = e.deltaY > 0 ? -0.08 : 0.08;
-      this.zoom = Math.max(0.2, Math.min(3.0, this.zoom + delta));
     } else {
       this.panY -= e.deltaY;
     }
     this.applyTransform();
   }
 
+  private handleZoomAtMouse(e: WheelEvent) {
+    const rect = this.viewport.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    const delta = e.deltaY > 0 ? -0.08 : 0.08;
+    const oldZoom = this.zoom;
+    this.zoom = Math.max(0.2, Math.min(3.0, this.zoom + delta));
+    // Keep the point under the mouse cursor fixed
+    const ratio = this.zoom / oldZoom;
+    this.panX = mouseX - (mouseX - this.panX) * ratio;
+    this.panY = mouseY - (mouseY - this.panY) * ratio;
+    this.applyTransform();
+  }
+
   private onMouseDown(e: MouseEvent) {
     if (e.button !== 0) return;
     if ((e.target as HTMLElement).closest('.terminal-window')) return;
+    this.closeCanvasMenu();
 
     this.isDragging = true;
     const rect = this.viewport.getBoundingClientRect();
@@ -282,5 +327,64 @@ export class Canvas implements CanvasController {
       this.horizontalGuide.style.display = 'block';
       this.horizontalGuide.style.top = `${y}px`;
     }
+  }
+
+  private canvasMenu: HTMLDivElement | null = null;
+
+  private onContextMenu(e: MouseEvent) {
+    if ((e.target as HTMLElement).closest('.terminal-window')) return;
+    e.preventDefault();
+    this.closeCanvasMenu();
+    if (this.onCanvasContextMenu) {
+      this.onCanvasContextMenu(this, e.clientX, e.clientY);
+    }
+  }
+
+  closeCanvasMenu() {
+    if (this.canvasMenu) {
+      this.canvasMenu.remove();
+      this.canvasMenu = null;
+    }
+  }
+
+  showCanvasMenu(x: number, y: number, items: Array<{ label: string; action: () => void }>) {
+    this.closeCanvasMenu();
+    const menu = document.createElement('div');
+    menu.className = 'context-menu canvas-context-menu';
+    menu.style.left = `${x}px`;
+    menu.style.top = `${y}px`;
+
+    for (const item of items) {
+      const el = document.createElement('div');
+      el.className = 'context-menu-item';
+      el.textContent = item.label;
+      el.addEventListener('click', () => {
+        item.action();
+        this.closeCanvasMenu();
+      });
+      menu.appendChild(el);
+    }
+
+    document.body.appendChild(menu);
+    this.canvasMenu = menu;
+
+    const close = (ev: MouseEvent) => {
+      if (!(ev.target as HTMLElement).closest('.canvas-context-menu')) {
+        this.closeCanvasMenu();
+      }
+    };
+    const cleanup = () => {
+      document.removeEventListener('click', close);
+      document.removeEventListener('contextmenu', close as EventListener);
+    };
+    // Defer adding close listeners so the current contextmenu event
+    // finishes bubbling before we start listening for close triggers.
+    // Without this delay, the opening event itself reaches document and
+    // immediately closes the menu we just created.
+    setTimeout(() => {
+      document.addEventListener('click', close);
+      document.addEventListener('contextmenu', close as EventListener);
+    }, 0);
+    menu.addEventListener('remove', cleanup);
   }
 }

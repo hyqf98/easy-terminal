@@ -1,10 +1,12 @@
 import { invoke } from '@tauri-apps/api/core';
+import { Document } from 'flexsearch';
 import type {
   CommandConfig,
   CommandEntry,
   CommandHistoryEntry,
   CommandMapping,
   SuggestionItem,
+  SuggestionSourceType,
 } from './types';
 import { t } from './i18n';
 
@@ -13,6 +15,21 @@ type Listener = () => void;
 interface CandidateText {
   value: string;
   weight: number;
+}
+
+interface SearchDocument {
+  [key: string]: string;
+  id: string;
+  title: string;
+  subtitle: string;
+  aliases: string;
+  tags: string;
+  description: string;
+  usage: string;
+  examples: string;
+  category: string;
+  sourceLabel: string;
+  language: string;
 }
 
 export interface GhostSuggestion {
@@ -32,6 +49,8 @@ export class CommandIntelligence {
   private mappings: CommandMapping[] = [];
   private history: CommandHistoryEntry[] = [];
   private listeners = new Set<Listener>();
+  private searchIndex: Document<SearchDocument> | null = null;
+  private indexedItems = new Map<string, SuggestionItem>();
 
   async init() {
     await this.reloadAll();
@@ -57,22 +76,26 @@ export class CommandIntelligence {
     this.commandConfigs = commandConfigs;
     this.mappings = mappings;
     this.history = history.sort((left, right) => right.timestamp - left.timestamp);
+    this.rebuildSearchIndex();
     this.emitChange();
   }
 
   async reloadCommands() {
     this.commandConfigs = await invoke<CommandConfig[]>('load_commands');
+    this.rebuildSearchIndex();
     this.emitChange();
   }
 
   async reloadMappings() {
     this.mappings = await invoke<CommandMapping[]>('load_command_mappings');
+    this.rebuildSearchIndex();
     this.emitChange();
   }
 
   async reloadHistory() {
     this.history = await invoke<CommandHistoryEntry[]>('load_command_history');
     this.history.sort((left, right) => right.timestamp - left.timestamp);
+    this.rebuildSearchIndex();
     this.emitChange();
   }
 
@@ -102,25 +125,32 @@ export class CommandIntelligence {
   async saveMappings(entries: CommandMapping[]) {
     await invoke('save_command_mappings', { entries });
     this.mappings = entries;
+    this.rebuildSearchIndex();
     this.emitChange();
   }
 
   async saveHistory(entries: CommandHistoryEntry[]) {
     await invoke('save_command_history', { entries });
     this.history = entries.sort((left, right) => right.timestamp - left.timestamp);
+    this.rebuildSearchIndex();
     this.emitChange();
   }
 
   async recordHistory(command: string, cwd: string) {
+    const normalizedCommand = normalizeHistoryValue(command);
+    const normalizedCwd = normalizeHistoryValue(cwd);
+    if (!normalizedCommand) return;
+
     const entry: CommandHistoryEntry = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      command: command.trim(),
-      cwd,
+      command: normalizedCommand,
+      cwd: normalizedCwd,
       timestamp: Date.now(),
       count: 1,
     };
     this.history = await invoke<CommandHistoryEntry[]>('record_command_history', { entry });
     this.history.sort((left, right) => right.timestamp - left.timestamp);
+    this.rebuildSearchIndex();
     this.emitChange();
   }
 
@@ -128,16 +158,19 @@ export class CommandIntelligence {
     const normalizedQuery = normalize(query);
     if (!normalizedQuery) return [];
 
-    const items = [
-      ...this.commandItems(),
-      ...this.mappingItems(),
-      ...this.historyItems(),
-    ];
+    const indexed = this.searchByIndex(normalizedQuery);
+    if (indexed.length > 0) {
+      return indexed;
+    }
 
+    const items = [...this.indexedItems.values()];
     const scored = items
       .map((item) => ({ item, score: this.scoreItem(item, normalizedQuery) }))
       .filter((entry) => entry.score > 0)
-      .sort((left, right) => right.score - left.score || left.item.title.localeCompare(right.item.title, 'zh-CN'))
+      .sort((left, right) =>
+        right.score - left.score
+        || sourcePriority(right.item.type) - sourcePriority(left.item.type)
+        || left.item.title.localeCompare(right.item.title, 'zh-CN'))
       .slice(0, 12)
       .map((entry) => ({ ...entry.item, score: entry.score }));
 
@@ -150,14 +183,111 @@ export class CommandIntelligence {
 
     const suggestions = this.getSuggestionItems(trimmed);
     const top = this.pickGhostCandidate(trimmed, suggestions);
-    if (!top) return null;
+    return this.getGhostSuggestionForItem(trimmed, top);
+  }
 
-    const ghost = this.buildGhostText(top, trimmed);
+  getGhostSuggestionForItem(input: string, item: SuggestionItem | null): GhostSuggestion | null {
+    const trimmed = input.trimStart();
+    if (!trimmed || !item) return null;
+
+    const ghost = this.buildGhostText(item, trimmed);
     if (!ghost) return null;
     return {
-      item: top,
+      item,
       text: ghost,
     };
+  }
+
+  private rebuildSearchIndex() {
+    const items = [
+      ...this.commandItems(),
+      ...this.mappingItems(),
+      ...this.historyItems(),
+    ];
+
+    this.indexedItems = new Map(items.map((item) => [item.id, item]));
+    this.searchIndex = new Document<SearchDocument>({
+      tokenize: 'forward',
+      cache: 100,
+      document: {
+        id: 'id',
+        index: [
+          { field: 'title', tokenize: 'forward' },
+          { field: 'subtitle', tokenize: 'forward' },
+          { field: 'aliases', tokenize: 'forward' },
+          { field: 'tags', tokenize: 'forward' },
+          { field: 'description', tokenize: 'strict' },
+          { field: 'usage', tokenize: 'forward' },
+          { field: 'examples', tokenize: 'strict' },
+          { field: 'category', tokenize: 'strict' },
+          { field: 'sourceLabel', tokenize: 'strict' },
+          { field: 'language', tokenize: 'strict' },
+        ],
+        store: true,
+      },
+    });
+
+    items.forEach((item) => {
+      this.searchIndex?.add({
+        id: item.id,
+        title: item.title,
+        subtitle: item.subtitle,
+        aliases: item.aliases.join(' '),
+        tags: item.tags.join(' '),
+        description: item.description,
+        usage: item.usage,
+        examples: item.examples.join(' '),
+        category: item.category,
+        sourceLabel: item.sourceLabel,
+        language: item.language || '',
+      });
+    });
+  }
+
+  private searchByIndex(query: string): SuggestionItem[] {
+    if (!this.searchIndex) return [];
+    const results = this.searchIndex.search(query, { enrich: true, limit: 20 }) as Array<{ field?: string; result?: Array<{ id: string }> }>;
+    if (!Array.isArray(results) || results.length === 0) return [];
+
+    const fieldWeights: Record<string, number> = {
+      title: 220,
+      subtitle: 190,
+      aliases: 200,
+      tags: 180,
+      usage: 155,
+      description: 110,
+      examples: 128,
+      category: 70,
+      sourceLabel: 48,
+      language: 65,
+    };
+    const ranked = new Map<string, { item: SuggestionItem; score: number; matchedField: string }>();
+
+    results.forEach((group) => {
+      const field = group.field || 'title';
+      const weight = fieldWeights[field] || 40;
+      (group.result || []).forEach((entry, index) => {
+        const item = this.indexedItems.get(entry.id);
+        if (!item) return;
+        const base = weight - index * 4 + this.scoreItem(item, query) + sourcePriority(item.type);
+        const existing = ranked.get(entry.id);
+        if (!existing || base > existing.score) {
+          ranked.set(entry.id, {
+            item: { ...item, matchedField: field },
+            score: base,
+            matchedField: field,
+          });
+        }
+      });
+    });
+
+    return [...ranked.values()]
+      .sort((left, right) =>
+        right.score - left.score
+        || sourcePriority(right.item.type) - sourcePriority(left.item.type)
+        || left.item.title.localeCompare(right.item.title, 'zh-CN'))
+      .slice(0, 12)
+      .map((entry) => ({ ...entry.item, score: entry.score, matchedField: entry.matchedField }));
   }
 
   resolveExecution(input: string): ExecutionResolution {
@@ -203,26 +333,35 @@ export class CommandIntelligence {
 
   private buildGhostText(item: SuggestionItem, input: string): string {
     const trimmed = input.trimStart();
+    if (!trimmed) return '';
+
+    const replacement = resolveGhostReplacement(item);
+    const normalizedInput = normalize(trimmed);
+    const suffixGhost = buildSuffixGhost(trimmed, replacement);
+    if (suffixGhost) return suffixGhost;
+    if (item.type === 'completion' || item.type === 'history') return '';
+
     const firstToken = trimmed.split(/\s+/)[0] || '';
     const exactToken = this.matchesTokenExactly(item, firstToken);
-    const insertPrefix = commonPrefixLength(trimmed, item.insertText);
-    const hint = resolveHintText(item);
-
-    if (insertPrefix < item.insertText.length && insertPrefix === trimmed.length) {
-      const remainder = item.insertText.slice(insertPrefix);
-      const suffix = hint ? ` ${hint}` : '';
-      return `${remainder}${suffix}`;
-    }
+    const prefixToken = this.matchesTokenByPrefix(item, firstToken);
+    const hint = stripRepeatedCommandPrefix(resolveHintText(item), firstToken);
 
     if (exactToken && hint) {
       const typedSuffix = trimmed.slice(firstToken.length);
-      if (!typedSuffix) {
-        return ` ${hint}`;
+      const displayHint = ` ${hint}`;
+      if (!typedSuffix) return displayHint;
+      if (displayHint.startsWith(typedSuffix)) {
+        return displayHint.slice(typedSuffix.length);
       }
-      if (` ${hint}`.startsWith(typedSuffix)) {
-        return ` ${hint}`.slice(typedSuffix.length);
-      }
+      return '';
+    }
+
+    if (prefixToken && hint) {
       return ` ${hint}`;
+    }
+
+    if (containsNonAscii(trimmed) && replacement && (exactToken || prefixToken || this.matchesSemanticLookup(item, normalizedInput))) {
+      return replacement;
     }
 
     return '';
@@ -247,6 +386,21 @@ export class CommandIntelligence {
       ...item.aliases,
       ...item.tags,
     ].filter(Boolean);
+  }
+
+  private matchesSemanticLookup(item: SuggestionItem, query: string): boolean {
+    if (!query) return false;
+    return [
+      item.subtitle,
+      item.description,
+      item.category,
+      item.language || '',
+      ...item.aliases,
+      ...item.tags,
+      ...item.examples,
+    ]
+      .filter(Boolean)
+      .some((field) => normalize(field).includes(query) || normalize(field).startsWith(query));
   }
 
   private scoreItem(item: SuggestionItem, query: string): number {
@@ -281,11 +435,9 @@ export class CommandIntelligence {
     const normalizedQuery = query.trim();
     if (normalize(item.title) === normalizedQuery) score += 48;
     if (normalize(item.insertText).startsWith(normalizedQuery)) score += 22;
+    score += sourcePriority(item.type);
     if (item.type === 'history') {
       score += Math.min(item.score, 30);
-    }
-    if (item.type === 'mapping') {
-      score += 18;
     }
 
     return score;
@@ -326,11 +478,13 @@ export class CommandIntelligence {
           usage: normalized.usage,
           hint: normalized.hint || resolveEntryHint(normalized),
           examples: normalized.examples,
-          aliases: normalized.alias,
-          tags: normalized.tags,
+          aliases: [...normalized.alias, ...(normalized.triggers || [])],
+          tags: [...normalized.tags, ...(normalized.keywords || [])],
           category: normalized.category || category,
           sourceLabel,
           score: 0,
+          language: normalized.language || config.language || category,
+          libraryId: config.id || category,
         });
       }
     }
@@ -386,6 +540,7 @@ function mappingToSuggestionItem(mapping: CommandMapping): SuggestionItem {
     category: t('mapping.title'),
     sourceLabel: t('mapping.sourceLabel'),
     score: 0,
+    language: 'mapping',
   };
 }
 
@@ -419,6 +574,11 @@ export function normalizeCommandEntry(entry: Partial<CommandEntry>): CommandEntr
     tags: Array.isArray(entry.tags) ? entry.tags.filter(Boolean) : [],
     examples: Array.isArray(entry.examples) ? entry.examples.filter(Boolean) : [],
     hint: entry.hint || resolveEntryHint(entry),
+    language: entry.language || '',
+    triggers: Array.isArray(entry.triggers) ? entry.triggers.filter(Boolean) : [],
+    keywords: Array.isArray(entry.keywords) ? entry.keywords.filter(Boolean) : [],
+    weight: typeof entry.weight === 'number' ? entry.weight : 0,
+    libraryId: entry.libraryId || '',
   };
 }
 
@@ -439,6 +599,66 @@ function resolveHintText(item: SuggestionItem): string {
   if (item.usage && normalize(item.usage) !== normalize(item.title)) return item.usage.trim();
   if (item.examples.length > 0) return item.examples[0];
   return '';
+}
+
+function sourcePriority(type: SuggestionSourceType): number {
+  switch (type) {
+    case 'history':
+      return 240;
+    case 'mapping':
+      return 160;
+    case 'completion':
+      return 120;
+    case 'command':
+    default:
+      return 0;
+  }
+}
+
+function buildSuffixGhost(input: string, candidate: string): string {
+  const trimmedCandidate = candidate.trim();
+  if (!trimmedCandidate) return '';
+  const prefix = commonPrefixLength(input, trimmedCandidate);
+  if (prefix !== input.length || prefix >= trimmedCandidate.length) {
+    return '';
+  }
+  return trimmedCandidate.slice(prefix);
+}
+
+function stripRepeatedCommandPrefix(hint: string, token: string): string {
+  const trimmedHint = hint.trim();
+  const trimmedToken = token.trim();
+  if (!trimmedHint || !trimmedToken) return trimmedHint;
+
+  const normalizedHint = normalize(trimmedHint);
+  const normalizedToken = normalize(trimmedToken);
+  if (normalizedHint === normalizedToken) return '';
+  if (!normalizedHint.startsWith(`${normalizedToken} `)) {
+    return trimmedHint;
+  }
+
+  return trimmedHint.slice(trimmedToken.length).trimStart();
+}
+
+function normalizeHistoryValue(value: string): string {
+  return value.trim().replace(/\s+/g, ' ');
+}
+
+function resolveGhostReplacement(item: SuggestionItem): string {
+  switch (item.type) {
+    case 'mapping':
+      return item.executeText || item.usage || item.insertText;
+    case 'completion':
+    case 'history':
+      return item.insertText || item.executeText || item.usage;
+    case 'command':
+    default:
+      return item.usage || item.insertText || item.executeText;
+  }
+}
+
+function containsNonAscii(value: string): boolean {
+  return /[^\u0000-\u007f]/.test(value);
 }
 
 const DEFAULT_HINTS: Record<string, string> = {

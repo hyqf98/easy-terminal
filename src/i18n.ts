@@ -186,6 +186,10 @@ const messages: Record<Lang, Record<string, string>> = {
     // Shortcut
     'shortcut.title': '快捷键设置',
     'shortcut.summary': '当前平台：{0}，修改后立即生效',
+    'shortcut.reset': '恢复默认',
+    'shortcut.categoryTerminal': '终端操作',
+    'shortcut.categoryNavigation': '导航切换',
+    'shortcut.categoryWorkspace': '工作台',
   },
 
   'en-US': {
@@ -368,6 +372,10 @@ const messages: Record<Lang, Record<string, string>> = {
     // Shortcut
     'shortcut.title': 'Shortcut Settings',
     'shortcut.summary': 'Current platform: {0}. Changes apply immediately.',
+    'shortcut.reset': 'Restore Defaults',
+    'shortcut.categoryTerminal': 'Terminal',
+    'shortcut.categoryNavigation': 'Navigation',
+    'shortcut.categoryWorkspace': 'Workspace',
   },
 };
 

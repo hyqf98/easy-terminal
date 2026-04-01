@@ -41,15 +41,22 @@ export class ShortcutPanel {
   }
 
   private render() {
+    const grouped = this.groupBindings();
     this.body.innerHTML = `
       <div class="shortcut-summary">
         ${t('shortcut.summary', this.platformLabel())}
         <span class="shortcut-summary-note">点击录制后直接按下组合键，按 <code>Delete</code> 清空，按 <code>Esc</code> 取消。</span>
       </div>
       <div class="shortcut-list">
-        ${this.draftBindings.map((binding) => this.renderItem(binding)).join('')}
+        ${grouped.map(([category, bindings]) => `
+          <section class="shortcut-group">
+            <div class="shortcut-group-title">${escapeHtml(this.categoryLabel(category))}</div>
+            ${bindings.map((binding) => this.renderItem(binding)).join('')}
+          </section>
+        `).join('')}
       </div>
       <div class="cmd-overlay-actions shortcut-actions">
+        <button class="cmd-toolbar-btn" id="shortcut-reset">${t('shortcut.reset')}</button>
         <button class="cmd-toolbar-btn primary" id="shortcut-save">${t('cmd.save')}</button>
       </div>
     `;
@@ -101,6 +108,12 @@ export class ShortcutPanel {
   }
 
   private bindEvents() {
+    this.body.querySelector('#shortcut-reset')?.addEventListener('click', async () => {
+      this.stopRecording(false);
+      this.draftBindings = await this.shortcuts.loadDefaultBindings();
+      this.render();
+    });
+
     this.body.querySelector('#shortcut-save')?.addEventListener('click', async () => {
       this.stopRecording(false);
       await this.shortcuts.saveBindings(this.draftBindings.map((binding) => ({ ...binding })));
@@ -193,6 +206,27 @@ export class ShortcutPanel {
     if (platform === 'darwin') return 'macOS';
     if (platform === 'linux') return 'Linux';
     return 'Windows';
+  }
+
+  private groupBindings(): Array<[string, ShortcutBinding[]]> {
+    const groups = new Map<string, ShortcutBinding[]>();
+    this.draftBindings.forEach((binding) => {
+      const key = binding.category || 'workspace';
+      const list = groups.get(key) || [];
+      list.push(binding);
+      groups.set(key, list);
+    });
+
+    return [...groups.entries()].map(([key, bindings]) => [
+      key,
+      bindings.sort((left, right) => left.label.localeCompare(right.label, 'zh-CN')),
+    ]);
+  }
+
+  private categoryLabel(category: string): string {
+    if (category === 'terminal') return t('shortcut.categoryTerminal');
+    if (category === 'navigation') return t('shortcut.categoryNavigation');
+    return t('shortcut.categoryWorkspace');
   }
 }
 

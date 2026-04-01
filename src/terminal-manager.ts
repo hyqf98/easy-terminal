@@ -1,6 +1,6 @@
 import { TerminalWindow } from './terminal-window';
 import { CommandSuggest } from './command-suggest';
-import { buildSshStartupCommand } from './command-intercept';
+import { buildSshPasswordSequence, buildSshStartupCommand } from './command-intercept';
 import type { ShortcutManager } from './shortcut-manager';
 import type { CanvasController, Rect, SSHProfile, SnapTarget, TerminalLaunchOptions } from './types';
 
@@ -22,6 +22,7 @@ export class TerminalManager {
   /** Called when Ctrl+C successfully copies a terminal (for toast) */
   public onTerminalCopied: (() => void) | null = null;
   public onActiveTerminalCwdChange: ((cwd: string) => void) | null = null;
+  public onActiveTerminalChange: ((context: { cwd: string; launchOptions: TerminalLaunchOptions } | null) => void) | null = null;
   public onAddMappingFromSelection: ((text: string) => void) | null = null;
 
   constructor(
@@ -56,6 +57,12 @@ export class TerminalManager {
       if (this.activeId === tw.getId() && launchOptions.mode !== 'ssh') {
         this.onActiveTerminalCwdChange?.(cwd);
       }
+      if (this.activeId === tw.getId()) {
+        this.onActiveTerminalChange?.({
+          cwd,
+          launchOptions: tw.getLaunchOptions(),
+        });
+      }
     };
     tw.onAddMappingFromSelection = (text) => this.onAddMappingFromSelection?.(text);
 
@@ -76,6 +83,31 @@ export class TerminalManager {
         this.activeId = null;
       }
     }
+  }
+
+  alignAll(canvasRect: { w: number; h: number }) {
+    const ids = [...this.terminals.keys()];
+    if (ids.length === 0) return;
+
+    const count = ids.length;
+    const padding = 20;
+    const gap = 16;
+    const cols = Math.ceil(Math.sqrt(count));
+    const rows = Math.ceil(count / cols);
+    const cellW = (canvasRect.w - padding * 2 - gap * (cols - 1)) / cols;
+    const cellH = (canvasRect.h - padding * 2 - gap * (rows - 1)) / rows;
+    const w = Math.max(280, cellW);
+    const h = Math.max(180, cellH);
+
+    ids.forEach((id, index) => {
+      const tw = this.terminals.get(id);
+      if (!tw) return;
+      const col = index % cols;
+      const row = Math.floor(index / cols);
+      const x = padding + col * (w + gap);
+      const y = padding + row * (h + gap);
+      tw.setRect(x, y, w, h);
+    });
   }
 
   async closeAll() {
@@ -110,6 +142,10 @@ export class TerminalManager {
       if (tw.getLaunchOptions().mode !== 'ssh') {
         this.onActiveTerminalCwdChange?.(tw.getCwd());
       }
+      this.onActiveTerminalChange?.({
+        cwd: tw.getCwd(),
+        launchOptions: tw.getLaunchOptions(),
+      });
     }
   }
 
@@ -119,6 +155,13 @@ export class TerminalManager {
       if (tw) tw.blur();
       this.activeId = null;
       this.onActiveTerminalCwdChange?.('');
+      this.onActiveTerminalChange?.(null);
+    }
+  }
+
+  hideTransientUi() {
+    for (const [, tw] of this.terminals) {
+      tw.hideTransientUi();
     }
   }
 
@@ -150,7 +193,7 @@ export class TerminalManager {
     if (!tw) return false;
     const rect = tw.getRect();
     this.copiedInfo = {
-      launchOptions: tw.getLaunchOptions(),
+      launchOptions: this.cloneLaunchOptions(tw.getLaunchOptions()),
       w: rect.w,
       h: rect.h,
     };
@@ -161,7 +204,7 @@ export class TerminalManager {
   async pasteTerminal(canvasX: number, canvasY: number) {
     if (!this.copiedInfo) return;
     const { launchOptions, w, h } = this.copiedInfo;
-    await this.createTerminal(canvasX, canvasY, w, h, launchOptions);
+    await this.createTerminal(canvasX, canvasY, w, h, this.cloneLaunchOptions(launchOptions));
   }
 
   hasCopiedTerminal(): boolean {
@@ -222,6 +265,7 @@ export class TerminalManager {
       profileId: profile.id,
       profileName: profile.name,
       startupCommand: buildSshStartupCommand(profile, this.sshProfiles),
+      passwordSequence: buildSshPasswordSequence(profile, this.sshProfiles),
     });
   }
 
@@ -252,6 +296,13 @@ export class TerminalManager {
     return {
       mode: 'local',
       ...options,
+    };
+  }
+
+  private cloneLaunchOptions(options: TerminalLaunchOptions): TerminalLaunchOptions {
+    return {
+      ...options,
+      passwordSequence: options.passwordSequence ? [...options.passwordSequence] : undefined,
     };
   }
 }

@@ -44,6 +44,11 @@ export interface CommandEntry {
   tags: string[];
   examples: string[];
   hint?: string;
+  language?: string;
+  triggers?: string[];
+  keywords?: string[];
+  weight?: number;
+  libraryId?: string;
 }
 
 export interface CommandConfig {
@@ -52,6 +57,9 @@ export interface CommandConfig {
   platforms: string[];
   commands: CommandEntry[];
   platform: string;
+  label?: string;
+  language?: string;
+  sourceType?: string;
 }
 
 export interface CommandHistoryEntry {
@@ -92,6 +100,7 @@ export interface TerminalLaunchOptions {
   mode?: 'local' | 'ssh';
   profileName?: string;
   profileId?: string;
+  passwordSequence?: string[];
 }
 
 export interface FilePreviewData {
@@ -106,12 +115,15 @@ export interface ShortcutBinding {
   id: string;
   label: string;
   description: string;
+  category?: string;
+  editable?: boolean;
+  deletable?: boolean;
   windows: string;
   darwin: string;
   linux: string;
 }
 
-export type SuggestionSourceType = 'command' | 'mapping' | 'history';
+export type SuggestionSourceType = 'command' | 'mapping' | 'history' | 'completion';
 
 export interface SuggestionItem {
   id: string;
@@ -129,6 +141,9 @@ export interface SuggestionItem {
   category: string;
   sourceLabel: string;
   score: number;
+  matchedField?: string;
+  language?: string;
+  libraryId?: string;
 }
 
 export interface TerminalInstance {

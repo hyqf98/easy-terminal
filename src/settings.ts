@@ -12,7 +12,7 @@ interface AppSettings {
 
 export class Settings {
   private container: HTMLDivElement;
-  private currentTheme = 'dark';
+  private currentTheme = 'light';
   private currentLang: Lang = 'zh-CN';
   private autoCheckUpdate = true;
   private lastPersistedUpdateCheck = '';
@@ -56,7 +56,7 @@ export class Settings {
       setLang(this.currentLang);
       this.applyTheme(settings.theme);
     } catch {
-      this.applyTheme('dark');
+      this.applyTheme('light');
     }
     this.render();
   }

@@ -2,6 +2,7 @@ mod pty;
 mod fs;
 mod settings;
 mod commands;
+mod ssh;
 
 use pty::PtyManager;
 use settings::AppSettings;
@@ -178,69 +179,60 @@ fn test_ssh_connection(
     port: u16,
     user: String,
     auth_type: String,
+    password: String,
     private_key_path: String,
     jump_profile_id: String,
     profiles: Vec<settings::SSHProfile>,
 ) -> Result<String, String> {
-    use std::process::Command;
+    ssh::test_connection(
+        host,
+        port,
+        user,
+        auth_type,
+        password,
+        private_key_path,
+        jump_profile_id,
+        profiles,
+    )
+}
 
-    let lookup: std::collections::HashMap<String, &settings::SSHProfile> = profiles
-        .iter()
-        .map(|p| (p.id.clone(), p))
-        .collect();
+#[tauri::command]
+fn get_remote_home(
+    profile: settings::SSHProfile,
+    profiles: Vec<settings::SSHProfile>,
+) -> Result<String, String> {
+    ssh::get_remote_home(profile, profiles)
+}
 
-    // Build jump chain
-    let mut jump_chain: Vec<String> = Vec::new();
-    let mut visited = std::collections::HashSet::new();
-    let mut current_id = jump_profile_id.clone();
+#[tauri::command]
+fn read_remote_dir(
+    profile: settings::SSHProfile,
+    path: String,
+    profiles: Vec<settings::SSHProfile>,
+) -> Result<Vec<fs::FileEntry>, String> {
+    ssh::read_remote_dir(profile, path, profiles)
+}
 
-    while !current_id.is_empty() {
-        if visited.contains(&current_id) {
-            break;
-        }
-        visited.insert(current_id.clone());
-        if let Some(jump) = lookup.get(&current_id) {
-            jump_chain.push(format!("{}@{}:{}", jump.user, jump.host, jump.port));
-            current_id = jump.jump_profile_id.clone();
-        } else {
-            break;
-        }
-    }
+#[tauri::command]
+fn download_remote_entries(
+    app_handle: tauri::AppHandle,
+    profile: settings::SSHProfile,
+    remote_paths: Vec<String>,
+    local_dir: String,
+    profiles: Vec<settings::SSHProfile>,
+) -> Result<(), String> {
+    ssh::download_remote_entries(app_handle, profile, remote_paths, local_dir, profiles)
+}
 
-    let mut args: Vec<String> = Vec::new();
-    args.push("-o".to_string());
-    args.push("BatchMode=yes".to_string());
-    args.push("-o".to_string());
-    args.push("ConnectTimeout=5".to_string());
-    args.push("-o".to_string());
-    args.push("StrictHostKeyChecking=no".to_string());
-
-    if auth_type == "key" && !private_key_path.is_empty() {
-        args.push("-i".to_string());
-        args.push(private_key_path);
-    }
-
-    if !jump_chain.is_empty() {
-        args.push("-J".to_string());
-        args.push(jump_chain.join(","));
-    }
-
-    args.push("-p".to_string());
-    args.push(port.to_string());
-    args.push(format!("{}@{}", user, host));
-    args.push("exit".to_string());
-
-    let output = Command::new("ssh")
-        .args(&args)
-        .output()
-        .map_err(|e| format!("Failed to execute ssh: {}", e))?;
-
-    if output.status.success() {
-        Ok("连接成功".to_string())
-    } else {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        Err(format!("{}", stderr.trim()))
-    }
+#[tauri::command]
+fn upload_local_entries(
+    app_handle: tauri::AppHandle,
+    profile: settings::SSHProfile,
+    local_paths: Vec<String>,
+    remote_dir: String,
+    profiles: Vec<settings::SSHProfile>,
+) -> Result<(), String> {
+    ssh::upload_local_entries(app_handle, profile, local_paths, remote_dir, profiles)
 }
 
 #[tauri::command]
@@ -251,6 +243,11 @@ fn load_shortcuts() -> Result<Vec<settings::ShortcutBinding>, String> {
 #[tauri::command]
 fn save_shortcuts(entries: Vec<settings::ShortcutBinding>) -> Result<(), String> {
     settings::save_shortcuts(entries)
+}
+
+#[tauri::command]
+fn load_default_shortcuts() -> Vec<settings::ShortcutBinding> {
+    settings::default_shortcuts_public()
 }
 
 #[tauri::command]
@@ -343,8 +340,13 @@ pub fn run() {
             load_ssh_profiles,
             save_ssh_profiles,
             test_ssh_connection,
+            get_remote_home,
+            read_remote_dir,
+            download_remote_entries,
+            upload_local_entries,
             load_shortcuts,
             save_shortcuts,
+            load_default_shortcuts,
             get_platform,
             get_platforms,
             load_commands,

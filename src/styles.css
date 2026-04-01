@@ -1,3 +1,10 @@
+@import "@fontsource/manrope/latin-400.css";
+@import "@fontsource/manrope/latin-500.css";
+@import "@fontsource/manrope/latin-600.css";
+@import "@fontsource/manrope/latin-700.css";
+@import "@fontsource/jetbrains-mono/latin-400.css";
+@import "@fontsource/jetbrains-mono/latin-600.css";
+
 *, *::before, *::after {
   margin: 0;
   padding: 0;
@@ -23,13 +30,17 @@
 
 /* ===== Design Tokens ===== */
 :root {
-  --radius-sm: 8px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
+  --radius-xs: 10px;
+  --radius-sm: 14px;
+  --radius-lg: 22px;
+  --radius-xl: 28px;
   --transition-fast: 0.15s;
-  --transition-normal: 0.2s;
-  --font-mono: "Cascadia Code", "Fira Code", "JetBrains Mono", Consolas, monospace;
-  --font-sans: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --transition-normal: 0.24s;
+  --font-mono: "JetBrains Mono", "Cascadia Code", "Fira Code", Consolas, monospace;
+  --font-sans: "Manrope", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  --glass-blur: 18px;
+  --glass-border: rgba(255, 255, 255, 0.22);
+  --glass-shadow: 0 24px 80px rgba(14, 32, 24, 0.16);
 }
 
 /* ===== Theme CSS Variables ===== */
@@ -69,37 +80,37 @@
 }
 
 [data-theme="light"] {
-  --bg-base: #ffffff;
-  --bg-mantle: #f5f5f7;
-  --bg-crust: #fafafa;
-  --bg-surface0: #f0f0f3;
-  --bg-surface1: #e0e0e5;
-  --bg-surface2: #c8c8cf;
-  --bg-overlay0: #86868b;
-  --text: #1d1d1f;
-  --text-sub: #424245;
-  --text-muted: #86868b;
-  --accent: #0071e3;
-  --accent-hover: #0060c7;
-  --green: #34c759;
-  --yellow: #ff9f0a;
-  --red: #ff3b30;
-  --mauve: #af52de;
-  --peach: #ff9500;
-  --teal: #5ac8fa;
-  --pink: #ff2d55;
-  --border: #d2d2d7;
-  --border-sub: #e5e5ea;
-  --shadow: rgba(0, 0, 0, 0.08);
-  --scrollbar: rgba(0, 0, 0, 0.15);
-  --scrollbar-hover: rgba(0, 0, 0, 0.30);
-  --selection-bg: rgba(0, 113, 227, 0.10);
-  --selection-border: rgba(0, 113, 227, 0.36);
-  --sidebar-bg: #f0f0f3;
-  --sidebar-hover: #e8e8ed;
-  --sidebar-active: #ffffff;
-  --sidebar-border: #d2d2d7;
-  --tree-indent: #d2d2d7;
+  --bg-base: #f5fbf7;
+  --bg-mantle: rgba(245, 251, 247, 0.8);
+  --bg-crust: #edf7f1;
+  --bg-surface0: rgba(255, 255, 255, 0.68);
+  --bg-surface1: rgba(230, 242, 234, 0.84);
+  --bg-surface2: rgba(205, 226, 214, 0.9);
+  --bg-overlay0: #8aa194;
+  --text: #173126;
+  --text-sub: #2f4b3f;
+  --text-muted: #6d8a7e;
+  --accent: #2f9e74;
+  --accent-hover: #20835f;
+  --green: #36b37e;
+  --yellow: #d7a84e;
+  --red: #d05d5d;
+  --mauve: #648d7c;
+  --peach: #e38b55;
+  --teal: #3eaf9a;
+  --pink: #d36f8d;
+  --border: rgba(105, 140, 122, 0.22);
+  --border-sub: rgba(123, 159, 139, 0.14);
+  --shadow: rgba(35, 56, 46, 0.14);
+  --scrollbar: rgba(47, 78, 63, 0.18);
+  --scrollbar-hover: rgba(47, 78, 63, 0.32);
+  --selection-bg: rgba(47, 158, 116, 0.12);
+  --selection-border: rgba(47, 158, 116, 0.48);
+  --sidebar-bg: rgba(240, 249, 244, 0.82);
+  --sidebar-hover: rgba(255, 255, 255, 0.72);
+  --sidebar-active: rgba(255, 255, 255, 0.88);
+  --sidebar-border: rgba(128, 162, 144, 0.18);
+  --tree-indent: rgba(128, 162, 144, 0.22);
 }
 
 [data-theme="warm"] {
@@ -141,23 +152,83 @@ html, body {
   height: 100%;
   overflow: hidden;
   background: var(--bg-crust);
-  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
   user-select: none;
   color: var(--text);
 }
 
+body {
+  position: relative;
+}
+
+#app-resize-handles {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2000;
+}
+
+.app-resize-handle {
+  position: absolute;
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+
+.app-resize-handle-n,
+.app-resize-handle-s {
+  left: 10px;
+  right: 10px;
+  height: 8px;
+}
+
+.app-resize-handle-e,
+.app-resize-handle-w {
+  top: 10px;
+  bottom: 10px;
+  width: 8px;
+}
+
+.app-resize-handle-n { top: 0; cursor: ns-resize; }
+.app-resize-handle-s { bottom: 0; cursor: ns-resize; }
+.app-resize-handle-e { right: 0; cursor: ew-resize; }
+.app-resize-handle-w { left: 0; cursor: ew-resize; }
+
+.app-resize-handle-ne,
+.app-resize-handle-nw,
+.app-resize-handle-se,
+.app-resize-handle-sw {
+  width: 10px;
+  height: 10px;
+  z-index: 2001;
+}
+
+.app-resize-handle-ne { top: 0; right: 0; cursor: nesw-resize; }
+.app-resize-handle-nw { top: 0; left: 0; cursor: nwse-resize; }
+.app-resize-handle-se { right: 0; bottom: 0; cursor: nwse-resize; }
+.app-resize-handle-sw { left: 0; bottom: 0; cursor: nesw-resize; }
+
 /* ===== App Title Bar ===== */
 #app-titlebar {
   height: 36px;
-  background: var(--bg-mantle);
+  background: color-mix(in srgb, var(--bg-mantle) 92%, transparent);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 12px;
+  padding: 0 10px 0 12px;
   border-bottom: 1px solid color-mix(in srgb, var(--accent) 10%, var(--border-sub));
-  -webkit-app-region: drag;
-  app-region: drag;
+  backdrop-filter: blur(var(--glass-blur));
   flex-shrink: 0;
+  position: relative;
+  z-index: 9999;
+}
+
+#app-titlebar .app-titlebar-drag {
+  min-width: 0;
+  flex: 1 1 auto;
+  height: 100%;
+  display: flex;
+  align-items: center;
 }
 
 #app-titlebar .app-title {
@@ -165,15 +236,20 @@ html, body {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.5px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  padding: 0 8px;
+  height: 100%;
 }
 
-#app-titlebar .app-title svg {
-  width: 14px;
-  height: 14px;
-  opacity: 0.5;
+#app-titlebar .app-title img {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  display: block;
+  flex: 0 0 auto;
 }
 
 #app-titlebar .app-window-controls {
@@ -181,6 +257,17 @@ html, body {
   gap: 8px;
   -webkit-app-region: no-drag;
   app-region: no-drag;
+  position: relative;
+  z-index: 10000;
+  pointer-events: auto;
+  /* Force separate compositing layer to fix WebKit backdrop-filter hit-testing issues */
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+#app-titlebar .app-window-controls button {
+  position: relative;
+  pointer-events: auto;
 }
 
 #app-titlebar .app-window-controls button {
@@ -211,9 +298,9 @@ html, body {
   height: calc(100% - 36px);
   overflow: hidden;
   background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 16%, transparent), transparent 32%),
-    radial-gradient(circle at bottom right, color-mix(in srgb, var(--teal) 12%, transparent), transparent 28%),
-    linear-gradient(180deg, color-mix(in srgb, var(--bg-mantle) 94%, transparent), var(--bg-crust));
+    radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 18%, transparent), transparent 36%),
+    radial-gradient(circle at bottom right, color-mix(in srgb, var(--teal) 14%, transparent), transparent 30%),
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-mantle) 88%, transparent), var(--bg-crust));
 }
 
 /* ===== Column 1: Sidebar (Icons Only) ===== */
@@ -223,9 +310,9 @@ html, body {
 }
 
 #sidebar {
-  width: 48px;
+  width: 56px;
   height: 100%;
-  background: var(--sidebar-bg);
+  background: color-mix(in srgb, var(--sidebar-bg) 88%, transparent);
   border-right: 1px solid var(--sidebar-border);
   display: flex;
   flex-direction: column;
@@ -234,12 +321,13 @@ html, body {
   gap: 4px;
   flex-shrink: 0;
   z-index: 100;
+  backdrop-filter: blur(var(--glass-blur));
 }
 
 .sidebar-tab {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
   border: none;
   background: transparent;
   color: var(--text-muted);
@@ -315,22 +403,23 @@ html, body {
 #panel-area {
   width: 0;
   flex: 0 0 0;
-  background: var(--sidebar-bg);
+  background: color-mix(in srgb, var(--sidebar-bg) 85%, transparent);
   border-right: 1px solid var(--sidebar-border);
   overflow: hidden;
   flex-shrink: 0;
   position: relative;
   transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1), flex-basis 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(var(--glass-blur));
 }
 
 #panel-area.open {
   width: 320px;
-  flex-basis: 320px;
+  flex: 0 0 320px;
 }
 
 #app-body[data-layout="files"] #panel-area.open {
   width: 340px;
-  flex-basis: 340px;
+  flex: 0 0 340px;
 }
 
 #app-body[data-layout="workspace"] #panel-area {
@@ -368,8 +457,9 @@ html, body {
 .panel-header {
   padding: 18px 18px 12px;
   border-bottom: 1px solid color-mix(in srgb, var(--accent) 8%, var(--sidebar-border));
-  background: linear-gradient(180deg, color-mix(in srgb, var(--sidebar-bg) 98%, var(--accent) 2%), var(--sidebar-bg));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--sidebar-bg) 82%, transparent), color-mix(in srgb, var(--bg-surface0) 72%, transparent));
   flex-shrink: 0;
+  backdrop-filter: blur(var(--glass-blur));
 }
 
 .panel-header h2 {
@@ -395,15 +485,72 @@ html, body {
 }
 
 /* ===== File Tree ===== */
+.file-tree-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 0;
+}
+
+.file-tree-source-badge {
+  flex-shrink: 0;
+  max-width: 140px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.file-tree-source-badge[data-source="remote"] {
+  color: var(--teal);
+  background: color-mix(in srgb, var(--teal) 16%, transparent);
+  border-color: color-mix(in srgb, var(--teal) 26%, transparent);
+}
+
+.file-tree-current-path {
+  min-width: 0;
+  flex: 1;
+  padding: 4px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--bg-surface0) 76%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .file-tree {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 8px 0;
+  padding: 6px 0 16px;
+}
+
+.file-tree-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 92px 72px;
+  gap: 8px;
+  padding: 0 18px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.file-col-modified,
+.file-col-size {
+  text-align: right;
 }
 
 .tree-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: 18px 18px minmax(0, 1fr) 92px 72px;
   align-items: center;
   padding: 3px 8px 3px 0;
   cursor: pointer;
@@ -463,6 +610,19 @@ html, body {
   text-overflow: ellipsis;
   white-space: nowrap;
   line-height: 1.3;
+  min-width: 0;
+}
+
+.tree-modified,
+.tree-size {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.tree-size {
+  font-variant-numeric: tabular-nums;
 }
 
 .tree-name-input {
@@ -1558,7 +1718,7 @@ html, body {
 
 /* ===== Command Autocomplete Popup ===== */
 .cmd-suggest-popup {
-  position: absolute;
+  position: fixed;
   background: color-mix(in srgb, var(--bg-mantle) 95%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border));
   border-radius: 20px;
@@ -1609,6 +1769,8 @@ html, body {
 .cmd-suggest-item.simple {
   padding: 8px 10px;
   gap: 0;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .cmd-suggest-item:hover,
@@ -1657,6 +1819,13 @@ html, body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.cmd-suggest-meta-line {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .cmd-suggest-name {
@@ -1818,6 +1987,7 @@ html, body {
 /* ===== Terminal Window ===== */
 .terminal-window {
   position: absolute;
+  opacity: 1;
   background: var(--bg-base);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -1849,8 +2019,8 @@ html, body {
 }
 
 @keyframes windowAppear {
-  from { opacity: 0; transform: scale(0.92); }
-  to { opacity: 1; transform: scale(1); }
+  from { transform: scale(0.92); }
+  to { transform: scale(1); }
 }
 
 .terminal-window .title-bar {
@@ -1921,7 +2091,9 @@ html, body {
   position: relative;
 }
 
-.terminal-window .terminal-body .xterm { height: 100%; }
+.terminal-window .terminal-body .xterm {
+  height: 100%;
+}
 
 .terminal-window.minimized .terminal-body,
 .terminal-window.minimized .resize-handle { display: none; }
@@ -1956,38 +2128,25 @@ html, body {
 /* ===== Ghost Text Overlay ===== */
 .ghost-text-overlay {
   position: absolute;
-  right: 12px;
-  bottom: 12px;
-  color: var(--text-sub);
+  left: 0;
+  top: 0;
+  color: color-mix(in srgb, var(--text) 34%, transparent);
   pointer-events: none;
   font-family: var(--font-mono);
-  font-weight: 500;
-  white-space: nowrap;
+  font-weight: 400;
+  white-space: pre;
   z-index: 7;
   display: none;
   user-select: none;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border));
-  background: color-mix(in srgb, var(--bg-mantle) 92%, transparent);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 10px 30px color-mix(in srgb, var(--shadow) 40%, transparent),
-              0 0 0 1px color-mix(in srgb, var(--accent) 8%, transparent);
-}
-
-.ghost-text-key {
-  padding: 3px 6px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent) 20%, transparent);
-  color: var(--accent);
-  font-size: 11px;
-  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 0 0.01px currentColor;
+  transform: translateX(2px);
 }
 
 .ghost-text-value {
-  max-width: min(420px, 52vw);
+  font: inherit;
+  color: inherit;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -2000,6 +2159,14 @@ html, body {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
   z-index: 4;
   display: none;
+}
+
+/* ===== xterm Selection Highlight ===== */
+.terminal-body .xterm .xterm-screen canvas {
+  /* Ensure selection rendering is visible */
+}
+.terminal-window.focused .terminal-body .xterm-screen {
+  /* Boost selection contrast in focused terminal */
 }
 
 /* ===== Thin Scrollbar for xterm.js ===== */
@@ -2104,14 +2271,29 @@ html, body {
 .shortcut-list {
   display: flex;
   flex-direction: column;
+  gap: 14px;
+}
+
+.shortcut-group {
+  display: flex;
+  flex-direction: column;
   gap: 10px;
+}
+
+.shortcut-group-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
 }
 
 .shortcut-item {
   padding: 12px;
-  border-radius: 14px;
+  border-radius: 18px;
   border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
-  background: color-mix(in srgb, var(--bg-surface0) 50%, transparent);
+  background: color-mix(in srgb, var(--bg-surface0) 62%, transparent);
+  backdrop-filter: blur(10px);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -2186,7 +2368,7 @@ html, body {
   color: var(--text);
   padding: 10px 12px;
   font-size: 12px;
-  font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+  font-family: var(--font-mono);
   outline: none;
 }
 
@@ -2628,10 +2810,14 @@ html, body {
 .file-tree-filter {
   padding: 8px 12px;
   flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 .file-filter-input {
   width: 100%;
+  min-width: 0;
   padding: 6px 10px;
   background: var(--bg-surface0);
   border: 1px solid var(--border);
@@ -2649,6 +2835,26 @@ html, body {
 
 .file-filter-input::placeholder {
   color: var(--text-muted);
+}
+
+.file-sort-select,
+.file-sort-order-btn {
+  flex-shrink: 0;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-surface0) 82%, transparent);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.file-sort-select {
+  padding: 0 10px;
+}
+
+.file-sort-order-btn {
+  width: 34px;
+  font-weight: 700;
 }
 
 .file-no-results {
@@ -2699,6 +2905,74 @@ html, body {
 .toast-notification.visible {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
+}
+
+.file-transfer-bar {
+  position: fixed;
+  left: 72px;
+  right: 20px;
+  bottom: 14px;
+  padding: 10px 14px 12px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
+  background: color-mix(in srgb, var(--bg-mantle) 92%, transparent);
+  box-shadow: 0 12px 30px var(--shadow);
+  backdrop-filter: blur(14px);
+  z-index: 12000;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.file-transfer-bar.hidden {
+  opacity: 0;
+  transform: translateY(14px);
+  pointer-events: none;
+}
+
+.file-transfer-bar.error {
+  border-color: color-mix(in srgb, var(--red) 45%, var(--border));
+}
+
+.file-transfer-bar.success {
+  border-color: color-mix(in srgb, var(--green) 45%, var(--border));
+}
+
+.file-transfer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.file-transfer-title,
+.file-transfer-percent {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.file-transfer-detail {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-transfer-track {
+  margin-top: 8px;
+  height: 7px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--bg-surface1) 80%, transparent);
+}
+
+.file-transfer-fill {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 88%, transparent), color-mix(in srgb, var(--teal) 72%, transparent));
+  transition: width 0.18s ease;
 }
 
 /* ===== SSH Profile List ===== */

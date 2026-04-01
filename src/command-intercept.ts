@@ -23,8 +23,36 @@ export function buildSshStartupCommand(profile: SSHProfile, profiles: SSHProfile
   const target = profile.user ? `${profile.user}@${profile.host}` : profile.host;
   const jumpChain = resolveJumpChain(profile, profiles);
   const jumpArg = jumpChain.length > 0 ? ` -J ${jumpChain.join(',')}` : '';
-  const keyArg = profile.authType === 'key' && profile.privateKeyPath ? ` -i ${profile.privateKeyPath}` : '';
-  return `ssh${keyArg}${jumpArg} -p ${profile.port} ${target}`;
+  const keyArg = profile.authType === 'key' && profile.privateKeyPath ? ` -i "${profile.privateKeyPath}"` : '';
+  return `ssh${keyArg}${jumpArg} -o StrictHostKeyChecking=no -p ${profile.port} ${target}`;
+}
+
+export function buildSshPasswordSequence(profile: SSHProfile, profiles: SSHProfile[]): string[] {
+  const lookup = new Map(profiles.map((item) => [item.id, item]));
+  const queue: string[] = [];
+  const visited = new Set<string>([profile.id]);
+
+  let currentId = profile.jumpProfileId;
+  const jumpProfiles: SSHProfile[] = [];
+  while (currentId) {
+    const current = lookup.get(currentId);
+    if (!current || visited.has(currentId)) break;
+    visited.add(currentId);
+    jumpProfiles.unshift(current);
+    currentId = current.jumpProfileId;
+  }
+
+  jumpProfiles.forEach((item) => {
+    if (item.authType === 'password' && item.password) {
+      queue.push(item.password);
+    }
+  });
+
+  if (profile.authType === 'password' && profile.password) {
+    queue.push(profile.password);
+  }
+
+  return queue;
 }
 
 function resolvePath(cwd: string, input: string): string {
