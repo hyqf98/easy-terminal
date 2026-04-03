@@ -1,10 +1,10 @@
 use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Emitter};
-use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -127,10 +127,7 @@ function global:prompt {
     }
 
     pub fn resize(&mut self, session_id: &str, cols: u16, rows: u16) -> Result<(), String> {
-        let session = self
-            .sessions
-            .get(session_id)
-            .ok_or("Session not found")?;
+        let session = self.sessions.get(session_id).ok_or("Session not found")?;
         session
             .master
             .resize(PtySize {

@@ -11,6 +11,7 @@ export class SSHPanel {
   private activeDrawId = '';
   private overlayState: OverlayState = null;
   private groupCollapsed: Record<string, boolean> = {};
+  public ready: Promise<void>;
 
   public onSelectionChange: ((profile: SSHProfile | null, profiles: SSHProfile[]) => void) | null = null;
   public onConnect: ((profile: SSHProfile, profiles: SSHProfile[]) => Promise<void>) | null = null;
@@ -19,7 +20,7 @@ export class SSHPanel {
   constructor(container: HTMLDivElement) {
     this.container = container;
     this.renderShell();
-    void this.init();
+    this.ready = this.init();
 
     onLangChange(() => {
       this.renderShell();
@@ -30,6 +31,8 @@ export class SSHPanel {
 
   setActiveProfile(profileId: string | null) {
     this.activeDrawId = profileId || '';
+    const active = this.profiles.find((profile) => profile.id === this.activeDrawId) || null;
+    this.onSelectionChange?.(active, this.profiles);
     this.render();
   }
 

@@ -52,6 +52,7 @@ export class MappingPanel {
             <div class="mapping-trigger-row">
               <span class="mapping-trigger">${escapeHtml(mapping.trigger)}</span>
               <span class="cmd-chip ${mapping.enabled ? 'accent' : ''}">${mapping.enabled ? t('mapping.enabled') : t('mapping.disabled')}</span>
+              ${mapping.sourceType === 'builtin' ? `<span class="cmd-chip">${t('mapping.sourceBuiltin')}</span>` : ''}
             </div>
             ${mapping.description ? `<div class="mapping-desc">${escapeHtml(mapping.description)}</div>` : ''}
             ${mapping.tags.length ? `<div class="cmd-command-tags">${mapping.tags.map((tag) => `<span class="cmd-tag">${escapeHtml(tag)}</span>`).join('')}</div>` : ''}
@@ -60,7 +61,7 @@ export class MappingPanel {
           <div class="cmd-command-actions always-visible">
             <button class="cmd-mini-btn" data-mapping-toggle="${index}" title="${t('mapping.toggle')}">${switchIcon()}</button>
             <button class="cmd-mini-btn" data-mapping-edit="${index}" title="${t('cmd.edit')}">${editIcon()}</button>
-            <button class="cmd-mini-btn" data-mapping-delete="${index}" title="${t('cmd.delete')}">${deleteIcon()}</button>
+            ${mapping.sourceType === 'builtin' ? '' : `<button class="cmd-mini-btn" data-mapping-delete="${index}" title="${t('cmd.delete')}">${deleteIcon()}</button>`}
           </div>
         </div>
       `).join('');
@@ -92,6 +93,10 @@ export class MappingPanel {
           <label class="cmd-field">
             <span>${t('cmd.tags')}</span>
             <input id="mapping-tags" type="text" value="${escapeHtml(mapping.tags.join(', '))}" placeholder="工作路径, workspace">
+          </label>
+          <label class="cmd-field">
+            <span>${t('mapping.platforms')}</span>
+            <input id="mapping-platforms" type="text" value="${escapeHtml((mapping.platforms || []).join(', '))}" placeholder="darwin, linux, windows">
           </label>
           <label class="cmd-field">
             <span>${t('cmd.examples')}</span>
@@ -152,6 +157,10 @@ export class MappingPanel {
       .split(',')
       .map((value) => value.trim())
       .filter(Boolean);
+    const platforms = ((root.querySelector('#mapping-platforms') as HTMLInputElement | null)?.value.trim() || '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean);
     const examples = ((root.querySelector('#mapping-examples') as HTMLTextAreaElement | null)?.value.trim() || '')
       .split('\n')
       .map((value) => value.trim())
@@ -170,8 +179,12 @@ export class MappingPanel {
       command,
       description,
       tags,
+      platforms,
       examples,
       enabled,
+      sourceType: this.overlayState?.index === null
+        ? 'user'
+        : entries[this.overlayState?.index ?? 0]?.sourceType || 'user',
     };
 
     if (this.overlayState?.index === null) {
@@ -231,6 +244,7 @@ export class MappingPanel {
       ...prefill,
       id: '',
       tags: [...(prefill?.tags || [])],
+      platforms: [...(prefill?.platforms || [])],
       examples: [...(prefill?.examples || [])],
     };
     this.render();
@@ -244,9 +258,11 @@ function emptyMapping(): CommandMapping {
     command: '',
     description: '',
     tags: [],
+    platforms: [],
     examples: [],
     hint: '',
     enabled: true,
+    sourceType: 'user',
   };
 }
 

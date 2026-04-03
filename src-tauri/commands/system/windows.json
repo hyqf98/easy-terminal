@@ -13,7 +13,14 @@
       "name_cn": "列出目录",
       "description": "列出目录内容和文件属性",
       "usage": "dir [path] [/s] [/b]",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "dir # 列出当前目录文件",
+        "dir /w # 以宽格式列出文件",
+        "dir /s /b C:\\Windows\\*.log # 递归搜索日志文件",
+        "dir /o:d # 按日期排序",
+        "dir /a:h # 显示隐藏文件"
+      ]
     },
     {
       "name": "cd",
@@ -23,7 +30,13 @@
       "name_cn": "切换目录",
       "description": "显示或切换当前目录",
       "usage": "cd <path>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "cd C:\\Users # 切换到用户目录",
+        "cd .. # 返回上级目录",
+        "cd \\ # 切换到根目录",
+        "cd %USERPROFILE% # 切换到用户主目录"
+      ]
     },
     {
       "name": "mkdir",
@@ -33,7 +46,12 @@
       "name_cn": "创建目录",
       "description": "创建目录",
       "usage": "mkdir <dir>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "mkdir newfolder # 创建新目录",
+        "mkdir a\\b\\c # 递归创建多级目录",
+        "mkdir \"My Folder\" # 创建带空格的目录"
+      ]
     },
     {
       "name": "rmdir",
@@ -43,7 +61,12 @@
       "name_cn": "删除目录",
       "description": "删除目录",
       "usage": "rmdir [/s] [/q] <dir>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "rmdir emptydir # 删除空目录",
+        "rmdir /s /q myfolder # 静默递归删除目录",
+        "rmdir /s myfolder # 递归删除目录(需确认)"
+      ]
     },
     {
       "name": "del",
@@ -54,7 +77,13 @@
       "name_cn": "删除文件",
       "description": "删除一个或多个文件",
       "usage": "del [/f] [/q] <file>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "del file.txt # 删除文件",
+        "del /f /q *.tmp # 强制静默删除临时文件",
+        "del /s *.log # 递归删除所有日志文件",
+        "del /p file.txt # 删除前确认"
+      ]
     },
     {
       "name": "copy",
@@ -64,7 +93,12 @@
       "name_cn": "复制文件",
       "description": "复制文件到指定位置",
       "usage": "copy <src> <dest>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "copy file.txt backup\\ # 复制文件到目录",
+        "copy a.txt b.txt # 复制并重命名",
+        "copy *.txt archive\\ # 复制所有txt文件"
+      ]
     },
     {
       "name": "xcopy",
@@ -74,7 +108,12 @@
       "name_cn": "扩展复制",
       "description": "复制文件和目录树",
       "usage": "xcopy <src> <dest> [/s] [/e]",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "xcopy src dest /e /i # 递归复制目录",
+        "xcopy *.txt backup\\ /y # 复制txt文件不提示覆盖",
+        "xcopy src dest /s /d:01-01-2024 # 仅复制指定日期后的文件"
+      ]
     },
     {
       "name": "robocopy",
@@ -84,7 +123,13 @@
       "name_cn": "高级复制",
       "description": "强大的文件复制工具，支持断点续传",
       "usage": "robocopy <src> <dest> [/mir] [/z]",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "robocopy C:\\src D:\\dest /e # 递归复制所有内容",
+        "robocopy C:\\src D:\\dest /mir # 镜像同步目录",
+        "robocopy C:\\src D:\\dest /z /mt:8 # 多线程断点续传复制",
+        "robocopy C:\\src D:\\dest /xo /xj # 排除旧文件和 Junction"
+      ]
     },
     {
       "name": "move",
@@ -94,7 +139,12 @@
       "name_cn": "移动文件",
       "description": "移动或重命名文件",
       "usage": "move <src> <dest>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "move file.txt C:\\new\\ # 移动文件",
+        "move old.txt new.txt # 重命名文件",
+        "move *.txt C:\\docs\\ # 移动所有txt文件"
+      ]
     },
     {
       "name": "rename",
@@ -105,7 +155,11 @@
       "name_cn": "重命名",
       "description": "重命名文件或目录",
       "usage": "rename <old> <new>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "rename old.txt new.txt # 重命名文件",
+        "ren *.txt *.bak # 批量修改扩展名"
+      ]
     },
     {
       "name": "type",
@@ -115,7 +169,12 @@
       "name_cn": "查看文件",
       "description": "显示文本文件内容",
       "usage": "type <file>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "type readme.txt # 显示文件内容",
+        "type file1.txt file2.txt # 显示多个文件内容",
+        "type config.ini | more # 分页显示"
+      ]
     },
     {
       "name": "find",
@@ -125,7 +184,12 @@
       "name_cn": "搜索文本",
       "description": "在文件中搜索文本字符串",
       "usage": "find <string> <file>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "find \"error\" log.txt # 在文件中查找error",
+        "find /i \"warning\" *.log # 忽略大小写查找",
+        "find /c \"error\" log.txt # 统计包含error的行数"
+      ]
     },
     {
       "name": "findstr",
@@ -135,7 +199,13 @@
       "name_cn": "正则搜索",
       "description": "在文件中搜索正则表达式文本",
       "usage": "findstr [/r] <pattern> <file>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "findstr \"error\" *.log # 在日志中搜索error",
+        "findstr /i /n \"TODO\" *.cs # 忽略大小写显示行号",
+        "findstr /r \"^[0-9]\" data.txt # 正则搜索以数字开头的行",
+        "findstr /s /i \"password\" *.txt # 递归搜索所有txt文件"
+      ]
     },
     {
       "name": "tree",
@@ -145,7 +215,12 @@
       "name_cn": "目录树",
       "description": "以图形方式显示目录结构",
       "usage": "tree [path] [/f] [/a]",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "tree # 显示当前目录树",
+        "tree /f # 显示包含文件的目录树",
+        "tree /a C:\\project # 以ASCII字符显示目录树"
+      ]
     },
     {
       "name": "where",
@@ -156,7 +231,12 @@
       "name_cn": "查找命令",
       "description": "显示匹配搜索模式的文件位置",
       "usage": "where <command>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "where python # 查找python位置",
+        "where /r C:\\ *.log # 递归查找日志文件",
+        "where notepad # 查找notepad路径"
+      ]
     },
     {
       "name": "attrib",
@@ -167,7 +247,13 @@
       "name_cn": "文件属性",
       "description": "显示或更改文件属性",
       "usage": "attrib [+r|-r] [+h|-h] [+s|-s] <file>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "attrib +h secret.txt # 设置隐藏属性",
+        "attrib -r file.txt # 取消只读属性",
+        "attrib +s +h system.dat # 设置系统和隐藏属性",
+        "attrib /s *.dll # 查看所有DLL文件属性"
+      ]
     },
     {
       "name": "icacls",
@@ -178,7 +264,13 @@
       "name_cn": "文件权限",
       "description": "显示或修改文件ACL访问控制列表",
       "usage": "icacls <file> [/grant] [/deny]",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "icacls file.txt # 查看文件权限",
+        "icacls file.txt /grant User:F # 授予完全控制权限",
+        "icacls folder /grant Everyone:(OI)(CI)R # 授予读取权限",
+        "icacls file.txt /inheritance:r # 移除继承的权限"
+      ]
     },
     {
       "name": "takeown",
@@ -188,7 +280,11 @@
       "name_cn": "取得所有权",
       "description": "以管理员身份取得文件所有权",
       "usage": "takeown /f <file>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "takeown /f file.txt # 取得文件所有权",
+        "takeown /f C:\\folder /r /d y # 递归取得目录所有权"
+      ]
     },
     {
       "name": "cacls",
@@ -198,7 +294,12 @@
       "name_cn": "访问控制(旧版)",
       "description": "显示或修改文件的访问控制列表(旧版)",
       "usage": "cacls <file> [/e] [/p user:perm]",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "cacls file.txt # 查看文件ACL",
+        "cacls file.txt /e /p User:F # 编辑并授予完全控制",
+        "cacls file.txt /e /r User # 移除用户权限"
+      ]
     },
     {
       "name": "more",
@@ -208,7 +309,11 @@
       "name_cn": "分页查看",
       "description": "逐屏显示输出",
       "usage": "more <file>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "more file.txt # 分页查看文件",
+        "type huge.log | more # 管道分页显示"
+      ]
     },
     {
       "name": "sort",
@@ -218,7 +323,13 @@
       "name_cn": "排序",
       "description": "对输入进行排序",
       "usage": "sort [file]",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "sort file.txt # 排序文件内容",
+        "sort /r file.txt # 逆序排列",
+        "dir | sort # 排序目录列表",
+        "sort /+10 data.txt # 从第10列开始排序"
+      ]
     },
     {
       "name": "comp",
@@ -228,7 +339,11 @@
       "name_cn": "比较文件",
       "description": "比较两个文件的内容",
       "usage": "comp <file1> <file2>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "comp file1.txt file2.txt # 比较两个文件",
+        "comp /a file1.bin file2.bin # 以十进制显示差异"
+      ]
     },
     {
       "name": "fc",
@@ -238,7 +353,12 @@
       "name_cn": "文件对比",
       "description": "比较两个文件并显示差异",
       "usage": "fc <file1> <file2>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "fc file1.txt file2.txt # 比较两个文件差异",
+        "fc /b file1.bin file2.bin # 二进制比较",
+        "fc /n a.txt b.txt # 显示行号比较"
+      ]
     },
     {
       "name": "mklink",
@@ -248,7 +368,12 @@
       "name_cn": "创建链接",
       "description": "创建符号链接或硬链接",
       "usage": "mklink [/d] [/h] <link> <target>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "mklink link.txt target.txt # 创建文件符号链接",
+        "mklink /d D:\\link C:\\target # 创建目录符号链接",
+        "mklink /h hardlink.txt target.txt # 创建硬链接"
+      ]
     },
     {
       "name": "subst",
@@ -258,7 +383,12 @@
       "name_cn": "虚拟驱动器",
       "description": "将路径映射为驱动器号",
       "usage": "subst <drive:> <path>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "subst Z: C:\\Users\\Documents # 映射Z盘",
+        "subst # 显示所有映射",
+        "subst Z: /d # 删除Z盘映射"
+      ]
     },
     {
       "name": "pushd",
@@ -268,7 +398,11 @@
       "name_cn": "保存并切换",
       "description": "保存当前目录并切换到新目录",
       "usage": "pushd <path>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "pushd C:\\Windows # 保存当前目录并切换",
+        "pushd \\\\server\\share # 映射网络路径并切换"
+      ]
     },
     {
       "name": "popd",
@@ -278,7 +412,10 @@
       "name_cn": "恢复目录",
       "description": "恢复pushd保存的目录",
       "usage": "popd",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "popd # 返回pushd保存的目录"
+      ]
     },
     {
       "name": "forfiles",
@@ -288,7 +425,11 @@
       "name_cn": "批量文件操作",
       "description": "对匹配的文件执行命令",
       "usage": "forfiles [/p path] [/m mask] [/c command]",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "forfiles /p C:\\logs /m *.log /d -30 /c \"cmd /c del @path\" # 删除30天前的日志",
+        "forfiles /s /m *.txt /c \"cmd /c echo @fpath\" # 列出所有txt文件路径"
+      ]
     },
     {
       "name": "cipher",
@@ -296,7 +437,12 @@
       "name_cn": "文件加密",
       "description": "显示或修改NTFS分区上的文件加密",
       "usage": "cipher [/e|/d] <path>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "cipher /e C:\\secret # 加密目录",
+        "cipher /d C:\\secret # 解密目录",
+        "cipher /w:C:\\ # 安全擦除未使用空间"
+      ]
     },
     {
       "name": "certutil",
@@ -307,7 +453,12 @@
       "name_cn": "文件校验",
       "description": "证书服务工具，可计算文件哈希",
       "usage": "certutil -hashfile <file> [MD5|SHA256]",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "certutil -hashfile file.exe SHA256 # 计算SHA256哈希",
+        "certutil -hashfile file.exe MD5 # 计算MD5哈希",
+        "certutil -urlcache * # 查看缓存"
+      ]
     },
     {
       "name": "certutil -encode",
@@ -317,7 +468,10 @@
       "name_cn": "Base64编码",
       "description": "将文件编码为Base64格式",
       "usage": "certutil -encode <infile> <outfile>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "certutil -encode input.bin output.b64 # 编码为Base64"
+      ]
     },
     {
       "name": "certutil -decode",
@@ -327,7 +481,10 @@
       "name_cn": "Base64解码",
       "description": "解码Base64编码的文件",
       "usage": "certutil -decode <infile> <outfile>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "certutil -decode input.b64 output.bin # 解码Base64文件"
+      ]
     },
     {
       "name": "assoc",
@@ -337,7 +494,12 @@
       "name_cn": "文件关联",
       "description": "显示或修改文件扩展名关联",
       "usage": "assoc [.ext[=[fileType]]]",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "assoc .txt # 查看txt文件关联",
+        "assoc .py=Python.File # 设置.py文件关联",
+        "assoc # 显示所有文件关联"
+      ]
     },
     {
       "name": "ftype",
@@ -345,7 +507,11 @@
       "name_cn": "文件类型",
       "description": "显示或修改文件类型的打开命令",
       "usage": "ftype [fileType[=[command]]]",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "ftype Python.File # 查看文件类型打开方式",
+        "ftype txtfile=%SystemRoot%\\notepad.exe %1 # 设置txt打开方式"
+      ]
     },
     {
       "name": "expand",
@@ -356,7 +522,11 @@
       "name_cn": "解压文件",
       "description": "展开一个或多个压缩文件",
       "usage": "expand <source> <dest>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "expand source.cab -F:* C:\\dest # 解压CAB文件",
+        "expand file.gz C:\\output # 解压文件"
+      ]
     },
     {
       "name": "replace",
@@ -364,7 +534,11 @@
       "name_cn": "替换文件",
       "description": "替换目录中的文件",
       "usage": "replace <src> <dest>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "replace src.txt C:\\dest\\ # 替换目标目录中的同名文件",
+        "replace /a src.txt C:\\dest\\ # 添加新文件到目标目录"
+      ]
     },
     {
       "name": "openfiles",
@@ -374,7 +548,11 @@
       "name_cn": "打开的文件",
       "description": "查询或显示系统打开的文件",
       "usage": "openfiles [/query]",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "openfiles /query # 查询打开的文件",
+        "openfiles /disconnect /id 123 # 断开指定文件连接"
+      ]
     },
     {
       "name": "fsutil",
@@ -382,7 +560,12 @@
       "name_cn": "文件系统工具",
       "description": "文件系统管理工具",
       "usage": "fsutil <command>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "fsutil volume diskfree C: # 查看磁盘可用空间",
+        "fsutil file queryfileid file.txt # 查询文件ID",
+        "fsutil dirty query C: # 检查卷脏位"
+      ]
     },
     {
       "name": "pathping",
@@ -392,7 +575,10 @@
       "name_cn": "路径追踪",
       "description": "提供路径中各节点的延迟和丢包信息",
       "usage": "pathping <host>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "pathping google.com # 统计路由延迟和丢包"
+      ]
     },
     {
       "name": "copy /b",
@@ -402,7 +588,10 @@
       "name_cn": "二进制合并",
       "description": "以二进制模式合并文件",
       "usage": "copy /b <file1>+<file2> <dest>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "copy /b file1.bin+file2.bin merged.bin # 二进制合并文件"
+      ]
     },
     {
       "name": "del /s",
@@ -412,7 +601,10 @@
       "name_cn": "递归删除",
       "description": "递归删除指定文件",
       "usage": "del /s /q <file>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "del /s /q *.tmp # 递归静默删除临时文件"
+      ]
     },
     {
       "name": "dir /a",
@@ -422,7 +614,12 @@
       "name_cn": "列出隐藏文件",
       "description": "列出包含隐藏和系统属性的文件",
       "usage": "dir /a [path]",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "dir /a # 显示所有文件含隐藏",
+        "dir /a:d # 仅显示目录",
+        "dir /a:-d # 仅显示文件"
+      ]
     },
     {
       "name": "dir /s",
@@ -432,7 +629,11 @@
       "name_cn": "递归列出",
       "description": "递归列出目录和子目录中的文件",
       "usage": "dir /s [path]",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "dir /s *.exe # 递归搜索exe文件",
+        "dir /s /b C:\\Windows\\*.dll # 递归列出所有DLL"
+      ]
     },
     {
       "name": "xcopy /e",
@@ -442,7 +643,10 @@
       "name_cn": "递归复制目录",
       "description": "递归复制目录和子目录包括空目录",
       "usage": "xcopy <src> <dest> /e",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "xcopy C:\\src D:\\dest /e /i # 递归复制含空目录"
+      ]
     },
     {
       "name": "robocopy /mir",
@@ -452,7 +656,11 @@
       "name_cn": "镜像同步",
       "description": "镜像同步目录内容",
       "usage": "robocopy <src> <dest> /mir",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "robocopy C:\\src D:\\backup /mir # 镜像同步(删除目标多余文件)",
+        "robocopy C:\\src D:\\backup /mir /xf *.log # 排除日志文件"
+      ]
     },
     {
       "name": "robocopy /e",
@@ -462,7 +670,10 @@
       "name_cn": "递归同步",
       "description": "递归复制目录包含子目录",
       "usage": "robocopy <src> <dest> /e",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "robocopy C:\\src D:\\dest /e /copy:DAT # 复制含子目录和数据"
+      ]
     },
     {
       "name": "attrib +h",
@@ -470,7 +681,11 @@
       "name_cn": "隐藏文件",
       "description": "设置文件为隐藏属性",
       "usage": "attrib +h <file>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "attrib +h file.txt # 隐藏文件",
+        "attrib +h +s file.txt # 隐藏并设为系统文件"
+      ]
     },
     {
       "name": "attrib +r",
@@ -480,7 +695,11 @@
       "name_cn": "设为只读",
       "description": "设置文件为只读属性",
       "usage": "attrib +r <file>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "attrib +r config.ini # 设为只读",
+        "attrib +r *.sys # 所有sys文件设为只读"
+      ]
     },
     {
       "name": "icacls /grant",
@@ -490,7 +709,11 @@
       "name_cn": "授予权限",
       "description": "授予指定用户文件访问权限",
       "usage": "icacls <file> /grant <user>:<perm>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "icacls file.txt /grant Users:R # 授予Users组读取权限",
+        "icacls folder /grant Admin:(OI)(CI)F # 授予完全控制"
+      ]
     },
     {
       "name": "fsutil file",
@@ -500,7 +723,11 @@
       "name_cn": "文件信息查询",
       "description": "查询文件详细信息",
       "usage": "fsutil file queryfileid <file>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "fsutil file queryfileid C:\\test.txt # 查询文件ID",
+        "fsutil file queryvaliddata C:\\test.txt # 查询有效数据长度"
+      ]
     },
     {
       "name": "makecab",
@@ -510,7 +737,11 @@
       "name_cn": "创建CAB",
       "description": "将文件压缩为CAB格式",
       "usage": "makecab <source> <dest>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "makecab source.txt dest.cab # 压缩为CAB文件",
+        "makecab /v3 source.dll dest.cab # 高压缩率"
+      ]
     },
     {
       "name": "extrac32",
@@ -520,7 +751,10 @@
       "name_cn": "解压CAB文件",
       "description": "解压CAB压缩文件",
       "usage": "extrac32 <source> [/l] <dest>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "extrac32 source.cab /l C:\\dest # 解压CAB到指定目录"
+      ]
     },
     {
       "name": "cls",
@@ -530,7 +764,10 @@
       "name_cn": "清屏",
       "description": "清除命令提示符屏幕",
       "usage": "cls",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "cls # 清除屏幕"
+      ]
     },
     {
       "name": "echo",
@@ -541,7 +778,13 @@
       "name_cn": "输出文本",
       "description": "显示消息或将消息回显",
       "usage": "echo <message>",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "echo Hello World # 输出文本",
+        "echo %PATH% # 显示环境变量",
+        "echo off # 关闭命令回显",
+        "echo. # 输出空行"
+      ]
     },
     {
       "name": "set",
@@ -551,7 +794,13 @@
       "name_cn": "环境变量",
       "description": "显示、设置或删除环境变量",
       "usage": "set [var=value]",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "set # 显示所有环境变量",
+        "set MYVAR=hello # 设置变量",
+        "set MYVAR # 查看指定变量",
+        "set /p NAME=请输入: # 交互式设置变量"
+      ]
     },
     {
       "name": "setx",
@@ -559,7 +808,12 @@
       "name_cn": "永久环境变量",
       "description": "永久设置环境变量",
       "usage": "setx <var> <value>",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "setx MYVAR hello # 永久设置用户环境变量",
+        "setx MYVAR hello /m # 永久设置系统环境变量",
+        "setx PATH \"%PATH%;C:\\new\" # 添加到PATH"
+      ]
     },
     {
       "name": "path",
@@ -569,7 +823,11 @@
       "name_cn": "搜索路径",
       "description": "显示或设置可执行文件搜索路径",
       "usage": "path [[drive:]path[;...]]",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "path # 显示当前搜索路径",
+        "path C:\\Tools;%path% # 添加搜索路径"
+      ]
     },
     {
       "name": "title",
@@ -577,7 +835,10 @@
       "name_cn": "窗口标题",
       "description": "设置命令提示符窗口标题",
       "usage": "title <text>",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "title My Script # 设置窗口标题为My Script"
+      ]
     },
     {
       "name": "prompt",
@@ -587,7 +848,11 @@
       "name_cn": "命令提示符",
       "description": "更改命令提示符显示方式",
       "usage": "prompt <text>",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "prompt $p$g # 设置提示符为路径+大于号",
+        "prompt $t $p$g # 提示符显示时间和路径"
+      ]
     },
     {
       "name": "color",
@@ -595,7 +860,12 @@
       "name_cn": "控制台颜色",
       "description": "设置控制台前景和背景颜色",
       "usage": "color [attr]",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "color 0A # 绿字黑底",
+        "color # 恢复默认颜色",
+        "color FC # 亮白字亮红底"
+      ]
     },
     {
       "name": "ver",
@@ -605,7 +875,10 @@
       "name_cn": "系统版本",
       "description": "显示Windows版本",
       "usage": "ver",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "ver # 显示Windows版本"
+      ]
     },
     {
       "name": "date",
@@ -615,7 +888,11 @@
       "name_cn": "日期",
       "description": "显示或设置日期",
       "usage": "date [/t]",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "date /t # 显示当前日期",
+        "date # 设置新日期"
+      ]
     },
     {
       "name": "time",
@@ -623,7 +900,11 @@
       "name_cn": "时间",
       "description": "显示或设置时间",
       "usage": "time [/t]",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "time /t # 显示当前时间",
+        "time # 设置新时间"
+      ]
     },
     {
       "name": "exit",
@@ -633,7 +914,11 @@
       "name_cn": "退出",
       "description": "退出CMD或当前脚本",
       "usage": "exit [/b] [code]",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "exit # 退出CMD",
+        "exit /b 0 # 退出脚本并返回代码0"
+      ]
     },
     {
       "name": "start",
@@ -644,7 +929,13 @@
       "name_cn": "启动程序",
       "description": "在新窗口中启动程序或命令",
       "usage": "start [options] <program>",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "start notepad # 启动记事本",
+        "start https://github.com # 用默认浏览器打开URL",
+        "start /min app.exe # 最小化启动程序",
+        "start \"\" cmd /c script.bat # 在新窗口运行脚本"
+      ]
     },
     {
       "name": "call",
@@ -654,7 +945,11 @@
       "name_cn": "调用脚本",
       "description": "从另一个批处理程序调用",
       "usage": "call <script>",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "call other.bat # 调用另一个批处理",
+        "call :subroutine arg1 # 调用子程序"
+      ]
     },
     {
       "name": "cmd",
@@ -662,7 +957,12 @@
       "name_cn": "命令提示符",
       "description": "启动命令解释器的新实例",
       "usage": "cmd [/c|/k]",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "cmd # 打开新的命令提示符",
+        "cmd /c dir # 执行命令后退出",
+        "cmd /k echo hello # 执行命令后保留窗口"
+      ]
     },
     {
       "name": "powershell",
@@ -672,7 +972,13 @@
       "name_cn": "PowerShell",
       "description": "启动Windows PowerShell",
       "usage": "powershell [command]",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "powershell # 进入PowerShell",
+        "powershell -Command \"Get-Process\" # 执行PowerShell命令",
+        "powershell -File script.ps1 # 执行脚本",
+        "powershell -ExecutionPolicy Bypass -File script.ps1 # 绕过执行策略执行"
+      ]
     },
     {
       "name": "doskey",
@@ -683,7 +989,12 @@
       "name_cn": "宏和历史",
       "description": "编辑命令行、创建宏和查看历史",
       "usage": "doskey <name>=<command>",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "doskey /history # 查看命令历史",
+        "doskey ls=dir $* # 创建别名ls=dir",
+        "doskey /macros # 显示所有宏"
+      ]
     },
     {
       "name": "choice",
@@ -693,7 +1004,11 @@
       "name_cn": "用户选择",
       "description": "提示用户从选择列表中做选择",
       "usage": "choice [/c choices]",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "choice /c YN /m \"确认删除?\" # Y/N选择",
+        "choice /c ABC /n /m \"选择A/B/C\" # 隐藏选项字符"
+      ]
     },
     {
       "name": "pause",
@@ -703,7 +1018,11 @@
       "name_cn": "暂停",
       "description": "暂停批处理文件并显示提示",
       "usage": "pause",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "pause # 暂停等待按键",
+        "pause >/dev/null # 静默暂停"
+      ]
     },
     {
       "name": "break",
@@ -711,7 +1030,10 @@
       "name_cn": "中断控制",
       "description": "设置或清除扩展的CTRL+C检查",
       "usage": "break",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "break # 在CMD中无效，用于批处理中断循环"
+      ]
     },
     {
       "name": "if",
@@ -719,7 +1041,12 @@
       "name_cn": "条件判断",
       "description": "批处理中的条件处理",
       "usage": "if [not] <condition> <command>",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "if exist file.txt echo found # 判断文件是否存在",
+        "if %ERRORLEVEL%==0 echo success # 判断命令执行结果",
+        "if defined MYVAR echo defined # 判断变量是否定义"
+      ]
     },
     {
       "name": "for",
@@ -727,7 +1054,12 @@
       "name_cn": "循环",
       "description": "对一组文件运行指定命令",
       "usage": "for %var in (set) do <command>",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "for %f in (*.txt) do echo %f # 遍历所有txt文件",
+        "for /r %f in (*.dll) do echo %f # 递归遍历DLL",
+        "for /l %i in (1,1,10) do echo %i # 循环1到10"
+      ]
     },
     {
       "name": "goto",
@@ -735,7 +1067,11 @@
       "name_cn": "跳转",
       "description": "跳转到标签行",
       "usage": "goto <label>",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "goto :eof # 跳转到文件末尾",
+        "goto end # 跳转到end标签"
+      ]
     },
     {
       "name": "shift",
@@ -743,7 +1079,11 @@
       "name_cn": "参数移位",
       "description": "更改批处理中可替换参数的位置",
       "usage": "shift",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "shift # 参数左移一位",
+        "shift /2 # 从第3个参数开始左移"
+      ]
     },
     {
       "name": "rem",
@@ -753,7 +1093,11 @@
       "name_cn": "注释",
       "description": "批处理文件中的注释",
       "usage": "rem <comment>",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "rem This is a comment # 注释行",
+        ":: Another comment # 另一种注释方式"
+      ]
     },
     {
       "name": "timeout",
@@ -763,7 +1107,11 @@
       "name_cn": "延时等待",
       "description": "暂停指定秒数",
       "usage": "timeout [/t] <seconds>",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "timeout /t 5 # 等待5秒",
+        "timeout /t 10 /nobreak # 不可中断等待10秒"
+      ]
     },
     {
       "name": "waitfor",
@@ -773,7 +1121,11 @@
       "name_cn": "等待信号",
       "description": "等待或发送信号以同步系统",
       "usage": "waitfor <signal>",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "waitfor SignalName # 等待信号",
+        "waitfor /si SignalName # 发送信号"
+      ]
     },
     {
       "name": "clip",
@@ -784,7 +1136,12 @@
       "name_cn": "复制到剪贴板",
       "description": "将命令输出重定向到剪贴板",
       "usage": "command | clip",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "echo Hello | clip # 复制文本到剪贴板",
+        "dir | clip # 复制目录列表到剪贴板",
+        "type file.txt | clip # 复制文件内容到剪贴板"
+      ]
     },
     {
       "name": "systeminfo",
@@ -794,7 +1151,12 @@
       "name_cn": "系统信息",
       "description": "显示计算机的详细配置信息",
       "usage": "systeminfo",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "systeminfo # 显示完整系统信息",
+        "systeminfo | find \"OS\" # 过滤操作系统信息",
+        "systeminfo /s remote-pc # 查询远程计算机信息"
+      ]
     },
     {
       "name": "hostname",
@@ -804,7 +1166,10 @@
       "name_cn": "主机名",
       "description": "显示计算机的主机全名",
       "usage": "hostname",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "hostname # 显示主机名"
+      ]
     },
     {
       "name": "whoami",
@@ -814,7 +1179,12 @@
       "name_cn": "当前用户",
       "description": "显示当前用户信息",
       "usage": "whoami [/all]",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "whoami # 显示当前用户",
+        "whoami /all # 显示所有用户信息和权限",
+        "whoami /groups # 显示用户组"
+      ]
     },
     {
       "name": "shutdown",
@@ -825,7 +1195,13 @@
       "name_cn": "关机",
       "description": "关闭或重启计算机",
       "usage": "shutdown [/s|/r] [/t <sec>]",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "shutdown /s /t 60 # 60秒后关机",
+        "shutdown /a # 取消关机计划",
+        "shutdown /s /f /t 0 # 立即强制关机",
+        "shutdown /r /t 0 # 立即重启"
+      ]
     },
     {
       "name": "shutdown /r",
@@ -835,7 +1211,12 @@
       "name_cn": "重启计算机",
       "description": "重启本地或远程计算机",
       "usage": "shutdown /r /t <seconds>",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "shutdown /r /t 30 # 30秒后重启",
+        "shutdown /r /f # 强制重启",
+        "shutdown /r /o # 重启到高级启动选项"
+      ]
     },
     {
       "name": "shutdown /l",
@@ -845,7 +1226,10 @@
       "name_cn": "注销",
       "description": "注销当前用户",
       "usage": "shutdown /l",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "shutdown /l # 注销当前用户"
+      ]
     },
     {
       "name": "sfc",
@@ -853,7 +1237,12 @@
       "name_cn": "系统文件检查",
       "description": "系统文件检查器，扫描修复系统文件",
       "usage": "sfc /scannow",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "sfc /scannow # 立即扫描修复系统文件",
+        "sfc /verifyonly # 仅验证不修复",
+        "sfc /scanfile=C:\\Windows\\System32\\dll.dll # 扫描指定文件"
+      ]
     },
     {
       "name": "chkdsk",
@@ -863,7 +1252,12 @@
       "name_cn": "磁盘检查",
       "description": "检查磁盘并修复错误",
       "usage": "chkdsk [drive:] [/f] [/r]",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "chkdsk C: # 检查C盘",
+        "chkdsk C: /f # 检查并修复错误",
+        "chkdsk C: /r # 检查、修复并恢复坏扇区"
+      ]
     },
     {
       "name": "chkntfs",
@@ -871,7 +1265,11 @@
       "name_cn": "启动检查",
       "description": "显示或修改启动时的磁盘检查",
       "usage": "chkntfs <drive:>",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "chkntfs C: # 查看C盘是否计划检查",
+        "chkntfs /x C: # 排除C盘启动检查"
+      ]
     },
     {
       "name": "winget",
@@ -882,7 +1280,14 @@
       "name_cn": "包管理器",
       "description": "Windows包管理器",
       "usage": "winget <command>",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "winget install vscode # 安装VSCode",
+        "winget list # 列出已安装应用",
+        "winget search firefox # 搜索应用",
+        "winget upgrade --all # 升级所有应用",
+        "winget uninstall app-id # 卸载应用"
+      ]
     },
     {
       "name": "choco",
@@ -893,7 +1298,13 @@
       "name_cn": "Chocolatey",
       "description": "Chocolatey包管理器",
       "usage": "choco <command>",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "choco install firefox # 安装Firefox",
+        "choco list --local-only # 列出已安装包",
+        "choco upgrade all # 升级所有包",
+        "choco uninstall firefox # 卸载包"
+      ]
     },
     {
       "name": "scoop",
@@ -903,7 +1314,14 @@
       "name_cn": "Scoop",
       "description": "Scoop命令行包管理器",
       "usage": "scoop <command>",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "scoop install git # 安装git",
+        "scoop list # 列出已安装应用",
+        "scoop search python # 搜索应用",
+        "scoop update * # 更新所有应用",
+        "scoop bucket add extras # 添加extras仓库"
+      ]
     },
     {
       "name": "dism",
@@ -911,7 +1329,13 @@
       "name_cn": "系统映像管理",
       "description": "部署映像服务和管理工具",
       "usage": "dism [/online] [/cleanup-image]",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "dism /online /get-features # 列出系统功能",
+        "dism /online /enable-feature /featurename:TelnetClient # 启用功能",
+        "dism /online /cleanup-image /restorehealth # 修复系统映像",
+        "dism /online /get-drivers # 列出驱动"
+      ]
     },
     {
       "name": "bcdedit",
@@ -919,7 +1343,12 @@
       "name_cn": "启动配置",
       "description": "修改启动配置数据存储",
       "usage": "bcdedit [/store <file>]",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "bcdedit /enum # 列出启动项",
+        "bcdedit /set testsigning on # 启用测试签名",
+        "bcdedit /export C:\\backup\\bcd # 导出启动配置"
+      ]
     },
     {
       "name": "bcdboot",
@@ -929,7 +1358,11 @@
       "name_cn": "启动修复",
       "description": "设置或修复启动环境",
       "usage": "bcdboot <source>",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "bcdboot C:\\Windows # 修复启动环境",
+        "bcdboot D:\\Windows /s C: # 在C盘创建启动文件"
+      ]
     },
     {
       "name": "msconfig",
@@ -937,7 +1370,10 @@
       "name_cn": "系统配置",
       "description": "打开系统配置实用程序",
       "usage": "msconfig",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "msconfig # 打开系统配置"
+      ]
     },
     {
       "name": "regedit",
@@ -945,7 +1381,11 @@
       "name_cn": "注册表编辑器",
       "description": "打开注册表编辑器",
       "usage": "regedit",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "regedit # 打开注册表编辑器",
+        "regedit /s settings.reg # 静默导入注册表文件"
+      ]
     },
     {
       "name": "gpedit",
@@ -953,7 +1393,10 @@
       "name_cn": "组策略",
       "description": "打开组策略编辑器",
       "usage": "gpedit.msc",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "gpedit.msc # 打开组策略编辑器"
+      ]
     },
     {
       "name": "msinfo32",
@@ -961,7 +1404,11 @@
       "name_cn": "系统信息GUI",
       "description": "打开系统信息窗口",
       "usage": "msinfo32",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "msinfo32 # 打开系统信息窗口",
+        "msinfo32 /report report.txt # 导出系统信息报告"
+      ]
     },
     {
       "name": "dxdiag",
@@ -969,7 +1416,10 @@
       "name_cn": "DirectX诊断",
       "description": "打开DirectX诊断工具",
       "usage": "dxdiag",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "dxdiag # 打开DirectX诊断工具"
+      ]
     },
     {
       "name": "winver",
@@ -977,7 +1427,10 @@
       "name_cn": "Windows版本",
       "description": "显示Windows版本信息对话框",
       "usage": "winver",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "winver # 显示Windows版本信息"
+      ]
     },
     {
       "name": "powercfg",
@@ -985,7 +1438,13 @@
       "name_cn": "电源管理",
       "description": "控制电源管理设置和报告",
       "usage": "powercfg <command>",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "powercfg /list # 列出电源方案",
+        "powercfg /energy # 生成能效报告",
+        "powercfg /batteryreport # 生成电池报告",
+        "powercfg /hibernate off # 关闭休眠"
+      ]
     },
     {
       "name": "driverquery",
@@ -995,7 +1454,12 @@
       "name_cn": "驱动列表",
       "description": "显示已安装设备驱动列表",
       "usage": "driverquery [/v]",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "driverquery # 列出所有驱动",
+        "driverquery /v # 详细信息",
+        "driverquery /fo csv # CSV格式输出"
+      ]
     },
     {
       "name": "w32tm",
@@ -1005,7 +1469,12 @@
       "name_cn": "时间服务",
       "description": "Windows时间服务管理",
       "usage": "w32tm [/resync]",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "w32tm /resync # 立即同步时间",
+        "w32tm /query /status # 查看时间服务状态",
+        "w32tm /config /manualpeerlist:ntp.aliyun.com /syncfromflags:manual /update # 设置NTP服务器"
+      ]
     },
     {
       "name": "lodctr",
@@ -1013,7 +1482,10 @@
       "name_cn": "加载计数器",
       "description": "注册性能计数器名称",
       "usage": "lodctr <ini-file>",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "lodctr perf.ini # 加载性能计数器"
+      ]
     },
     {
       "name": "unlodctr",
@@ -1021,7 +1493,10 @@
       "name_cn": "卸载计数器",
       "description": "移除性能计数器名称",
       "usage": "unlodctr <driver>",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "unlodctr MyApp # 卸载性能计数器"
+      ]
     },
     {
       "name": "diskpart",
@@ -1032,7 +1507,11 @@
       "name_cn": "磁盘分区工具",
       "description": "磁盘分区管理交互式工具",
       "usage": "diskpart",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "diskpart # 进入磁盘分区工具(交互式)",
+        "echo list disk | diskpart # 列出所有磁盘"
+      ]
     },
     {
       "name": "wmic",
@@ -1040,7 +1519,13 @@
       "name_cn": "WMI管理",
       "description": "Windows管理规范命令行工具",
       "usage": "wmic <alias> <command>",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "wmic cpu get name # 查看CPU信息",
+        "wmic diskdrive get model,size # 查看硬盘信息",
+        "wmic product get name # 列出已安装软件",
+        "wmic bios get serialnumber # 获取BIOS序列号"
+      ]
     },
     {
       "name": "getmac",
@@ -1050,7 +1535,12 @@
       "name_cn": "MAC地址",
       "description": "显示网络适配器MAC地址",
       "usage": "getmac [/v]",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "getmac # 显示MAC地址",
+        "getmac /v # 详细显示每块网卡MAC",
+        "getmac /fo csv # CSV格式输出"
+      ]
     },
     {
       "name": "eventvwr",
@@ -1060,7 +1550,10 @@
       "name_cn": "事件查看器",
       "description": "打开事件查看器",
       "usage": "eventvwr.msc",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "eventvwr.msc # 打开事件查看器"
+      ]
     },
     {
       "name": "wevtutil",
@@ -1068,7 +1561,12 @@
       "name_cn": "事件日志命令",
       "description": "命令行事件日志管理工具",
       "usage": "wevtutil <command>",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "wevtutil el # 列出所有事件日志",
+        "wevtutil qe Application /c:10 # 查询最近10条应用日志",
+        "wevtutil cl Application # 清除应用日志"
+      ]
     },
     {
       "name": "perfmon",
@@ -1079,7 +1577,11 @@
       "name_cn": "性能监视器",
       "description": "打开性能监视器",
       "usage": "perfmon",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "perfmon # 打开性能监视器",
+        "perfmon /report # 生成系统诊断报告"
+      ]
     },
     {
       "name": "resmon",
@@ -1090,7 +1592,10 @@
       "name_cn": "资源监视器",
       "description": "打开资源监视器",
       "usage": "resmon",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "resmon # 打开资源监视器"
+      ]
     },
     {
       "name": "compmgmt",
@@ -1098,7 +1603,10 @@
       "name_cn": "计算机管理",
       "description": "打开计算机管理控制台",
       "usage": "compmgmt.msc",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "compmgmt.msc # 打开计算机管理"
+      ]
     },
     {
       "name": "devmgmt",
@@ -1108,7 +1616,10 @@
       "name_cn": "设备管理器",
       "description": "打开设备管理器",
       "usage": "devmgmt.msc",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "devmgmt.msc # 打开设备管理器"
+      ]
     },
     {
       "name": "services.msc",
@@ -1116,7 +1627,10 @@
       "name_cn": "服务管理GUI",
       "description": "打开服务管理控制台",
       "usage": "services.msc",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "services.msc # 打开服务管理"
+      ]
     },
     {
       "name": "control",
@@ -1124,7 +1638,12 @@
       "name_cn": "控制面板",
       "description": "打开Windows控制面板",
       "usage": "control",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "control # 打开控制面板",
+        "control appwiz.cpl # 打开程序和功能",
+        "control sysdm.cpl # 打开系统属性"
+      ]
     },
     {
       "name": "slmgr",
@@ -1132,7 +1651,12 @@
       "name_cn": "许可证管理",
       "description": "Windows软件授权管理工具",
       "usage": "slmgr [options]",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "slmgr /dli # 显示许可证信息",
+        "slmgr /xpr # 查看激活到期时间",
+        "slmgr /ipk XXXXX-XXXXX # 安装产品密钥"
+      ]
     },
     {
       "name": "tasklist",
@@ -1143,7 +1667,13 @@
       "name_cn": "进程列表",
       "description": "显示所有当前运行的进程",
       "usage": "tasklist [/svc] [/fi]",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "tasklist # 列出所有进程",
+        "tasklist /svc # 显示进程对应的服务",
+        "tasklist /fi \"imagename eq notepad*\" # 过滤进程名",
+        "tasklist /fo csv # CSV格式输出"
+      ]
     },
     {
       "name": "taskkill",
@@ -1153,7 +1683,13 @@
       "name_cn": "终止进程",
       "description": "终止正在运行的进程",
       "usage": "taskkill [/pid <id>] [/im <name>] [/f]",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "taskkill /pid 1234 # 按PID终止进程",
+        "taskkill /im notepad.exe # 按名称终止进程",
+        "taskkill /f /im chrome.exe # 强制终止Chrome",
+        "taskkill /t /f /pid 1234 # 强制终止进程树"
+      ]
     },
     {
       "name": "ipconfig",
@@ -1164,7 +1700,14 @@
       "name_cn": "网络配置",
       "description": "显示网络适配器IP配置",
       "usage": "ipconfig [/all] [/renew] [/release]",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "ipconfig # 显示IP配置",
+        "ipconfig /all # 显示详细配置",
+        "ipconfig /release # 释放IP地址",
+        "ipconfig /renew # 重新获取IP",
+        "ipconfig /flushdns # 清除DNS缓存"
+      ]
     },
     {
       "name": "ping",
@@ -1174,7 +1717,13 @@
       "name_cn": "测试网络",
       "description": "测试与目标主机的网络连通性",
       "usage": "ping <host> [-t] [-n count]",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "ping google.com # 测试连通性",
+        "ping -t 192.168.1.1 # 持续ping",
+        "ping -n 4 localhost # 发送4个包",
+        "ping -l 1024 server.com # 指定包大小"
+      ]
     },
     {
       "name": "netstat",
@@ -1184,7 +1733,13 @@
       "name_cn": "网络连接",
       "description": "显示活动的TCP连接和端口",
       "usage": "netstat [-an] [-o]",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "netstat -an # 显示所有连接和端口",
+        "netstat -ano # 显示连接和对应PID",
+        "netstat -r # 显示路由表",
+        "netstat -an | findstr :80 # 查找80端口"
+      ]
     },
     {
       "name": "netstat -an",
@@ -1194,7 +1749,11 @@
       "name_cn": "端口监听",
       "description": "显示所有连接和监听端口",
       "usage": "netstat -an",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "netstat -an # 显示所有连接",
+        "netstat -an | findstr LISTENING # 查看监听端口"
+      ]
     },
     {
       "name": "tracert",
@@ -1204,7 +1763,12 @@
       "name_cn": "路由跟踪",
       "description": "跟踪数据包到目标的路径",
       "usage": "tracert [-d] <host>",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "tracert google.com # 路由跟踪",
+        "tracert -d 8.8.8.8 # 不解析主机名加速",
+        "tracert -h 15 target.com # 限制最大跳数"
+      ]
     },
     {
       "name": "pathping",
@@ -1214,7 +1778,10 @@
       "name_cn": "路径统计",
       "description": "提供路径中各节点的延迟和丢包信息",
       "usage": "pathping <host>",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "pathping google.com # 统计路由延迟和丢包"
+      ]
     },
     {
       "name": "nslookup",
@@ -1225,7 +1792,12 @@
       "name_cn": "DNS查询",
       "description": "查询DNS名称服务器",
       "usage": "nslookup <domain>",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "nslookup google.com # 查询DNS记录",
+        "nslookup -type=MX gmail.com # 查询MX记录",
+        "nslookup 8.8.8.8 # 反向DNS查询"
+      ]
     },
     {
       "name": "curl",
@@ -1236,7 +1808,13 @@
       "name_cn": "HTTP请求",
       "description": "发起HTTP/HTTPS请求",
       "usage": "curl <url> [-o file]",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "curl https://api.example.com # 发起GET请求",
+        "curl -o file.zip URL # 下载文件",
+        "curl -X POST -d '{\"key\":\"val\"}' URL # POST请求",
+        "curl -I URL # 仅获取响应头"
+      ]
     },
     {
       "name": "wget",
@@ -1246,7 +1824,12 @@
       "name_cn": "下载文件",
       "description": "从网络下载文件",
       "usage": "wget <url>",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "wget URL # 下载文件",
+        "wget -O output.zip URL # 指定输出文件名",
+        "wget -c URL # 断点续传下载"
+      ]
     },
     {
       "name": "ssh",
@@ -1256,7 +1839,12 @@
       "name_cn": "远程登录",
       "description": "SSH安全Shell远程登录",
       "usage": "ssh <user>@<host>",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "ssh user@host # SSH连接远程主机",
+        "ssh -p 2222 user@host # 指定端口连接",
+        "ssh -i key.pem user@host # 使用密钥连接"
+      ]
     },
     {
       "name": "scp",
@@ -1266,7 +1854,12 @@
       "name_cn": "远程复制",
       "description": "通过SSH远程安全复制文件",
       "usage": "scp <src> <dest>",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "scp file.txt user@host:/path/ # 上传文件",
+        "scp user@host:/path/file.txt . # 下载文件",
+        "scp -r folder user@host:/path/ # 递归复制目录"
+      ]
     },
     {
       "name": "ftp",
@@ -1277,7 +1870,11 @@
       "name_cn": "FTP传输",
       "description": "文件传输协议客户端",
       "usage": "ftp <host>",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "ftp ftp.example.com # 连接FTP服务器",
+        "ftp -s:script.txt # 执行FTP脚本"
+      ]
     },
     {
       "name": "tftp",
@@ -1287,7 +1884,10 @@
       "name_cn": "TFTP传输",
       "description": "简单文件传输协议客户端",
       "usage": "tftp <host>",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "tftp -i host GET remote.txt # 下载文件"
+      ]
     },
     {
       "name": "netsh",
@@ -1298,7 +1898,13 @@
       "name_cn": "网络配置",
       "description": "网络配置命令行工具",
       "usage": "netsh <context> <command>",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "netsh interface ip show config # 显示IP配置",
+        "netsh advfirewall set allprofiles state off # 关闭防火墙",
+        "netsh winsock reset # 重置网络栈",
+        "netsh interface ip set dns \"Ethernet\" static 8.8.8.8 # 设置DNS"
+      ]
     },
     {
       "name": "netsh wlan",
@@ -1308,7 +1914,12 @@
       "name_cn": "WiFi管理",
       "description": "管理无线网络连接",
       "usage": "netsh wlan <command>",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "netsh wlan show networks # 显示可用WiFi",
+        "netsh wlan show profiles # 显示已保存的WiFi配置",
+        "netsh wlan connect name=MyWiFi # 连接WiFi"
+      ]
     },
     {
       "name": "net",
@@ -1316,7 +1927,13 @@
       "name_cn": "网络服务",
       "description": "网络服务管理命令",
       "usage": "net <command>",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "net user # 列出用户",
+        "net share # 查看共享",
+        "net start # 列出正在运行的服务",
+        "net stop servicename # 停止服务"
+      ]
     },
     {
       "name": "route",
@@ -1327,7 +1944,12 @@
       "name_cn": "路由表",
       "description": "显示或修改本地路由表",
       "usage": "route [print|add|delete]",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "route print # 显示路由表",
+        "route add 0.0.0.0 mask 0.0.0.0 192.168.1.1 # 添加默认网关",
+        "route delete 0.0.0.0 # 删除默认路由"
+      ]
     },
     {
       "name": "arp",
@@ -1337,7 +1959,11 @@
       "name_cn": "ARP缓存",
       "description": "显示和修改IP到物理地址的映射",
       "usage": "arp [-a] [-d]",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "arp -a # 显示ARP缓存",
+        "arp -d * # 清除ARP缓存"
+      ]
     },
     {
       "name": "nbtstat",
@@ -1345,7 +1971,11 @@
       "name_cn": "NetBIOS状态",
       "description": "显示NetBIOS统计和名称缓存",
       "usage": "nbtstat [-n] [-a]",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "nbtstat -n # 显示本地NetBIOS名称",
+        "nbtstat -a computername # 查询远程主机NetBIOS"
+      ]
     },
     {
       "name": "getmac",
@@ -1355,7 +1985,12 @@
       "name_cn": "MAC地址查询",
       "description": "显示网卡MAC地址",
       "usage": "getmac [/v]",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "getmac # 显示MAC地址",
+        "getmac /v # 详细显示每块网卡MAC",
+        "getmac /fo csv # CSV格式输出"
+      ]
     },
     {
       "name": "dnscmd",
@@ -1363,7 +1998,11 @@
       "name_cn": "DNS管理",
       "description": "管理DNS服务器",
       "usage": "dnscmd <server> <command>",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "dnscmd /info # 显示DNS服务器信息",
+        "dnscmd /enumzones # 列出DNS区域"
+      ]
     },
     {
       "name": "portqry",
@@ -1374,7 +2013,11 @@
       "name_cn": "端口查询",
       "description": "查询目标主机的端口状态",
       "usage": "portqry -n <host> -p <protocol> -e <port>",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "portqry -n 192.168.1.1 -e 80 # 查询80端口状态",
+        "portqry -n host -p udp -e 53 # 查询UDP 53端口"
+      ]
     },
     {
       "name": "rpcping",
@@ -1382,7 +2025,10 @@
       "name_cn": "RPC测试",
       "description": "测试RPC连接",
       "usage": "rpcping [options]",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "rpcping -s server # 测试RPC连接"
+      ]
     },
     {
       "name": "finger",
@@ -1392,7 +2038,10 @@
       "name_cn": "用户信息查询",
       "description": "显示远程系统上用户的信息",
       "usage": "finger <user@host>",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "finger user@host # 查询远程用户信息"
+      ]
     },
     {
       "name": "lpq",
@@ -1402,7 +2051,10 @@
       "name_cn": "打印队列",
       "description": "显示远程打印机的队列状态",
       "usage": "lpq -S <server> -P <printer>",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "lpq -S printserver -P printer # 查看打印队列"
+      ]
     },
     {
       "name": "lpr",
@@ -1412,7 +2064,10 @@
       "name_cn": "发送打印任务",
       "description": "发送文件到远程打印机",
       "usage": "lpr -S <server> -P <printer> <file>",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "lpr # 发送文件到远程打印机"
+      ]
     },
     {
       "name": "ipconfig /flushdns",
@@ -1422,7 +2077,10 @@
       "name_cn": "刷新DNS缓存",
       "description": "清除DNS解析缓存",
       "usage": "ipconfig /flushdns",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "ipconfig # 清除DNS解析缓存"
+      ]
     },
     {
       "name": "ipconfig /renew",
@@ -1432,7 +2090,10 @@
       "name_cn": "续租IP地址",
       "description": "重新获取DHCP分配的IP地址",
       "usage": "ipconfig /renew",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "ipconfig # 重新获取DHCP分配的IP地址"
+      ]
     },
     {
       "name": "ipconfig /release",
@@ -1442,7 +2103,10 @@
       "name_cn": "释放IP地址",
       "description": "释放DHCP分配的IP地址",
       "usage": "ipconfig /release",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "ipconfig # 释放DHCP分配的IP地址"
+      ]
     },
     {
       "name": "Test-NetConnection",
@@ -1452,8 +2116,14 @@
       ],
       "name_cn": "测试网络连接",
       "description": "PowerShell测试网络连接和端口",
-      "usage": "powershell Test-NetConnection <host> -Port <port>",
-      "category": "网络"
+      "usage": "Test-NetConnection [-ComputerName] <host> [-Port <port>]",
+      "category": "网络",
+      "examples": [
+        "Test-NetConnection google.com # 测试与google.com的连接",
+        "Test-NetConnection 192.168.1.1 -Port 80 # 测试指定端口是否开放",
+        "Test-NetConnection -ComputerName server -Port 443 # 测试HTTPS端口连通性",
+        "Test-NetConnection -ComputerName dbserver -Port 3306 # 测试MySQL端口"
+      ]
     },
     {
       "name": "Get-NetAdapter",
@@ -1463,8 +2133,14 @@
       ],
       "name_cn": "网卡信息",
       "description": "PowerShell获取网络适配器详细信息",
-      "usage": "powershell Get-NetAdapter",
-      "category": "网络"
+      "usage": "Get-NetAdapter [[-Name] <string>] [-Physical|-Virtual]",
+      "category": "网络",
+      "examples": [
+        "Get-NetAdapter # 列出所有网络适配器",
+        "Get-NetAdapter -Name '以太网' # 查看指定网卡信息",
+        "Get-NetAdapter -Physical # 仅显示物理网卡",
+        "Get-NetAdapter | Where-Object Status -eq 'Up' # 查看已启用的网卡"
+      ]
     },
     {
       "name": "diskmgmt",
@@ -1472,7 +2148,10 @@
       "name_cn": "磁盘管理GUI",
       "description": "打开磁盘管理界面",
       "usage": "diskmgmt.msc",
-      "category": "磁盘管理"
+      "category": "磁盘管理",
+      "examples": [
+        "diskmgmt.msc # 打开磁盘管理界面"
+      ]
     },
     {
       "name": "format",
@@ -1482,7 +2161,10 @@
       "name_cn": "格式化磁盘",
       "description": "格式化磁盘分区",
       "usage": "format <drive:> [/fs:ntfs]",
-      "category": "磁盘管理"
+      "category": "磁盘管理",
+      "examples": [
+        "format # 格式化磁盘分区"
+      ]
     },
     {
       "name": "label",
@@ -1492,7 +2174,10 @@
       "name_cn": "卷标管理",
       "description": "创建、更改或删除磁盘卷标",
       "usage": "label [drive:] [name]",
-      "category": "磁盘管理"
+      "category": "磁盘管理",
+      "examples": [
+        "label # 创建、更改或删除磁盘卷标"
+      ]
     },
     {
       "name": "vol",
@@ -1502,7 +2187,10 @@
       "name_cn": "卷信息",
       "description": "显示磁盘卷标和序列号",
       "usage": "vol [drive:]",
-      "category": "磁盘管理"
+      "category": "磁盘管理",
+      "examples": [
+        "vol # 显示磁盘卷标和序列号"
+      ]
     },
     {
       "name": "convert",
@@ -1510,7 +2198,10 @@
       "name_cn": "转换文件系统",
       "description": "将FAT卷转换为NTFS",
       "usage": "convert <drive:> /fs:ntfs",
-      "category": "磁盘管理"
+      "category": "磁盘管理",
+      "examples": [
+        "convert # 将FAT卷转换为NTFS"
+      ]
     },
     {
       "name": "defrag",
@@ -1518,7 +2209,10 @@
       "name_cn": "磁盘碎片整理",
       "description": "对磁盘进行碎片整理优化",
       "usage": "defrag <drive:>",
-      "category": "磁盘管理"
+      "category": "磁盘管理",
+      "examples": [
+        "defrag # 对磁盘进行碎片整理优化"
+      ]
     },
     {
       "name": "compact",
@@ -1528,7 +2222,10 @@
       "name_cn": "NTFS压缩",
       "description": "显示或修改NTFS上的文件压缩状态",
       "usage": "compact [/c|/u] <path>",
-      "category": "磁盘管理"
+      "category": "磁盘管理",
+      "examples": [
+        "compact # 显示或修改NTFS上的文件压缩状态"
+      ]
     },
     {
       "name": "vssadmin",
@@ -1538,7 +2235,10 @@
       "name_cn": "卷影副本",
       "description": "卷影复制服务管理",
       "usage": "vssadmin <command>",
-      "category": "磁盘管理"
+      "category": "磁盘管理",
+      "examples": [
+        "vssadmin # 卷影复制服务管理"
+      ]
     },
     {
       "name": "mountvol",
@@ -1549,7 +2249,10 @@
       "name_cn": "挂载卷",
       "description": "创建、删除或列出卷挂载点",
       "usage": "mountvol <path> <guid>",
-      "category": "磁盘管理"
+      "category": "磁盘管理",
+      "examples": [
+        "mountvol # 创建、删除或列出卷挂载点"
+      ]
     },
     {
       "name": "diskcopy",
@@ -1559,7 +2262,10 @@
       "name_cn": "磁盘复制",
       "description": "将一个软盘的内容复制到另一个",
       "usage": "diskcopy <drive1:> <drive2:>",
-      "category": "磁盘管理"
+      "category": "磁盘管理",
+      "examples": [
+        "diskcopy # 将一个软盘的内容复制到另一个"
+      ]
     },
     {
       "name": "recover",
@@ -1567,7 +2273,10 @@
       "name_cn": "数据恢复",
       "description": "从损坏的磁盘恢复可读信息",
       "usage": "recover <drive:> <file>",
-      "category": "磁盘管理"
+      "category": "磁盘管理",
+      "examples": [
+        "recover # 从损坏的磁盘恢复可读信息"
+      ]
     },
     {
       "name": "wmic diskdrive",
@@ -1578,7 +2287,10 @@
       "name_cn": "物理磁盘信息",
       "description": "查询物理磁盘驱动器信息",
       "usage": "wmic diskdrive list brief",
-      "category": "磁盘管理"
+      "category": "磁盘管理",
+      "examples": [
+        "wmic # 查询物理磁盘驱动器信息"
+      ]
     },
     {
       "name": "wmic logicaldisk",
@@ -1588,7 +2300,10 @@
       "name_cn": "逻辑磁盘信息",
       "description": "查询逻辑磁盘分区和空间信息",
       "usage": "wmic logicaldisk get size,freespace,caption",
-      "category": "磁盘管理"
+      "category": "磁盘管理",
+      "examples": [
+        "wmic # 查询逻辑磁盘分区和空间信息"
+      ]
     },
     {
       "name": "net user",
@@ -1599,7 +2314,10 @@
       "name_cn": "用户管理",
       "description": "添加或修改用户帐户",
       "usage": "net user [name [password]]",
-      "category": "用户管理"
+      "category": "用户管理",
+      "examples": [
+        "net # 添加或修改用户帐户"
+      ]
     },
     {
       "name": "net localgroup",
@@ -1610,7 +2328,10 @@
       "name_cn": "用户组管理",
       "description": "添加或修改本地组",
       "usage": "net localgroup [group [user]]",
-      "category": "用户管理"
+      "category": "用户管理",
+      "examples": [
+        "net # 添加或修改本地组"
+      ]
     },
     {
       "name": "net group",
@@ -1620,7 +2341,10 @@
       "name_cn": "全局组管理",
       "description": "管理域环境中的全局组",
       "usage": "net group [group [options]]",
-      "category": "用户管理"
+      "category": "用户管理",
+      "examples": [
+        "net # 管理域环境中的全局组"
+      ]
     },
     {
       "name": "runas",
@@ -1631,7 +2355,10 @@
       "name_cn": "以其他用户运行",
       "description": "以其他用户身份运行程序",
       "usage": "runas /user:<name> <program>",
-      "category": "用户管理"
+      "category": "用户管理",
+      "examples": [
+        "runas # 以其他用户身份运行程序"
+      ]
     },
     {
       "name": "net accounts",
@@ -1642,7 +2369,10 @@
       "name_cn": "账户策略",
       "description": "管理用户账户和密码策略",
       "usage": "net accounts",
-      "category": "用户管理"
+      "category": "用户管理",
+      "examples": [
+        "net # 管理用户账户和密码策略"
+      ]
     },
     {
       "name": "lusrmgr",
@@ -1650,7 +2380,10 @@
       "name_cn": "用户管理GUI",
       "description": "打开本地用户和组管理",
       "usage": "lusrmgr.msc",
-      "category": "用户管理"
+      "category": "用户管理",
+      "examples": [
+        "lusrmgr.msc # 打开本地用户和组管理"
+      ]
     },
     {
       "name": "dsadd",
@@ -1660,7 +2393,10 @@
       "name_cn": "AD添加对象",
       "description": "向Active Directory添加对象",
       "usage": "dsadd <object> <dn> [options]",
-      "category": "用户管理"
+      "category": "用户管理",
+      "examples": [
+        "dsadd # 向Active Directory添加对象"
+      ]
     },
     {
       "name": "dsquery",
@@ -1668,7 +2404,10 @@
       "name_cn": "AD查询",
       "description": "查询Active Directory中的对象",
       "usage": "dsquery <object> [options]",
-      "category": "用户管理"
+      "category": "用户管理",
+      "examples": [
+        "dsquery # 查询Active Directory中的对象"
+      ]
     },
     {
       "name": "dsmod",
@@ -1678,7 +2417,10 @@
       "name_cn": "AD修改对象",
       "description": "修改Active Directory中的对象",
       "usage": "dsmod <object> <dn> [options]",
-      "category": "用户管理"
+      "category": "用户管理",
+      "examples": [
+        "dsmod # 修改Active Directory中的对象"
+      ]
     },
     {
       "name": "dsrm",
@@ -1688,7 +2430,10 @@
       "name_cn": "AD删除对象",
       "description": "从Active Directory删除对象",
       "usage": "dsrm <dn> [options]",
-      "category": "用户管理"
+      "category": "用户管理",
+      "examples": [
+        "dsrm # 从Active Directory删除对象"
+      ]
     },
     {
       "name": "whoami /priv",
@@ -1698,7 +2443,10 @@
       "name_cn": "当前用户权限",
       "description": "显示当前用户的安全特权信息",
       "usage": "whoami /priv",
-      "category": "用户管理"
+      "category": "用户管理",
+      "examples": [
+        "whoami # 显示当前用户的安全特权信息"
+      ]
     },
     {
       "name": "reg",
@@ -1706,7 +2454,10 @@
       "name_cn": "注册表命令",
       "description": "命令行注册表编辑器",
       "usage": "reg [add|delete|query] <key>",
-      "category": "注册表"
+      "category": "注册表",
+      "examples": [
+        "reg # 命令行注册表编辑器"
+      ]
     },
     {
       "name": "reg add",
@@ -1714,7 +2465,10 @@
       "name_cn": "添加注册表项",
       "description": "向注册表添加子项或条目",
       "usage": "reg add <key> [/v name] [/d data]",
-      "category": "注册表"
+      "category": "注册表",
+      "examples": [
+        "reg # 向注册表添加子项或条目"
+      ]
     },
     {
       "name": "reg delete",
@@ -1722,7 +2476,10 @@
       "name_cn": "删除注册表项",
       "description": "从注册表删除子项或条目",
       "usage": "reg delete <key> [/v name] [/f]",
-      "category": "注册表"
+      "category": "注册表",
+      "examples": [
+        "reg # 从注册表删除子项或条目"
+      ]
     },
     {
       "name": "reg query",
@@ -1730,7 +2487,10 @@
       "name_cn": "查询注册表",
       "description": "查询注册表中的子项和值",
       "usage": "reg query <key> [/v name]",
-      "category": "注册表"
+      "category": "注册表",
+      "examples": [
+        "reg # 查询注册表中的子项和值"
+      ]
     },
     {
       "name": "reg copy",
@@ -1738,7 +2498,10 @@
       "name_cn": "复制注册表项",
       "description": "将一个注册表项复制到指定位置",
       "usage": "reg copy <src> <dest> [/s]",
-      "category": "注册表"
+      "category": "注册表",
+      "examples": [
+        "reg # 将一个注册表项复制到指定位置"
+      ]
     },
     {
       "name": "reg export",
@@ -1746,7 +2509,10 @@
       "name_cn": "导出注册表",
       "description": "导出注册表子项和值到文件",
       "usage": "reg export <key> <file>",
-      "category": "注册表"
+      "category": "注册表",
+      "examples": [
+        "reg # 导出注册表子项和值到文件"
+      ]
     },
     {
       "name": "reg import",
@@ -1754,7 +2520,10 @@
       "name_cn": "导入注册表",
       "description": "从文件导入注册表内容",
       "usage": "reg import <file>",
-      "category": "注册表"
+      "category": "注册表",
+      "examples": [
+        "reg # 从文件导入注册表内容"
+      ]
     },
     {
       "name": "reg compare",
@@ -1762,7 +2531,10 @@
       "name_cn": "比较注册表项",
       "description": "比较两个注册表子项",
       "usage": "reg compare <key1> <key2>",
-      "category": "注册表"
+      "category": "注册表",
+      "examples": [
+        "reg # 比较两个注册表子项"
+      ]
     },
     {
       "name": "reg save",
@@ -1770,7 +2542,10 @@
       "name_cn": "保存注册表",
       "description": "将注册表子项保存到文件",
       "usage": "reg save <key> <file>",
-      "category": "注册表"
+      "category": "注册表",
+      "examples": [
+        "reg # 将注册表子项保存到文件"
+      ]
     },
     {
       "name": "reg restore",
@@ -1778,7 +2553,10 @@
       "name_cn": "恢复注册表",
       "description": "从文件恢复注册表子项",
       "usage": "reg restore <key> <file>",
-      "category": "注册表"
+      "category": "注册表",
+      "examples": [
+        "reg # 从文件恢复注册表子项"
+      ]
     },
     {
       "name": "reg unload",
@@ -1786,7 +2564,10 @@
       "name_cn": "卸载注册表节",
       "description": "卸载使用reg load加载的注册表节",
       "usage": "reg unload <key>",
-      "category": "注册表"
+      "category": "注册表",
+      "examples": [
+        "reg # 卸载使用reg load加载的注册表节"
+      ]
     },
     {
       "name": "sc",
@@ -1796,7 +2577,10 @@
       "name_cn": "服务控制",
       "description": "与服务控制管理器通信",
       "usage": "sc <command> [service]",
-      "category": "服务管理"
+      "category": "服务管理",
+      "examples": [
+        "sc # 与服务控制管理器通信"
+      ]
     },
     {
       "name": "sc query",
@@ -1806,7 +2590,10 @@
       "name_cn": "查询服务状态",
       "description": "查询服务的当前状态",
       "usage": "sc query [service]",
-      "category": "服务管理"
+      "category": "服务管理",
+      "examples": [
+        "sc # 查询服务的当前状态"
+      ]
     },
     {
       "name": "sc start",
@@ -1816,7 +2603,10 @@
       "name_cn": "启动服务",
       "description": "启动指定的服务",
       "usage": "sc start <service>",
-      "category": "服务管理"
+      "category": "服务管理",
+      "examples": [
+        "sc # 启动指定的服务"
+      ]
     },
     {
       "name": "sc stop",
@@ -1826,7 +2616,10 @@
       "name_cn": "停止服务",
       "description": "停止指定的服务",
       "usage": "sc stop <service>",
-      "category": "服务管理"
+      "category": "服务管理",
+      "examples": [
+        "sc # 停止指定的服务"
+      ]
     },
     {
       "name": "sc create",
@@ -1834,7 +2627,10 @@
       "name_cn": "创建服务",
       "description": "创建新的Windows服务",
       "usage": "sc create <service> [options]",
-      "category": "服务管理"
+      "category": "服务管理",
+      "examples": [
+        "sc # 创建新的Windows服务"
+      ]
     },
     {
       "name": "sc delete",
@@ -1844,7 +2640,10 @@
       "name_cn": "删除服务",
       "description": "删除Windows服务",
       "usage": "sc delete <service>",
-      "category": "服务管理"
+      "category": "服务管理",
+      "examples": [
+        "sc # 删除Windows服务"
+      ]
     },
     {
       "name": "sc config",
@@ -1854,7 +2653,10 @@
       "name_cn": "配置服务",
       "description": "修改服务的配置",
       "usage": "sc config <service> [options]",
-      "category": "服务管理"
+      "category": "服务管理",
+      "examples": [
+        "sc # 修改服务的配置"
+      ]
     },
     {
       "name": "sc failure",
@@ -1862,7 +2664,10 @@
       "name_cn": "服务故障操作",
       "description": "设置服务失败时的操作",
       "usage": "sc failure <service> [options]",
-      "category": "服务管理"
+      "category": "服务管理",
+      "examples": [
+        "sc # 设置服务失败时的操作"
+      ]
     },
     {
       "name": "sc qc",
@@ -1870,7 +2675,10 @@
       "name_cn": "查询服务配置",
       "description": "查询服务的详细配置信息",
       "usage": "sc qc <service>",
-      "category": "服务管理"
+      "category": "服务管理",
+      "examples": [
+        "sc # 查询服务的详细配置信息"
+      ]
     },
     {
       "name": "sc enumdepend",
@@ -1878,7 +2686,10 @@
       "name_cn": "服务依赖",
       "description": "列出服务的依赖关系",
       "usage": "sc enumdepend <service>",
-      "category": "服务管理"
+      "category": "服务管理",
+      "examples": [
+        "sc # 列出服务的依赖关系"
+      ]
     },
     {
       "name": "net start",
@@ -1888,7 +2699,10 @@
       "name_cn": "启动服务(net)",
       "description": "启动网络服务",
       "usage": "net start [service]",
-      "category": "服务管理"
+      "category": "服务管理",
+      "examples": [
+        "net # 启动网络服务"
+      ]
     },
     {
       "name": "net stop",
@@ -1898,7 +2712,10 @@
       "name_cn": "停止服务(net)",
       "description": "停止网络服务",
       "usage": "net stop <service>",
-      "category": "服务管理"
+      "category": "服务管理",
+      "examples": [
+        "net # 停止网络服务"
+      ]
     },
     {
       "name": "schtasks",
@@ -1908,7 +2725,10 @@
       "name_cn": "计划任务",
       "description": "管理计划任务",
       "usage": "schtasks [options]",
-      "category": "计划任务"
+      "category": "计划任务",
+      "examples": [
+        "schtasks # 管理计划任务"
+      ]
     },
     {
       "name": "schtasks /create",
@@ -1918,7 +2738,10 @@
       "name_cn": "创建计划任务",
       "description": "创建新的计划任务",
       "usage": "schtasks /create /tn <name> /tr <cmd> /sc <schedule>",
-      "category": "计划任务"
+      "category": "计划任务",
+      "examples": [
+        "schtasks # 创建新的计划任务"
+      ]
     },
     {
       "name": "schtasks /delete",
@@ -1928,7 +2751,10 @@
       "name_cn": "删除计划任务",
       "description": "删除指定的计划任务",
       "usage": "schtasks /delete /tn <name> [/f]",
-      "category": "计划任务"
+      "category": "计划任务",
+      "examples": [
+        "schtasks # 删除指定的计划任务"
+      ]
     },
     {
       "name": "schtasks /query",
@@ -1938,7 +2764,10 @@
       "name_cn": "查询计划任务",
       "description": "列出所有计划任务",
       "usage": "schtasks /query [/fo table]",
-      "category": "计划任务"
+      "category": "计划任务",
+      "examples": [
+        "schtasks # 列出所有计划任务"
+      ]
     },
     {
       "name": "schtasks /change",
@@ -1946,7 +2775,10 @@
       "name_cn": "修改计划任务",
       "description": "修改已有的计划任务",
       "usage": "schtasks /change /tn <name> [options]",
-      "category": "计划任务"
+      "category": "计划任务",
+      "examples": [
+        "schtasks # 修改已有的计划任务"
+      ]
     },
     {
       "name": "schtasks /run",
@@ -1954,7 +2786,10 @@
       "name_cn": "运行计划任务",
       "description": "立即运行指定的计划任务",
       "usage": "schtasks /run /tn <name>",
-      "category": "计划任务"
+      "category": "计划任务",
+      "examples": [
+        "schtasks # 立即运行指定的计划任务"
+      ]
     },
     {
       "name": "schtasks /end",
@@ -1962,7 +2797,10 @@
       "name_cn": "停止计划任务",
       "description": "停止正在运行的计划任务",
       "usage": "schtasks /end /tn <name>",
-      "category": "计划任务"
+      "category": "计划任务",
+      "examples": [
+        "schtasks # 停止正在运行的计划任务"
+      ]
     },
     {
       "name": "at",
@@ -1972,7 +2810,10 @@
       "name_cn": "定时任务(旧版)",
       "description": "安排命令在指定时间运行(旧版)",
       "usage": "at [options] <time> <command>",
-      "category": "计划任务"
+      "category": "计划任务",
+      "examples": [
+        "at # 安排命令在指定时间运行(旧版)"
+      ]
     },
     {
       "name": "netsh advfirewall",
@@ -1983,7 +2824,10 @@
       "name_cn": "防火墙管理",
       "description": "管理Windows高级安全防火墙",
       "usage": "netsh advfirewall <command>",
-      "category": "安全防护"
+      "category": "安全防护",
+      "examples": [
+        "netsh # 管理Windows高级安全防火墙"
+      ]
     },
     {
       "name": "netsh advfirewall firewall",
@@ -1993,7 +2837,10 @@
       "name_cn": "防火墙规则管理",
       "description": "管理防火墙入站和出站规则",
       "usage": "netsh advfirewall firewall add rule [options]",
-      "category": "安全防护"
+      "category": "安全防护",
+      "examples": [
+        "netsh # 管理防火墙入站和出站规则"
+      ]
     },
     {
       "name": "auditpol",
@@ -2003,7 +2850,10 @@
       "name_cn": "审计策略",
       "description": "显示或修改系统审核策略",
       "usage": "auditpol /get /category:*",
-      "category": "安全防护"
+      "category": "安全防护",
+      "examples": [
+        "auditpol # 显示或修改系统审核策略"
+      ]
     },
     {
       "name": "cipher /w",
@@ -2013,7 +2863,10 @@
       "name_cn": "安全擦除",
       "description": "安全擦除磁盘上的已删除数据",
       "usage": "cipher /w:<path>",
-      "category": "安全防护"
+      "category": "安全防护",
+      "examples": [
+        "cipher # 安全擦除磁盘上的已删除数据"
+      ]
     },
     {
       "name": "manage-bde",
@@ -2023,7 +2876,10 @@
       "name_cn": "BitLocker管理",
       "description": "管理BitLocker驱动器加密",
       "usage": "manage-bde -status",
-      "category": "安全防护"
+      "category": "安全防护",
+      "examples": [
+        "manage-bde # 管理BitLocker驱动器加密"
+      ]
     },
     {
       "name": "gpupdate",
@@ -2031,7 +2887,10 @@
       "name_cn": "更新组策略",
       "description": "刷新本地和Active Directory组策略",
       "usage": "gpupdate [/force]",
-      "category": "安全防护"
+      "category": "安全防护",
+      "examples": [
+        "gpupdate # 刷新本地和Active Directory组策略"
+      ]
     },
     {
       "name": "gpresult",
@@ -2039,7 +2898,10 @@
       "name_cn": "组策略结果",
       "description": "显示计算机的组策略结果集",
       "usage": "gpresult [/r] [/v]",
-      "category": "安全防护"
+      "category": "安全防护",
+      "examples": [
+        "gpresult # 显示计算机的组策略结果集"
+      ]
     },
     {
       "name": "secpol",
@@ -2047,7 +2909,10 @@
       "name_cn": "安全策略",
       "description": "打开本地安全策略管理器",
       "usage": "secpol.msc",
-      "category": "安全防护"
+      "category": "安全防护",
+      "examples": [
+        "secpol.msc # 打开本地安全策略管理器"
+      ]
     },
     {
       "name": "rsop",
@@ -2055,7 +2920,10 @@
       "name_cn": "策略结果集",
       "description": "显示策略的结果集管理控制台",
       "usage": "rsop.msc",
-      "category": "安全防护"
+      "category": "安全防护",
+      "examples": [
+        "rsop.msc # 显示策略的结果集管理控制台"
+      ]
     },
     {
       "name": "cipher",
@@ -2063,7 +2931,12 @@
       "name_cn": "文件加密",
       "description": "管理NTFS文件系统加密",
       "usage": "cipher [/e|/d] <path>",
-      "category": "安全防护"
+      "category": "安全防护",
+      "examples": [
+        "cipher /e C:\\secret # 加密目录",
+        "cipher /d C:\\secret # 解密目录",
+        "cipher /w:C:\\ # 安全擦除未使用空间"
+      ]
     },
     {
       "name": "npm",
@@ -2071,7 +2944,10 @@
       "name_cn": "NPM包管理",
       "description": "Node.js包管理器",
       "usage": "npm <command>",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "npm # Node.js包管理器"
+      ]
     },
     {
       "name": "pnpm",
@@ -2079,7 +2955,10 @@
       "name_cn": "PNPM包管理",
       "description": "快速、节省磁盘空间的包管理器",
       "usage": "pnpm <command>",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "pnpm # 快速、节省磁盘空间的包管理器"
+      ]
     },
     {
       "name": "yarn",
@@ -2087,7 +2966,10 @@
       "name_cn": "Yarn包管理",
       "description": "快速可靠的依赖管理工具",
       "usage": "yarn <command>",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "yarn # 快速可靠的依赖管理工具"
+      ]
     },
     {
       "name": "npx",
@@ -2095,7 +2977,10 @@
       "name_cn": "NPX执行",
       "description": "执行npm包中的命令",
       "usage": "npx <package>",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "npx # 执行npm包中的命令"
+      ]
     },
     {
       "name": "node",
@@ -2103,7 +2988,10 @@
       "name_cn": "运行Node",
       "description": "运行Node.js程序",
       "usage": "node <file>",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "node # 运行Node.js程序"
+      ]
     },
     {
       "name": "git",
@@ -2111,7 +2999,10 @@
       "name_cn": "版本控制",
       "description": "分布式版本控制系统",
       "usage": "git <command>",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "git # 分布式版本控制系统"
+      ]
     },
     {
       "name": "cargo",
@@ -2119,7 +3010,10 @@
       "name_cn": "Rust构建",
       "description": "Rust包管理器与构建工具",
       "usage": "cargo <command>",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "cargo # Rust包管理器与构建工具"
+      ]
     },
     {
       "name": "rustc",
@@ -2129,7 +3023,10 @@
       "name_cn": "Rust编译",
       "description": "Rust编程语言编译器",
       "usage": "rustc <file>",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "rustc # Rust编程语言编译器"
+      ]
     },
     {
       "name": "python",
@@ -2139,7 +3036,10 @@
       "name_cn": "运行Python",
       "description": "运行Python程序",
       "usage": "python <file>",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "python # 运行Python程序"
+      ]
     },
     {
       "name": "pip",
@@ -2147,7 +3047,10 @@
       "name_cn": "PIP包管理",
       "description": "Python包安装器",
       "usage": "pip <command>",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "pip # Python包安装器"
+      ]
     },
     {
       "name": "code",
@@ -2155,7 +3058,10 @@
       "name_cn": "VS Code",
       "description": "打开VS Code编辑器",
       "usage": "code [file|dir]",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "code # 打开VS Code编辑器"
+      ]
     },
     {
       "name": "dotnet",
@@ -2163,7 +3069,10 @@
       "name_cn": ".NET CLI",
       "description": ".NET命令行工具",
       "usage": "dotnet <command>",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "dotnet # .NET命令行工具"
+      ]
     },
     {
       "name": "java",
@@ -2171,7 +3080,10 @@
       "name_cn": "运行Java",
       "description": "运行Java程序",
       "usage": "java -jar <file>",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "java # 运行Java程序"
+      ]
     },
     {
       "name": "javac",
@@ -2179,7 +3091,10 @@
       "name_cn": "编译Java",
       "description": "编译Java源文件",
       "usage": "javac <file.java>",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "javac # 编译Java源文件"
+      ]
     },
     {
       "name": "mvn",
@@ -2187,7 +3102,10 @@
       "name_cn": "Maven构建",
       "description": "Apache Maven项目构建工具",
       "usage": "mvn <command>",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "mvn # Apache Maven项目构建工具"
+      ]
     },
     {
       "name": "gradle",
@@ -2195,7 +3113,10 @@
       "name_cn": "Gradle构建",
       "description": "Gradle构建自动化工具",
       "usage": "gradle <command>",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "gradle # Gradle构建自动化工具"
+      ]
     },
     {
       "name": "go",
@@ -2203,7 +3124,10 @@
       "name_cn": "Go语言",
       "description": "Go编程语言工具",
       "usage": "go <command>",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "go # Go编程语言工具"
+      ]
     },
     {
       "name": "docker",
@@ -2211,7 +3135,10 @@
       "name_cn": "Docker容器",
       "description": "容器管理工具",
       "usage": "docker <command>",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "docker # 容器管理工具"
+      ]
     },
     {
       "name": "wsl",
@@ -2219,7 +3146,10 @@
       "name_cn": "WSL",
       "description": "Windows Subsystem for Linux",
       "usage": "wsl [<command>]",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "wsl # Windows Subsystem for Linux"
+      ]
     },
     {
       "name": "msbuild",
@@ -2229,7 +3159,10 @@
       "name_cn": "MSBuild",
       "description": "Microsoft构建引擎",
       "usage": "msbuild <project>",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "msbuild # Microsoft构建引擎"
+      ]
     },
     {
       "name": "nuget",
@@ -2237,7 +3170,10 @@
       "name_cn": "NuGet包管理",
       "description": ".NET包管理器",
       "usage": "nuget <command>",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "nuget # .NET包管理器"
+      ]
     },
     {
       "name": "tar",
@@ -2247,7 +3183,10 @@
       "name_cn": "归档工具",
       "description": "创建或提取归档文件",
       "usage": "tar [-c|-x] [-z] -f <archive> <files>",
-      "category": "压缩解压"
+      "category": "压缩解压",
+      "examples": [
+        "tar # 创建或提取归档文件"
+      ]
     },
     {
       "name": "tar -czf",
@@ -2257,7 +3196,10 @@
       "name_cn": "创建tar.gz",
       "description": "创建gzip压缩的tar归档",
       "usage": "tar -czf <archive.tar.gz> <files>",
-      "category": "压缩解压"
+      "category": "压缩解压",
+      "examples": [
+        "tar # 创建gzip压缩的tar归档"
+      ]
     },
     {
       "name": "tar -xzf",
@@ -2267,7 +3209,10 @@
       "name_cn": "解压tar.gz",
       "description": "解压gzip压缩的tar归档",
       "usage": "tar -xzf <archive.tar.gz>",
-      "category": "压缩解压"
+      "category": "压缩解压",
+      "examples": [
+        "tar # 解压gzip压缩的tar归档"
+      ]
     },
     {
       "name": "makecab",
@@ -2277,7 +3222,11 @@
       "name_cn": "创建CAB",
       "description": "将文件压缩为CAB格式",
       "usage": "makecab <source> <dest>",
-      "category": "压缩解压"
+      "category": "压缩解压",
+      "examples": [
+        "makecab source.txt dest.cab # 压缩为CAB文件",
+        "makecab /v3 source.dll dest.cab # 高压缩率"
+      ]
     },
     {
       "name": "extrac32",
@@ -2287,7 +3236,10 @@
       "name_cn": "解压CAB文件",
       "description": "解压CAB压缩文件",
       "usage": "extrac32 <source> [/l] <dest>",
-      "category": "压缩解压"
+      "category": "压缩解压",
+      "examples": [
+        "extrac32 source.cab /l C:\\dest # 解压CAB到指定目录"
+      ]
     },
     {
       "name": "expand",
@@ -2298,7 +3250,11 @@
       "name_cn": "解压CAB",
       "description": "展开压缩文件",
       "usage": "expand <source> <dest>",
-      "category": "压缩解压"
+      "category": "压缩解压",
+      "examples": [
+        "expand source.cab -F:* C:\\dest # 解压CAB文件",
+        "expand file.gz C:\\output # 解压文件"
+      ]
     },
     {
       "name": "compact",
@@ -2308,7 +3264,10 @@
       "name_cn": "NTFS压缩",
       "description": "显示或修改NTFS文件压缩状态",
       "usage": "compact [/c|/u] <path>",
-      "category": "压缩解压"
+      "category": "压缩解压",
+      "examples": [
+        "compact # 显示或修改NTFS文件压缩状态"
+      ]
     },
     {
       "name": "powershell Compress-Archive",
@@ -2318,7 +3277,10 @@
       "name_cn": "压缩为ZIP",
       "description": "PowerShell将文件压缩为ZIP格式",
       "usage": "powershell Compress-Archive -Path <src> -DestinationPath <dest>",
-      "category": "压缩解压"
+      "category": "压缩解压",
+      "examples": [
+        "powershell # PowerShell将文件压缩为ZIP格式"
+      ]
     },
     {
       "name": "powershell Expand-Archive",
@@ -2328,7 +3290,10 @@
       "name_cn": "解压ZIP",
       "description": "PowerShell解压ZIP文件",
       "usage": "powershell Expand-Archive -Path <file> -DestinationPath <dest>",
-      "category": "压缩解压"
+      "category": "压缩解压",
+      "examples": [
+        "powershell # PowerShell解压ZIP文件"
+      ]
     },
     {
       "name": "tasklist",
@@ -2339,7 +3304,13 @@
       "name_cn": "进程列表",
       "description": "显示所有运行中的进程",
       "usage": "tasklist [/svc] [/fi]",
-      "category": "进程管理"
+      "category": "进程管理",
+      "examples": [
+        "tasklist # 列出所有进程",
+        "tasklist /svc # 显示进程对应的服务",
+        "tasklist /fi \"imagename eq notepad*\" # 过滤进程名",
+        "tasklist /fo csv # CSV格式输出"
+      ]
     },
     {
       "name": "taskkill",
@@ -2349,7 +3320,13 @@
       "name_cn": "终止进程",
       "description": "按PID或映像名终止进程",
       "usage": "taskkill [/pid <id>] [/im <name>] [/f]",
-      "category": "进程管理"
+      "category": "进程管理",
+      "examples": [
+        "taskkill /pid 1234 # 按PID终止进程",
+        "taskkill /im notepad.exe # 按名称终止进程",
+        "taskkill /f /im chrome.exe # 强制终止Chrome",
+        "taskkill /t /f /pid 1234 # 强制终止进程树"
+      ]
     },
     {
       "name": "wmic process",
@@ -2359,7 +3336,10 @@
       "name_cn": "WMI进程查询",
       "description": "使用WMI查询和管理进程",
       "usage": "wmic process list brief",
-      "category": "进程管理"
+      "category": "进程管理",
+      "examples": [
+        "wmic # 使用WMI查询和管理进程"
+      ]
     },
     {
       "name": "start /wait",
@@ -2369,7 +3349,10 @@
       "name_cn": "等待进程",
       "description": "启动程序并等待其结束",
       "usage": "start /wait <program>",
-      "category": "进程管理"
+      "category": "进程管理",
+      "examples": [
+        "start # 启动程序并等待其结束"
+      ]
     },
     {
       "name": "Get-Process",
@@ -2378,8 +3361,15 @@
       ],
       "name_cn": "PowerShell获取进程",
       "description": "PowerShell获取运行中的进程",
-      "usage": "powershell Get-Process",
-      "category": "进程管理"
+      "usage": "Get-Process [[-Name] <string[]>] [-IncludeUserName]",
+      "category": "进程管理",
+      "examples": [
+        "Get-Process # 列出所有运行中的进程",
+        "Get-Process -Name chrome # 查看Chrome进程",
+        "Get-Process -Name sql* # 模糊匹配进程名",
+        "Get-Process -IncludeUserName # 显示进程所属用户",
+        "Get-Process | Sort-Object CPU -Descending | Select-Object -First 10 # 按CPU排序显示前10"
+      ]
     },
     {
       "name": "Start-Process",
@@ -2388,8 +3378,15 @@
       ],
       "name_cn": "PowerShell启动进程",
       "description": "PowerShell启动新进程",
-      "usage": "powershell Start-Process <file>",
-      "category": "进程管理"
+      "usage": "Start-Process [-FilePath] <string> [-ArgumentList <string[]>] [-Verb <string>]",
+      "category": "进程管理",
+      "examples": [
+        "Start-Process notepad.exe # 启动记事本",
+        "Start-Process 'https://github.com' # 用默认浏览器打开URL",
+        "Start-Process cmd.exe -ArgumentList '/c dir' -NoNewWindow # 在当前窗口执行命令",
+        "Start-Process setup.exe -Verb RunAs # 以管理员身份运行",
+        "Start-Process python.exe -ArgumentList 'script.py' -WindowStyle Hidden # 后台运行脚本"
+      ]
     },
     {
       "name": "Stop-Process",
@@ -2398,8 +3395,14 @@
       ],
       "name_cn": "PowerShell停止进程",
       "description": "PowerShell停止运行中的进程",
-      "usage": "powershell Stop-Process -Name <name>",
-      "category": "进程管理"
+      "usage": "Stop-Process [-Name <string[]>] [-Id <int[]>] [-Force]",
+      "category": "进程管理",
+      "examples": [
+        "Stop-Process -Name notepad # 按名称停止进程",
+        "Stop-Process -Id 1234 # 按PID停止进程",
+        "Stop-Process -Name chrome -Force # 强制停止Chrome",
+        "Get-Process | Where-Object CPU -gt 50 | Stop-Process # 停止CPU占用超50的进程"
+      ]
     },
     {
       "name": "Wait-Process",
@@ -2408,8 +3411,13 @@
       ],
       "name_cn": "PowerShell等待进程",
       "description": "PowerShell等待进程结束",
-      "usage": "powershell Wait-Process -Name <name>",
-      "category": "进程管理"
+      "usage": "Wait-Process [-Name <string[]>] [-Id <int[]>] [-Timeout <int>]",
+      "category": "进程管理",
+      "examples": [
+        "Wait-Process -Name installer # 等待installer进程结束",
+        "Wait-Process -Id 1234 -Timeout 60 # 等待进程最多60秒",
+        "Get-Process backup | Wait-Process # 等待backup进程完成"
+      ]
     },
     {
       "name": "set",
@@ -2420,7 +3428,13 @@
       "name_cn": "查看/设置环境变量",
       "description": "临时显示或设置环境变量",
       "usage": "set [var=value]",
-      "category": "环境变量"
+      "category": "环境变量",
+      "examples": [
+        "set # 显示所有环境变量",
+        "set MYVAR=hello # 设置变量",
+        "set MYVAR # 查看指定变量",
+        "set /p NAME=请输入: # 交互式设置变量"
+      ]
     },
     {
       "name": "setx",
@@ -2428,7 +3442,12 @@
       "name_cn": "永久设置环境变量",
       "description": "永久设置用户或系统环境变量",
       "usage": "setx <var> <value>",
-      "category": "环境变量"
+      "category": "环境变量",
+      "examples": [
+        "setx MYVAR hello # 永久设置用户环境变量",
+        "setx MYVAR hello /m # 永久设置系统环境变量",
+        "setx PATH \"%PATH%;C:\\new\" # 添加到PATH"
+      ]
     },
     {
       "name": "echo %PATH%",
@@ -2438,7 +3457,10 @@
       "name_cn": "查看PATH",
       "description": "显示当前PATH环境变量",
       "usage": "echo %PATH%",
-      "category": "环境变量"
+      "category": "环境变量",
+      "examples": [
+        "echo # 显示当前PATH环境变量"
+      ]
     },
     {
       "name": "powershell $env:",
@@ -2448,7 +3470,10 @@
       "name_cn": "PowerShell环境变量",
       "description": "PowerShell访问环境变量",
       "usage": "powershell $env:<VAR>",
-      "category": "环境变量"
+      "category": "环境变量",
+      "examples": [
+        "powershell # PowerShell访问环境变量"
+      ]
     },
     {
       "name": "reg query environment",
@@ -2456,7 +3481,10 @@
       "name_cn": "注册表查询环境变量",
       "description": "从注册表查询系统环境变量",
       "usage": "reg query \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment\"",
-      "category": "环境变量"
+      "category": "环境变量",
+      "examples": [
+        "reg # 从注册表查询系统环境变量"
+      ]
     },
     {
       "name": "Get-ChildItem Env:",
@@ -2467,7 +3495,10 @@
       "name_cn": "列出所有环境变量",
       "description": "PowerShell列出所有环境变量",
       "usage": "powershell Get-ChildItem Env:",
-      "category": "环境变量"
+      "category": "环境变量",
+      "examples": [
+        "powershell # PowerShell列出所有环境变量"
+      ]
     },
     {
       "name": "[Environment]::SetEnvironmentVariable",
@@ -2475,7 +3506,10 @@
       "name_cn": "永久修改环境变量",
       "description": "PowerShell永久设置环境变量",
       "usage": "powershell [Environment]::SetEnvironmentVariable('<var>', '<value>', 'User')",
-      "category": "环境变量"
+      "category": "环境变量",
+      "examples": [
+        "powershell # PowerShell永久设置环境变量"
+      ]
     },
     {
       "name": "refreshenv",
@@ -2485,7 +3519,10 @@
       "name_cn": "刷新环境变量",
       "description": "刷新当前会话的环境变量",
       "usage": "refreshenv",
-      "category": "环境变量"
+      "category": "环境变量",
+      "examples": [
+        "refreshenv # 刷新当前会话的环境变量"
+      ]
     },
     {
       "name": "Get-Command",
@@ -2495,7 +3532,13 @@
       "name_cn": "查找命令",
       "description": "获取所有命令或指定命令信息",
       "usage": "Get-Command [-Name <string>]",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "Get-Command # 列出所有可用命令",
+        "Get-Command *service* # 搜索包含service的命令",
+        "Get-Command -CommandType Cmdlet # 仅列出Cmdlet类型命令",
+        "Get-Command -Name Get-Process # 查看指定命令详情"
+      ]
     },
     {
       "name": "Get-Help",
@@ -2506,7 +3549,13 @@
       "name_cn": "命令帮助",
       "description": "获取命令的帮助信息",
       "usage": "Get-Help <command> [-Detailed]",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "Get-Help Get-Process # 查看Get-Process帮助",
+        "Get-Help Get-Process -Detailed # 查看详细帮助",
+        "Get-Help Get-Process -Examples # 仅查看示例",
+        "Get-Help about_* # 列出所有主题帮助"
+      ]
     },
     {
       "name": "Get-History",
@@ -2517,7 +3566,13 @@
       "name_cn": "命令历史",
       "description": "获取当前会话的命令历史",
       "usage": "Get-History",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "Get-History # 查看当前会话命令历史",
+        "Get-History | Select-Object -Last 10 # 查看最近10条命令",
+        "Get-History | Where-Object CommandLine -like '*git*' # 查找含git的历史",
+        "(Get-History).Count # 查看历史命令总数"
+      ]
     },
     {
       "name": "Invoke-History",
@@ -2527,7 +3582,12 @@
       "name_cn": "执行历史命令",
       "description": "从历史记录中运行命令",
       "usage": "Invoke-History [id]",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "Invoke-History 5 # 重新执行第5条历史命令",
+        "Invoke-History # 重新执行最后一条命令",
+        "Get-History | Select-Object -Last 1 | Invoke-History # 执行最后一条命令"
+      ]
     },
     {
       "name": "Write-Output",
@@ -2538,7 +3598,13 @@
       "name_cn": "输出内容",
       "description": "将对象发送到管道中的下一个命令",
       "usage": "Write-Output <object>",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "Write-Output 'Hello World' # 输出字符串",
+        "Write-Output 1..10 # 输出数字1到10",
+        "Write-Output @(1,2,3) | ForEach-Object { $_ * 2 } # 输出数组并管道处理",
+        "\"$(Get-Date)\" | Write-Output # 输出当前日期"
+      ]
     },
     {
       "name": "Write-Host",
@@ -2546,7 +3612,13 @@
       "name_cn": "控制台输出",
       "description": "将输出写入控制台",
       "usage": "Write-Host <message> [-ForegroundColor <color>]",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "Write-Host 'Hello World' # 输出文本到控制台",
+        "Write-Host 'Success' -ForegroundColor Green # 绿色输出成功信息",
+        "Write-Host 'Error!' -ForegroundColor Red -BackgroundColor White # 红字白底",
+        "Write-Host 'No newline' -NoNewline # 输出不换行"
+      ]
     },
     {
       "name": "Read-Host",
@@ -2556,7 +3628,12 @@
       "name_cn": "读取输入",
       "description": "从控制台读取一行输入",
       "usage": "Read-Host [-Prompt <string>]",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "Read-Host '请输入你的名字' # 带提示读取输入",
+        "Read-Host '请输入密码' -AsSecureString # 以安全方式读取密码",
+        "$name = Read-Host '输入用户名' # 将输入存入变量"
+      ]
     },
     {
       "name": "Out-File",
@@ -2566,7 +3643,13 @@
       "name_cn": "输出到文件",
       "description": "将输出发送到文件",
       "usage": "Out-File [-FilePath] <path> [-Append]",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "Get-Process | Out-File processes.txt # 将进程列表写入文件",
+        "'Hello World' | Out-File output.txt -Encoding UTF8 # 指定编码写入",
+        "Get-Service | Out-File services.txt -Append # 追加内容到文件",
+        "'日志内容' | Out-File log.txt -Width 200 # 指定行宽写入"
+      ]
     },
     {
       "name": "Out-GridView",
@@ -2576,7 +3659,13 @@
       "name_cn": "图形化显示",
       "description": "在独立窗口中以交互表格显示输出",
       "usage": "Out-GridView [-Title <string>]",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "Get-Process | Out-GridView # 以表格显示进程列表",
+        "Get-Service | Out-GridView -Title '服务列表' # 带标题显示服务",
+        "Get-EventLog -LogName Application -Newest 50 | Out-GridView # 显示最近50条应用日志",
+        "Get-ChildItem | Out-GridView # 图形化显示目录内容"
+      ]
     },
     {
       "name": "Tee-Object",
@@ -2586,7 +3675,13 @@
       "name_cn": "双向输出",
       "description": "将输出同时发送到文件和管道",
       "usage": "Tee-Object -FilePath <path>",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "Get-Process | Tee-Object process.txt # 输出到屏幕并保存到文件",
+        "'Hello' | Tee-File output.txt -Append # 追加模式双向输出",
+        "Get-Service | Tee-Object -Variable svc # 同时存入变量",
+        "ipconfig | Tee-Object network.txt # 保存网络配置同时显示"
+      ]
     },
     {
       "name": "Clear-Host",
@@ -2597,7 +3692,12 @@
       "name_cn": "清屏",
       "description": "清除控制台显示",
       "usage": "Clear-Host",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "Clear-Host # 清除控制台屏幕内容",
+        "cls # Clear-Host的别名",
+        "clear # 同样可以清屏"
+      ]
     },
     {
       "name": "Get-Date",
@@ -2607,7 +3707,14 @@
       "name_cn": "获取日期",
       "description": "获取当前日期和时间",
       "usage": "Get-Date [-Format <string>]",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "Get-Date # 获取当前日期时间",
+        "Get-Date -Format 'yyyy-MM-dd' # 格式化为2024-01-15",
+        "Get-Date -Format 'HH:mm:ss' # 获取当前时间",
+        "(Get-Date).AddDays(7) # 获取7天后的日期",
+        "Get-Date -Date '2024-12-25' # 获取指定日期"
+      ]
     },
     {
       "name": "Set-Date",
@@ -2615,7 +3722,11 @@
       "name_cn": "设置日期",
       "description": "设置系统日期和时间",
       "usage": "Set-Date [-Date] <datetime>",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "Set-Date -Date (Get-Date).AddHours(1) # 将系统时间调快1小时",
+        "Set-Date -Date '2024-06-01 12:00:00' # 设置为指定日期时间"
+      ]
     },
     {
       "name": "Start-Sleep",
@@ -2625,7 +3736,13 @@
       "name_cn": "暂停",
       "description": "暂停脚本执行指定时间",
       "usage": "Start-Sleep [-Seconds <int>]",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "Start-Sleep -Seconds 5 # 暂停5秒",
+        "Start-Sleep -Milliseconds 500 # 暂停500毫秒",
+        "Start-Sleep 10 # 简写暂停10秒",
+        "Write-Host 'Starting...'; Start-Sleep 3; Write-Host 'Done!' # 带提示的暂停"
+      ]
     },
     {
       "name": "Measure-Command",
@@ -2635,7 +3752,13 @@
       "name_cn": "计时执行",
       "description": "测量运行命令所需时间",
       "usage": "Measure-Command { <command> }",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "Measure-Command { Get-ChildItem C:\\ } # 测量列出C盘目录耗时",
+        "Measure-Command { Get-Process } # 测量获取进程列表耗时",
+        "Measure-Command { Invoke-WebRequest 'https://example.com' } # 测量HTTP请求耗时",
+        "$result = Measure-Command { Get-EventLog -LogName Application }; $result.TotalMilliseconds # 获取毫秒数"
+      ]
     },
     {
       "name": "Select-Object",
@@ -2645,7 +3768,14 @@
       "name_cn": "选择属性",
       "description": "选择对象的属性子集",
       "usage": "Select-Object [-Property <string[]>] [-First <int>]",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "Get-Process | Select-Object Name, CPU, WorkingSet # 选择进程的指定属性",
+        "Get-Service | Select-Object -First 5 # 仅获取前5个服务",
+        "Get-Process | Select-Object -Last 3 # 获取最后3个进程",
+        "Get-ChildItem | Select-Object Name, Length, LastWriteTime # 选择文件属性",
+        "Get-Process | Select-Object -Unique DisplayName # 去重选择"
+      ]
     },
     {
       "name": "Sort-Object",
@@ -2655,7 +3785,14 @@
       "name_cn": "排序对象",
       "description": "按属性值对对象排序",
       "usage": "Sort-Object [-Property <string[]>] [-Descending]",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "Get-Process | Sort-Object CPU -Descending # 按CPU使用率降序排列",
+        "Get-ChildItem | Sort-Object Length # 按文件大小升序排列",
+        "Get-Service | Sort-Object Status # 按服务状态排序",
+        "Get-Process | Sort-Object WorkingSet -Descending | Select-Object -First 5 # 内存占用前5",
+        "'c','b','a','d' | Sort-Object # 对数组排序"
+      ]
     },
     {
       "name": "Where-Object",
@@ -2666,7 +3803,14 @@
       "name_cn": "过滤对象",
       "description": "根据条件过滤集合中的对象",
       "usage": "Where-Object { <condition> }",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "Get-Process | Where-Object { $_.CPU -gt 10 } # 过滤CPU大于10的进程",
+        "Get-Service | Where-Object Status -eq 'Running' # 筛选运行中的服务",
+        "Get-ChildItem | Where-Object { $_.Length -gt 1MB } # 查找大于1MB的文件",
+        "Get-Process | Where-Object Name -like '*chrome*' # 模糊匹配进程名",
+        "1..100 | Where-Object { $_ % 2 -eq 0 } # 筛选偶数"
+      ]
     },
     {
       "name": "ForEach-Object",
@@ -2677,7 +3821,14 @@
       "name_cn": "遍历对象",
       "description": "对每个输入对象执行操作",
       "usage": "ForEach-Object { <scriptblock> }",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "1..5 | ForEach-Object { $_ * 2 } # 将每个数字乘以2",
+        "Get-Service | ForEach-Object { Write-Host $_.Name $_.Status } # 列出服务名和状态",
+        "Get-ChildItem *.txt | ForEach-Object { $_.Name } # 列出所有txt文件名",
+        "'apple','banana' | ForEach-Object { $_.ToUpper() } # 转为大写",
+        "Get-Process | ForEach-Object { if ($_.CPU -gt 50) { $_.Name } } # 找出高CPU进程"
+      ]
     },
     {
       "name": "Compare-Object",
@@ -2688,7 +3839,13 @@
       "name_cn": "比较对象",
       "description": "比较两组对象",
       "usage": "Compare-Object <ref> <diff>",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "Compare-Object (Get-Content file1.txt) (Get-Content file2.txt) # 比较两个文件内容",
+        "Compare-Object @(1,2,3) @(2,3,4) # 比较两个数组差异",
+        "$a = Get-ChildItem C:\\dir1; $b = Get-ChildItem C:\\dir2; Compare-Object $a $b -Property Name # 比较两个目录文件",
+        "Compare-Object (Get-Service) (Get-Service -ComputerName Server1) -Property Name # 比较本地和远程服务"
+      ]
     },
     {
       "name": "Group-Object",
@@ -2698,7 +3855,13 @@
       "name_cn": "分组对象",
       "description": "按属性对对象分组",
       "usage": "Group-Object [-Property <string>]",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "Get-Service | Group-Object Status # 按服务状态分组统计",
+        "Get-Process | Group-Object Name | Sort-Object Count -Descending # 按进程名分组并排序",
+        "Get-ChildItem | Group-Object Extension # 按文件扩展名分组",
+        "Get-EventLog -LogName System -Newest 100 | Group-Object Source # 按事件来源分组"
+      ]
     },
     {
       "name": "Get-Member",
@@ -2708,7 +3871,13 @@
       "name_cn": "查看成员",
       "description": "获取对象的属性和方法",
       "usage": "Get-Member [-MemberType <type>]",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "Get-Process | Get-Member # 查看Process对象的所有成员",
+        "'Hello' | Get-Member -MemberType Method # 查看字符串的方法",
+        "Get-Date | Get-Member -MemberType Property # 查看日期对象的属性",
+        "$var = 42; $var | Get-Member # 查看变量的类型和成员"
+      ]
     },
     {
       "name": "New-Object",
@@ -2716,7 +3885,14 @@
       "name_cn": "创建对象",
       "description": "创建.NET或COM对象",
       "usage": "New-Object -TypeName <type>",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "New-Object -TypeName System.Net.WebClient # 创建WebClient对象",
+        "New-Object -ComObject WScript.Shell # 创建COM Shell对象",
+        "New-Object -TypeName System.Random # 创建随机数生成器",
+        "New-Object -TypeName System.Collections.ArrayList # 创建ArrayList对象",
+        "$wc = New-Object System.Net.WebClient; $wc.DownloadString('https://example.com') # 创建并使用对象"
+      ]
     },
     {
       "name": "Get-ChildItem",
@@ -2728,7 +3904,14 @@
       "name_cn": "列出子项",
       "description": "获取目录中的项目和子目录",
       "usage": "Get-ChildItem [-Path <string>] [-Recurse] [-Filter <string>]",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "Get-ChildItem # 列出当前目录内容",
+        "Get-ChildItem C:\\Windows # 列出指定目录内容",
+        "Get-ChildItem -Recurse -Filter *.log # 递归查找所有日志文件",
+        "Get-ChildItem -Force # 显示隐藏文件",
+        "Get-ChildItem | Where-Object { $_.Length -gt 1MB } # 查找大于1MB的文件"
+      ]
     },
     {
       "name": "Get-Content",
@@ -2740,7 +3923,14 @@
       "name_cn": "获取内容",
       "description": "获取指定位置的内容",
       "usage": "Get-Content <path> [-Head <int>] [-Tail <int>]",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "Get-Content file.txt # 查看文件全部内容",
+        "Get-Content file.txt -Head 10 # 查看文件前10行",
+        "Get-Content file.txt -Tail 20 # 查看文件末尾20行",
+        "Get-Content file.txt -Wait # 实时监控文件变化(类似tail -f)",
+        "Get-Content C:\\Windows\\System32\\drivers\\etc\\hosts # 查看hosts文件"
+      ]
     },
     {
       "name": "Set-Content",
@@ -2750,7 +3940,13 @@
       "name_cn": "写入内容",
       "description": "写入或替换文件内容",
       "usage": "Set-Content [-Path] <path> -Value <content>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "Set-Content -Path output.txt -Value 'Hello World' # 写入文本到文件",
+        "'Line1','Line2','Line3' | Set-Content lines.txt # 写入多行内容",
+        "Get-Process | Set-Content processes.txt # 将进程列表写入文件",
+        "Set-Content -Path file.txt -Value (Get-Date) -Encoding UTF8 # 写入当前时间"
+      ]
     },
     {
       "name": "Add-Content",
@@ -2760,7 +3956,14 @@
       "name_cn": "追加内容",
       "description": "向文件追加内容",
       "usage": "Add-Content [-Path] <path> -Value <content>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "Add-Content -Path log.txt -Value 'New log entry' # 追加一行文本",
+        "Add-Content -Path readme.txt -Value 'Append this line' # 追加内容到文件末尾",
+        "'Line1','Line2' | Add-Content output.txt # 追加多行内容",
+        "Get-Date | Add-Content log.txt -Encoding UTF8 # 追加当前时间到日志",
+        "Add-Content -Path file.txt -Value (Get-Process) # 追加进程列表到文件"
+      ]
     },
     {
       "name": "Select-String",
@@ -2771,7 +3974,14 @@
       "name_cn": "正则搜索",
       "description": "在字符串和文件中查找文本",
       "usage": "Select-String [-Pattern] <regex> [-Path] <path>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "Select-String -Pattern 'error' *.log # 在所有日志文件中搜索error",
+        "Select-String -Pattern 'TODO' -Path *.cs -CaseSensitive # 区分大小写搜索TODO",
+        "Get-ChildItem -Recurse -Filter *.txt | Select-String -Pattern 'password' # 递归搜索所有txt文件",
+        "Select-String -Pattern '\\d{4}-\\d{2}-\\d{2}' log.txt # 用正则搜索日期格式",
+        "'Hello World' | Select-String -Pattern 'World' # 在字符串中搜索"
+      ]
     },
     {
       "name": "Copy-Item",
@@ -2783,7 +3993,13 @@
       "name_cn": "复制项目",
       "description": "复制项目到另一位置",
       "usage": "Copy-Item [-Path] <src> [-Destination] <dest> [-Recurse]",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "Copy-Item file.txt D:\\backup\\ # 复制文件到指定目录",
+        "Copy-Item -Path C:\\src\\* -Destination D:\\dest\\ -Recurse # 递归复制目录内容",
+        "Copy-Item -Path *.txt -Destination D:\\docs\\ # 复制所有txt文件",
+        "Copy-Item -Path file.txt -Destination D:\\file_backup.txt # 复制并重命名"
+      ]
     },
     {
       "name": "Move-Item",
@@ -2795,7 +4011,13 @@
       "name_cn": "移动项目",
       "description": "移动项目到新位置",
       "usage": "Move-Item [-Path] <src> [-Destination] <dest>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "Move-Item file.txt D:\\archive\\ # 移动文件到指定目录",
+        "Move-Item -Path C:\\temp\\* -Destination D:\\backup\\ # 移动所有文件",
+        "Move-Item -Path old.txt -Destination new.txt # 重命名文件",
+        "Move-Item -Path .\\src\\ -Destination .\\dist\\ -Force # 强制移动目录"
+      ]
     },
     {
       "name": "Remove-Item",
@@ -2807,7 +4029,13 @@
       "name_cn": "删除项目",
       "description": "删除文件或目录",
       "usage": "Remove-Item [-Path] <path> [-Recurse] [-Force]",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "Remove-Item file.txt # 删除文件",
+        "Remove-Item -Path C:\\temp\\* -Recurse -Force # 递归强制删除目录及内容",
+        "Remove-Item *.tmp -Force # 强制删除所有临时文件",
+        "Get-ChildItem | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-30) } | Remove-Item # 删除30天前的文件"
+      ]
     },
     {
       "name": "Rename-Item",
@@ -2818,7 +4046,13 @@
       "name_cn": "重命名项目",
       "description": "重命名文件或目录",
       "usage": "Rename-Item [-Path] <old> -NewName <new>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "Rename-Item -Path old.txt -NewName new.txt # 重命名文件",
+        "Rename-Item -Path 'C:\\folder' -NewName 'backup' # 重命名目录",
+        "Get-ChildItem *.txt | Rename-Item -NewName { $_.Name -replace '.txt$','.bak' } # 批量修改扩展名",
+        "Rename-Item -Path file.txt -NewName 'file_$(Get-Date -Format yyyyMMdd).txt' # 添加日期后缀"
+      ]
     },
     {
       "name": "New-Item",
@@ -2828,7 +4062,13 @@
       "name_cn": "创建项目",
       "description": "创建新文件或目录",
       "usage": "New-Item [-Path] <path> [-ItemType File|Directory]",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "New-Item -Path test.txt -ItemType File # 创建新文件",
+        "New-Item -Path 'C:\\NewFolder' -ItemType Directory # 创建新目录",
+        "New-Item -Path log.txt -ItemType File -Value 'Initial content' # 创建带内容的文件",
+        "New-Item -Path subfolder -ItemType Directory -Force # 强制创建目录"
+      ]
     },
     {
       "name": "Test-Path",
@@ -2836,7 +4076,13 @@
       "name_cn": "路径检测",
       "description": "检查路径是否存在",
       "usage": "Test-Path [-Path] <path>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "Test-Path C:\\Windows\\System32 # 检查目录是否存在",
+        "Test-Path file.txt # 检查文件是否存在",
+        "Test-Path HKLM:\\SOFTWARE\\Microsoft # 检查注册表路径是否存在",
+        "Test-Path -Path C:\\Users\\*\\Documents # 使用通配符检测路径"
+      ]
     },
     {
       "name": "Get-Item",
@@ -2846,7 +4092,14 @@
       "name_cn": "获取项目",
       "description": "获取指定位置的项",
       "usage": "Get-Item [-Path] <path>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "Get-Item C:\\Windows\\System32\\cmd.exe # 获取文件信息",
+        "Get-Item .\\*.txt # 获取当前目录所有txt文件",
+        "Get-Item HKLM:\\SOFTWARE # 获取注册表项信息",
+        "(Get-Item file.txt).LastWriteTime # 获取文件最后修改时间",
+        "Get-Item C:\\Users\\*\\Desktop # 使用通配符获取多个路径"
+      ]
     },
     {
       "name": "Set-Location",
@@ -2857,7 +4110,14 @@
       "name_cn": "设置位置",
       "description": "设置当前工作位置",
       "usage": "Set-Location [-Path] <path>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "Set-Location C:\\Windows # 切换到Windows目录",
+        "Set-Location .. # 返回上级目录",
+        "Set-Location -Path HKLM:\\SOFTWARE # 切换到注册表路径",
+        "Set-Location -Path Cert:\\LocalMachine\\My # 切换到证书存储路径",
+        "sl D:\\Projects # 使用别名快速切换目录"
+      ]
     },
     {
       "name": "Get-Location",
@@ -2868,7 +4128,13 @@
       "name_cn": "当前位置",
       "description": "获取当前工作目录",
       "usage": "Get-Location",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "Get-Location # 获取当前工作目录",
+        "Get-Location | Select-Object -ExpandProperty Path # 仅获取路径字符串",
+        "(Get-Location).Path # 使用属性获取路径",
+        "Set-Location C:\\Windows; Get-Location # 切换后确认当前目录"
+      ]
     },
     {
       "name": "Split-Path",
@@ -2876,15 +4142,29 @@
       "name_cn": "拆分路径",
       "description": "返回路径的指定部分",
       "usage": "Split-Path <path> [-Leaf] [-Parent] [-Extension]",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "Split-Path C:\\Users\\Documents\\file.txt # 返回父目录 C:\\Users\\Documents",
+        "Split-Path C:\\Users\\Documents\\file.txt -Leaf # 返回文件名 file.txt",
+        "Split-Path C:\\Users\\Documents\\file.txt -Parent # 返回父目录",
+        "Split-Path C:\\Users\\Documents\\file.txt -Extension # 返回扩展名 .txt",
+        "Split-Path C:\\Users\\Documents\\file.txt -Qualifier # 返回驱动器 C:"
+      ]
     },
     {
       "name": "Join-Path",
       "alias": [],
       "name_cn": "拼接路径",
       "description": "将路径和子路径合并",
-      "usage": "Join-Path <path> <child>",
-      "category": "文件操作"
+      "usage": "Join-Path [-Path] <path> [-ChildPath] <child>",
+      "category": "文件操作",
+      "examples": [
+        "Join-Path -Path C:\\Windows -ChildPath System32 # 拼接为 C:\\Windows\\System32",
+        "Join-Path -Path C:\\Users -ChildPath Documents # 拼接为 C:\\Users\\Documents",
+        "Join-Path C:\\Windows System32 # 简写拼接路径",
+        "'C:\\','Windows','System32' | Join-Path # 管道多级拼接",
+        "Join-Path -Path C:\\Logs -ChildPath \"app_$(Get-Date -Format yyyyMMdd).log\" # 拼接带日期的日志路径"
+      ]
     },
     {
       "name": "Resolve-Path",
@@ -2894,39 +4174,69 @@
       "name_cn": "解析路径",
       "description": "解析通配符并返回实际路径",
       "usage": "Resolve-Path [-Path] <path>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "Resolve-Path .\\scripts\\*.ps1 # 解析当前目录下所有PS1脚本的实际路径",
+        "Resolve-Path C:\\Windows\\System32\\*.exe # 解析System32下所有exe的完整路径",
+        "Resolve-Path ~\\Documents # 解析用户文档目录的实际路径",
+        "\"..\\..\\config.json\" | Resolve-Path # 解析相对路径为绝对路径"
+      ]
     },
     {
       "name": "Import-Csv",
       "alias": [],
       "name_cn": "导入CSV",
       "description": "从CSV文件创建对象",
-      "usage": "Import-Csv [-Path] <file>",
-      "category": "文件操作"
+      "usage": "Import-Csv [-Path] <file> [-Delimiter <char>] [-Encoding <string>]",
+      "category": "文件操作",
+      "examples": [
+        "Import-Csv -Path users.csv # 导入CSV文件为对象数组",
+        "Import-Csv data.csv -Delimiter ';' # 指定分隔符为分号",
+        "Import-Csv users.csv | Where-Object { $_.Age -gt 30 } # 导入并筛选年龄大于30的记录",
+        "Import-Csv data.csv -Encoding UTF8 # 指定编码导入CSV"
+      ]
     },
     {
       "name": "Export-Csv",
       "alias": [],
       "name_cn": "导出CSV",
       "description": "将对象导出为CSV文件",
-      "usage": "Export-Csv [-Path] <file> -NoTypeInformation",
-      "category": "文件操作"
+      "usage": "Export-Csv [-Path] <file> -NoTypeInformation [-Append] [-Delimiter <char>]",
+      "category": "文件操作",
+      "examples": [
+        "Get-Process | Export-Csv processes.csv -NoTypeInformation # 将进程列表导出为CSV",
+        "Get-Service | Export-Csv services.csv -NoTypeInformation -Encoding UTF8 # 导出服务列表为UTF8编码CSV",
+        "Get-ChildItem | Export-Csv files.csv -NoTypeInformation -Delimiter ';' # 使用分号分隔符导出",
+        "Get-EventLog -LogName Application -Newest 10 | Export-Csv events.csv -NoTypeInformation -Append # 追加导出到CSV"
+      ]
     },
     {
       "name": "ConvertFrom-Json",
       "alias": [],
       "name_cn": "解析JSON",
       "description": "将JSON字符串转换为对象",
-      "usage": "ConvertFrom-Json [-InputObject] <string>",
-      "category": "文件操作"
+      "usage": "ConvertFrom-Json [-InputObject] <string> [-AsHashtable]",
+      "category": "文件操作",
+      "examples": [
+        "'{\"name\":\"John\",\"age\":30}' | ConvertFrom-Json # 解析JSON字符串为对象",
+        "Get-Content config.json | ConvertFrom-Json # 从文件读取并解析JSON",
+        "Invoke-RestMethod https://api.example.com/data | ConvertFrom-Json # 解析API返回的JSON",
+        "'[{\"id\":1},{\"id\":2}]' | ConvertFrom-Json # 解析JSON数组"
+      ]
     },
     {
       "name": "ConvertTo-Json",
       "alias": [],
       "name_cn": "转JSON",
       "description": "将对象转换为JSON字符串",
-      "usage": "ConvertTo-Json [-InputObject] <object>",
-      "category": "文件操作"
+      "usage": "ConvertTo-Json [-InputObject] <object> [-Depth <int>] [-Compress]",
+      "category": "文件操作",
+      "examples": [
+        "Get-Process -Name chrome | ConvertTo-Json # 将Chrome进程信息转为JSON",
+        "@{name='test';value=123} | ConvertTo-Json # 将哈希表转为JSON字符串",
+        "Get-Service | Select-Object Name,Status | ConvertTo-Json -Depth 3 # 将服务列表转为JSON",
+        "$config = @{host='localhost';port=8080}; $config | ConvertTo-Json -Compress # 压缩输出JSON"
+      ]
     },
     {
       "name": "Get-Acl",
@@ -2934,7 +4244,13 @@
       "name_cn": "获取ACL",
       "description": "获取文件访问控制列表",
       "usage": "Get-Acl [-Path] <path>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "Get-Acl C:\\Windows\\System32\\cmd.exe # 获取文件的访问控制列表",
+        "Get-Acl -Path C:\\Users\\Documents | Format-List # 以列表格式查看目录ACL",
+        "(Get-Acl file.txt).Access | Format-Table IdentityReference,FileSystemRights # 查看文件权限详情",
+        "Get-Acl -Path C:\\Logs | Select-Object Owner,AccessToString # 查看目录所有者和权限"
+      ]
     },
     {
       "name": "Set-Acl",
@@ -2942,7 +4258,12 @@
       "name_cn": "设置ACL",
       "description": "设置文件访问控制列表",
       "usage": "Set-Acl [-Path] <path> -AclObject <acl>",
-      "category": "文件操作"
+      "category": "文件操作",
+      "examples": [
+        "$acl = Get-Acl file.txt; Set-Acl -Path newfile.txt -AclObject $acl # 复制ACL到另一个文件",
+        "$acl = Get-Acl C:\\shared; Set-Acl -Path C:\\newshared -AclObject $acl # 复制目录权限",
+        "$rule = New-Object System.Security.AccessControl.FileSystemAccessRule('Users','Read','Allow'); $acl = Get-Acl folder; $acl.AddAccessRule($rule); Set-Acl folder $acl # 添加读取权限"
+      ]
     },
     {
       "name": "Get-CimInstance",
@@ -2952,7 +4273,14 @@
       "name_cn": "WMI信息",
       "description": "获取CIM类的实例",
       "usage": "Get-CimInstance -ClassName <class>",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "Get-CimInstance -ClassName Win32_Processor # 查看CPU信息",
+        "Get-CimInstance -ClassName Win32_OperatingSystem | Select-Object Caption, Version, BuildNumber # 查看操作系统版本",
+        "Get-CimInstance -ClassName Win32_LogicalDisk -Filter 'DriveType=3' # 查看本地磁盘信息",
+        "Get-CimInstance -ClassName Win32_PhysicalMemory | Measure-Object Capacity -Sum # 计算总内存",
+        "Get-CimInstance -ClassName Win32_NetworkAdapter | Where-Object PhysicalAdapter -eq $true # 查看物理网卡"
+      ]
     },
     {
       "name": "Get-WmiObject",
@@ -2960,25 +4288,46 @@
         "gwmi"
       ],
       "name_cn": "WMI查询(旧版)",
-      "description": "获取WMI类的实例(旧版)",
+      "description": "获取WMI类的实例(旧版，建议使用Get-CimInstance替代)",
       "usage": "Get-WmiObject -Class <class>",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "Get-WmiObject -Class Win32_Processor # 查看CPU信息",
+        "Get-WmiObject -Class Win32_OperatingSystem | Select-Object Caption, Version # 查看操作系统版本",
+        "Get-WmiObject -Class Win32_LogicalDisk -Filter 'DriveType=3' # 查看本地磁盘",
+        "Get-WmiObject -Class Win32_NetworkAdapterConfiguration | Where-Object IPEnabled # 查看网络配置",
+        "Get-WmiObject -Class Win32_StartupCommand | Select-Object Name, Command # 查看开机启动项"
+      ]
     },
     {
       "name": "Get-ComputerInfo",
       "alias": [],
       "name_cn": "计算机信息",
       "description": "获取计算机详细系统信息",
-      "usage": "Get-ComputerInfo",
-      "category": "系统管理"
+      "usage": "Get-ComputerInfo [-Property <string[]>]",
+      "category": "系统管理",
+      "examples": [
+        "Get-ComputerInfo # 获取所有系统信息",
+        "Get-ComputerInfo -Property 'Os*' # 仅获取操作系统相关属性",
+        "Get-ComputerInfo -Property CsName, CsProcessors, OsArchitecture # 查看计算机名、CPU和架构",
+        "(Get-ComputerInfo).WindowsVersion # 快速查看Windows版本",
+        "Get-ComputerInfo -Property 'OsName','OsVersion','OsBuildNumber' # 查看系统名称和版本号"
+      ]
     },
     {
       "name": "Get-HotFix",
       "alias": [],
       "name_cn": "已安装补丁",
       "description": "获取已安装的系统补丁",
-      "usage": "Get-HotFix [-Id <string>]",
-      "category": "系统管理"
+      "usage": "Get-HotFix [-Id <string>] [-ComputerName <string>]",
+      "category": "系统管理",
+      "examples": [
+        "Get-HotFix # 列出所有已安装的补丁",
+        "Get-HotFix -Id KB5034441 # 查询指定补丁是否已安装",
+        "Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 10 # 查看最近安装的10个补丁",
+        "Get-HotFix -ComputerName Server01 # 查询远程计算机的补丁列表",
+        "Get-HotFix | Where-Object {$_.InstalledOn -gt (Get-Date).AddDays(-30)} # 查看最近30天安装的补丁"
+      ]
     },
     {
       "name": "Restart-Computer",
@@ -2987,8 +4336,15 @@
       ],
       "name_cn": "重启计算机(PS)",
       "description": "重启本地或远程计算机",
-      "usage": "Restart-Computer [-Force]",
-      "category": "系统管理"
+      "usage": "Restart-Computer [-ComputerName <string>] [-Force] [-Wait]",
+      "category": "系统管理",
+      "examples": [
+        "Restart-Computer # 重启本地计算机",
+        "Restart-Computer -Force # 强制重启本地计算机",
+        "Restart-Computer -ComputerName Server01 # 重启远程计算机",
+        "Restart-Computer -ComputerName Server01,Server02 -Force # 批量重启多台远程计算机",
+        "Restart-Computer -Wait -For PowerShell # 等待重启完成并验证PowerShell可用"
+      ]
     },
     {
       "name": "Stop-Computer",
@@ -2997,41 +4353,73 @@
         "poweroff"
       ],
       "name_cn": "关机(PS)",
-      "description": "关闭计算机",
-      "usage": "Stop-Computer [-Force]",
-      "category": "系统管理"
+      "description": "关闭本地或远程计算机",
+      "usage": "Stop-Computer [-ComputerName <string>] [-Force]",
+      "category": "系统管理",
+      "examples": [
+        "Stop-Computer # 关闭本地计算机",
+        "Stop-Computer -Force # 强制关闭本地计算机",
+        "Stop-Computer -ComputerName Server01 # 关闭远程计算机",
+        "Stop-Computer -ComputerName Server01,Server02 -Force # 批量关闭多台远程计算机"
+      ]
     },
     {
       "name": "Get-AppxPackage",
       "alias": [],
       "name_cn": "已安装UWP应用",
       "description": "获取已安装的UWP应用包",
-      "usage": "Get-AppxPackage [-Name <string>]",
-      "category": "系统管理"
+      "usage": "Get-AppxPackage [-Name <string>] [-AllUsers]",
+      "category": "系统管理",
+      "examples": [
+        "Get-AppxPackage # 列出当前用户已安装的所有UWP应用",
+        "Get-AppxPackage -Name *Microsoft* # 搜索包含Microsoft的应用",
+        "Get-AppxPackage -AllUsers # 列出所有用户安装的UWP应用",
+        "Get-AppxPackage -Name *WindowsStore* # 查找Windows商店应用",
+        "Get-AppxPackage | Select-Object Name,PackageFullName | Format-Table # 以表格显示应用名和包全名"
+      ]
     },
     {
       "name": "Remove-AppxPackage",
       "alias": [],
       "name_cn": "卸载UWP应用",
       "description": "卸载UWP应用包",
-      "usage": "Remove-AppxPackage <package>",
-      "category": "系统管理"
+      "usage": "Remove-AppxPackage [-Package] <string> [-AllUsers]",
+      "category": "系统管理",
+      "examples": [
+        "Get-AppxPackage *WindowsMaps* | Remove-AppxPackage # 卸载Windows地图应用",
+        "Remove-AppxPackage -Package Microsoft.ZuneMusic_1.0.0.0_neutral_~_8wekyb3d8bbwe # 按包全名卸载",
+        "Get-AppxPackage -AllUsers *People* | Remove-AppxPackage -AllUsers # 为所有用户卸载人脉应用",
+        "Get-AppxPackage *Windows.Photos* | Remove-AppxPackage # 卸载Windows照片应用"
+      ]
     },
     {
       "name": "Get-Volume",
       "alias": [],
       "name_cn": "卷信息",
       "description": "获取存储卷信息",
-      "usage": "Get-Volume",
-      "category": "磁盘管理"
+      "usage": "Get-Volume [[-DriveLetter] <char>] [-FileSystem <string>]",
+      "category": "磁盘管理",
+      "examples": [
+        "Get-Volume # 列出所有存储卷",
+        "Get-Volume -DriveLetter C # 查看C盘详细信息",
+        "Get-Volume -FileSystem NTFS # 列出所有NTFS文件系统的卷",
+        "Get-Volume | Where-Object {$_.DriveLetter} | Format-Table DriveLetter,FileSystemLabel,SizeRemaining,Size # 以表格显示各卷信息"
+      ]
     },
     {
       "name": "DISM",
       "alias": [],
       "name_cn": "映像管理",
-      "description": "管理和修复Windows映像",
-      "usage": "DISM /Online /Cleanup-Image /RestoreHealth",
-      "category": "系统管理"
+      "description": "部署映像服务和管理工具，用于修复系统映像和管理功能",
+      "usage": "DISM /Online [/Cleanup-Image|/Get-Features|/Enable-Feature] [options]",
+      "category": "系统管理",
+      "examples": [
+        "DISM /Online /Cleanup-Image /RestoreHealth # 扫描并修复系统映像损坏",
+        "DISM /Online /Cleanup-Image /CheckHealth # 快速检查映像是否标记为损坏",
+        "DISM /Online /Cleanup-Image /ScanHealth # 扫描映像检查有无损坏",
+        "DISM /Online /Get-Features | findstr Telnet # 查找Telnet相关功能",
+        "DISM /Online /Enable-Feature /FeatureName:TelnetClient /All # 启用Telnet客户端功能"
+      ]
     },
     {
       "name": "Get-Service",
@@ -3041,7 +4429,14 @@
       "name_cn": "获取服务(PS)",
       "description": "获取服务状态信息",
       "usage": "Get-Service [[-Name] <string>]",
-      "category": "服务管理"
+      "category": "服务管理",
+      "examples": [
+        "Get-Service # 列出所有服务及状态",
+        "Get-Service -Name *sql* # 模糊搜索SQL相关服务",
+        "Get-Service | Where-Object Status -eq 'Running' # 仅显示运行中的服务",
+        "Get-Service -Name WinRM,Spooler # 查看指定服务状态",
+        "Get-Service | Sort-Object Status # 按状态排序显示服务"
+      ]
     },
     {
       "name": "Start-Service",
@@ -3051,7 +4446,13 @@
       "name_cn": "启动服务(PS)",
       "description": "启动一个或多个服务",
       "usage": "Start-Service [-Name] <string>",
-      "category": "服务管理"
+      "category": "服务管理",
+      "examples": [
+        "Start-Service -Name Spooler # 启动打印服务",
+        "Start-Service -Name WinRM,SNMP # 启动多个服务",
+        "Get-Service | Where-Object Status -eq 'Stopped' | Start-Service # 启动所有已停止的服务",
+        "Start-Service -Name *sql* # 启动所有SQL相关服务"
+      ]
     },
     {
       "name": "Stop-Service",
@@ -3061,7 +4462,13 @@
       "name_cn": "停止服务(PS)",
       "description": "停止一个或多个服务",
       "usage": "Stop-Service [-Name] <string> [-Force]",
-      "category": "服务管理"
+      "category": "服务管理",
+      "examples": [
+        "Stop-Service -Name Spooler # 停止打印服务",
+        "Stop-Service -Name WinRM -Force # 强制停止WinRM服务",
+        "Get-Service | Where-Object Status -eq 'Running' | Stop-Service # 停止所有运行中的服务",
+        "Stop-Service -Name *sql* -Force # 强制停止所有SQL相关服务"
+      ]
     },
     {
       "name": "Restart-Service",
@@ -3069,7 +4476,13 @@
       "name_cn": "重启服务(PS)",
       "description": "重启服务",
       "usage": "Restart-Service [-Name] <string>",
-      "category": "服务管理"
+      "category": "服务管理",
+      "examples": [
+        "Restart-Service -Name Spooler # 重启打印服务",
+        "Restart-Service -Name WinRM # 重启WinRM远程管理服务",
+        "Restart-Service -Name *sql* # 重启所有SQL相关服务",
+        "Get-Service | Where-Object Status -eq 'Running' | Restart-Service # 重启所有运行中的服务"
+      ]
     },
     {
       "name": "Set-Service",
@@ -3077,7 +4490,14 @@
       "name_cn": "修改服务(PS)",
       "description": "修改服务属性",
       "usage": "Set-Service [-Name] <string> [-StartupType <string>]",
-      "category": "服务管理"
+      "category": "服务管理",
+      "examples": [
+        "Set-Service -Name WinRM -StartupType Automatic # 设置服务为自动启动",
+        "Set-Service -Name Spooler -StartupType Manual # 设置服务为手动启动",
+        "Set-Service -Name SNMP -StartupType Disabled # 禁用服务",
+        "Set-Service -Name WinRM -DisplayName 'Windows远程管理' # 修改服务显示名称",
+        "Set-Service -Name Spooler -Status Running # 启动服务"
+      ]
     },
     {
       "name": "New-Service",
@@ -3085,7 +4505,13 @@
       "name_cn": "创建服务(PS)",
       "description": "创建新的Windows服务",
       "usage": "New-Service -Name <name> -BinaryPathName <path>",
-      "category": "服务管理"
+      "category": "服务管理",
+      "examples": [
+        "New-Service -Name MyService -BinaryPathName 'C:\\\\Services\\\\myservice.exe' # 创建新服务",
+        "New-Service -Name MySvc -BinaryPathName 'C:\\\\app\\\\svc.exe' -DisplayName 'My App Service' # 创建并设置显示名",
+        "New-Service -Name MySvc -BinaryPathName 'C:\\\\app\\\\svc.exe' -Description '自定义应用服务' # 创建并设置描述",
+        "New-Service -Name MySvc -BinaryPathName 'C:\\\\app\\\\svc.exe' -StartupType Automatic # 创建并设为自动启动"
+      ]
     },
     {
       "name": "Register-ScheduledTask",
@@ -3093,7 +4519,10 @@
       "name_cn": "注册计划任务(PS)",
       "description": "注册新的计划任务",
       "usage": "Register-ScheduledTask -Action <action> -Trigger <trigger>",
-      "category": "计划任务"
+      "category": "计划任务",
+      "examples": [
+        "Register-ScheduledTask # 注册新的计划任务"
+      ]
     },
     {
       "name": "Get-ScheduledTask",
@@ -3101,7 +4530,10 @@
       "name_cn": "获取计划任务(PS)",
       "description": "获取计划任务列表",
       "usage": "Get-ScheduledTask [[-TaskName] <string>]",
-      "category": "计划任务"
+      "category": "计划任务",
+      "examples": [
+        "Get-ScheduledTask # 获取计划任务列表"
+      ]
     },
     {
       "name": "Start-ScheduledTask",
@@ -3109,7 +4541,10 @@
       "name_cn": "运行计划任务(PS)",
       "description": "立即运行计划任务",
       "usage": "Start-ScheduledTask [-TaskName] <string>",
-      "category": "计划任务"
+      "category": "计划任务",
+      "examples": [
+        "Start-ScheduledTask # 立即运行计划任务"
+      ]
     },
     {
       "name": "Test-Connection",
@@ -3119,7 +4554,10 @@
       "name_cn": "连通测试(PS)",
       "description": "PowerShell版ping测试",
       "usage": "Test-Connection [-ComputerName] <host>",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "Test-Connection # PowerShell版ping测试"
+      ]
     },
     {
       "name": "Get-NetIPAddress",
@@ -3127,7 +4565,10 @@
       "name_cn": "IP地址(PS)",
       "description": "获取IP地址配置",
       "usage": "Get-NetIPAddress [-AddressFamily IPv4]",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "Get-NetIPAddress # 获取IP地址配置"
+      ]
     },
     {
       "name": "Get-NetRoute",
@@ -3137,7 +4578,10 @@
       "name_cn": "路由表(PS)",
       "description": "获取IP路由表",
       "usage": "Get-NetRoute",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "Get-NetRoute # 获取IP路由表"
+      ]
     },
     {
       "name": "Get-NetTCPConnection",
@@ -3147,7 +4591,10 @@
       "name_cn": "TCP连接(PS)",
       "description": "获取TCP连接信息",
       "usage": "Get-NetTCPConnection [-State Established]",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "Get-NetTCPConnection # 获取TCP连接信息"
+      ]
     },
     {
       "name": "Resolve-DnsName",
@@ -3157,7 +4604,10 @@
       "name_cn": "DNS解析(PS)",
       "description": "PowerShell版DNS查询",
       "usage": "Resolve-DnsName [-Name] <hostname>",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "Resolve-DnsName # PowerShell版DNS查询"
+      ]
     },
     {
       "name": "Clear-DnsClientCache",
@@ -3167,7 +4617,10 @@
       "name_cn": "清除DNS缓存(PS)",
       "description": "清除DNS客户端缓存",
       "usage": "Clear-DnsClientCache",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "Clear-DnsClientCache # 清除DNS客户端缓存"
+      ]
     },
     {
       "name": "Enable-NetAdapter",
@@ -3175,7 +4628,10 @@
       "name_cn": "启用网卡(PS)",
       "description": "启用网络适配器",
       "usage": "Enable-NetAdapter [-Name] <adapter>",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "Enable-NetAdapter # 启用网络适配器"
+      ]
     },
     {
       "name": "Disable-NetAdapter",
@@ -3183,7 +4639,10 @@
       "name_cn": "禁用网卡(PS)",
       "description": "禁用网络适配器",
       "usage": "Disable-NetAdapter [-Name] <adapter>",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "Disable-NetAdapter # 禁用网络适配器"
+      ]
     },
     {
       "name": "Enter-PSSession",
@@ -3191,7 +4650,10 @@
       "name_cn": "远程会话",
       "description": "进入远程PowerShell会话",
       "usage": "Enter-PSSession [-ComputerName] <host>",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "Enter-PSSession # 进入远程PowerShell会话"
+      ]
     },
     {
       "name": "Invoke-Command",
@@ -3201,7 +4663,10 @@
       "name_cn": "远程执行",
       "description": "在远程计算机执行命令",
       "usage": "Invoke-Command -ComputerName <host> -ScriptBlock { <cmd> }",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "Invoke-Command # 在远程计算机执行命令"
+      ]
     },
     {
       "name": "net share",
@@ -3209,7 +4674,10 @@
       "name_cn": "共享管理",
       "description": "管理文件共享",
       "usage": "net share [sharename=path]",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "net # 管理文件共享"
+      ]
     },
     {
       "name": "net use",
@@ -3219,7 +4687,10 @@
       "name_cn": "网络驱动器",
       "description": "连接或断开网络共享",
       "usage": "net use <drive:> \\\\server\\share",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "net # 连接或断开网络共享"
+      ]
     },
     {
       "name": "net view",
@@ -3227,7 +4698,10 @@
       "name_cn": "网络资源",
       "description": "查看网络共享资源",
       "usage": "net view [\\\\computer]",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "net # 查看网络共享资源"
+      ]
     },
     {
       "name": "net time",
@@ -3235,7 +4709,10 @@
       "name_cn": "网络时间",
       "description": "查看网络时间同步",
       "usage": "net time \\\\server",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "net # 查看网络时间同步"
+      ]
     },
     {
       "name": "bitsadmin",
@@ -3243,7 +4720,10 @@
       "name_cn": "后台传输",
       "description": "管理后台智能传输服务",
       "usage": "bitsadmin /transfer <name> <url> <path>",
-      "category": "下载工具"
+      "category": "下载工具",
+      "examples": [
+        "bitsadmin # 管理后台智能传输服务"
+      ]
     },
     {
       "name": "Get-NetFirewallRule",
@@ -3251,7 +4731,10 @@
       "name_cn": "防火墙规则(PS)",
       "description": "获取防火墙规则",
       "usage": "Get-NetFirewallRule [-Enabled True]",
-      "category": "安全防护"
+      "category": "安全防护",
+      "examples": [
+        "Get-NetFirewallRule # 获取防火墙规则"
+      ]
     },
     {
       "name": "New-NetFirewallRule",
@@ -3259,7 +4742,10 @@
       "name_cn": "新建防火墙规则(PS)",
       "description": "创建防火墙规则",
       "usage": "New-NetFirewallRule -DisplayName <name> -Direction Inbound -Action Allow",
-      "category": "安全防护"
+      "category": "安全防护",
+      "examples": [
+        "New-NetFirewallRule # 创建防火墙规则"
+      ]
     },
     {
       "name": "Enable-NetFirewallRule",
@@ -3267,7 +4753,10 @@
       "name_cn": "启用防火墙规则(PS)",
       "description": "启用防火墙规则",
       "usage": "Enable-NetFirewallRule -DisplayName <name>",
-      "category": "安全防护"
+      "category": "安全防护",
+      "examples": [
+        "Enable-NetFirewallRule # 启用防火墙规则"
+      ]
     },
     {
       "name": "Disable-NetFirewallRule",
@@ -3275,7 +4764,10 @@
       "name_cn": "禁用防火墙规则(PS)",
       "description": "禁用防火墙规则",
       "usage": "Disable-NetFirewallRule -DisplayName <name>",
-      "category": "安全防护"
+      "category": "安全防护",
+      "examples": [
+        "Disable-NetFirewallRule # 禁用防火墙规则"
+      ]
     },
     {
       "name": "Get-NetFirewallProfile",
@@ -3283,7 +4775,10 @@
       "name_cn": "防火墙配置(PS)",
       "description": "获取防火墙配置文件",
       "usage": "Get-NetFirewallProfile",
-      "category": "安全防护"
+      "category": "安全防护",
+      "examples": [
+        "Get-NetFirewallProfile # 获取防火墙配置文件"
+      ]
     },
     {
       "name": "Set-NetFirewallProfile",
@@ -3291,7 +4786,10 @@
       "name_cn": "设置防火墙(PS)",
       "description": "设置防火墙配置",
       "usage": "Set-NetFirewallProfile -Enabled True",
-      "category": "安全防护"
+      "category": "安全防护",
+      "examples": [
+        "Set-NetFirewallProfile # 设置防火墙配置"
+      ]
     },
     {
       "name": "Get-ExecutionPolicy",
@@ -3299,7 +4797,10 @@
       "name_cn": "执行策略",
       "description": "获取PowerShell执行策略",
       "usage": "Get-ExecutionPolicy",
-      "category": "安全防护"
+      "category": "安全防护",
+      "examples": [
+        "Get-ExecutionPolicy # 获取PowerShell执行策略"
+      ]
     },
     {
       "name": "Set-ExecutionPolicy",
@@ -3307,7 +4808,10 @@
       "name_cn": "设置执行策略",
       "description": "设置PowerShell执行策略",
       "usage": "Set-ExecutionPolicy RemoteSigned",
-      "category": "安全防护"
+      "category": "安全防护",
+      "examples": [
+        "Set-ExecutionPolicy # 设置PowerShell执行策略"
+      ]
     },
     {
       "name": "Get-AuthenticodeSignature",
@@ -3315,7 +4819,10 @@
       "name_cn": "签名验证",
       "description": "验证文件Authenticode签名",
       "usage": "Get-AuthenticodeSignature <file>",
-      "category": "安全防护"
+      "category": "安全防护",
+      "examples": [
+        "Get-AuthenticodeSignature # 验证文件Authenticode签名"
+      ]
     },
     {
       "name": "Get-Disk",
@@ -3323,7 +4830,10 @@
       "name_cn": "磁盘信息(PS)",
       "description": "获取磁盘信息",
       "usage": "Get-Disk",
-      "category": "磁盘管理"
+      "category": "磁盘管理",
+      "examples": [
+        "Get-Disk # 获取磁盘信息"
+      ]
     },
     {
       "name": "Get-Partition",
@@ -3331,7 +4841,10 @@
       "name_cn": "分区信息(PS)",
       "description": "获取分区信息",
       "usage": "Get-Partition",
-      "category": "磁盘管理"
+      "category": "磁盘管理",
+      "examples": [
+        "Get-Partition # 获取分区信息"
+      ]
     },
     {
       "name": "Format-Volume",
@@ -3341,7 +4854,10 @@
       "name_cn": "格式化卷(PS)",
       "description": "格式化磁盘卷",
       "usage": "Format-Volume [-DriveLetter] <char>",
-      "category": "磁盘管理"
+      "category": "磁盘管理",
+      "examples": [
+        "Format-Volume # 格式化磁盘卷"
+      ]
     },
     {
       "name": "Repair-Volume",
@@ -3349,7 +4865,10 @@
       "name_cn": "修复卷",
       "description": "修复磁盘卷错误",
       "usage": "Repair-Volume [-DriveLetter] <char>",
-      "category": "磁盘管理"
+      "category": "磁盘管理",
+      "examples": [
+        "Repair-Volume # 修复磁盘卷错误"
+      ]
     },
     {
       "name": "Initialize-Disk",
@@ -3357,7 +4876,10 @@
       "name_cn": "初始化磁盘(PS)",
       "description": "初始化新磁盘",
       "usage": "Initialize-Disk [-Number] <int>",
-      "category": "磁盘管理"
+      "category": "磁盘管理",
+      "examples": [
+        "Initialize-Disk # 初始化新磁盘"
+      ]
     },
     {
       "name": "New-Partition",
@@ -3365,7 +4887,10 @@
       "name_cn": "创建分区(PS)",
       "description": "创建磁盘分区",
       "usage": "New-Partition [-DiskNumber] <int> -Size <size>",
-      "category": "磁盘管理"
+      "category": "磁盘管理",
+      "examples": [
+        "New-Partition # 创建磁盘分区"
+      ]
     },
     {
       "name": "Resize-Partition",
@@ -3373,7 +4898,10 @@
       "name_cn": "调整分区(PS)",
       "description": "调整分区大小",
       "usage": "Resize-Partition -DiskNumber <int> -PartitionNumber <int> -Size <size>",
-      "category": "磁盘管理"
+      "category": "磁盘管理",
+      "examples": [
+        "Resize-Partition # 调整分区大小"
+      ]
     },
     {
       "name": "Get-PSDrive",
@@ -3383,7 +4911,10 @@
       "name_cn": "驱动器列表(PS)",
       "description": "获取PowerShell驱动器",
       "usage": "Get-PSDrive",
-      "category": "磁盘管理"
+      "category": "磁盘管理",
+      "examples": [
+        "Get-PSDrive # 获取PowerShell驱动器"
+      ]
     },
     {
       "name": "New-PSDrive",
@@ -3393,7 +4924,10 @@
       "name_cn": "映射驱动器(PS)",
       "description": "创建驱动器映射",
       "usage": "New-PSDrive -Name <letter> -PSProvider FileSystem -Root <path>",
-      "category": "磁盘管理"
+      "category": "磁盘管理",
+      "examples": [
+        "New-PSDrive # 创建驱动器映射"
+      ]
     },
     {
       "name": "Get-LocalUser",
@@ -3401,7 +4935,10 @@
       "name_cn": "本地用户(PS)",
       "description": "获取本地用户账户",
       "usage": "Get-LocalUser",
-      "category": "用户管理"
+      "category": "用户管理",
+      "examples": [
+        "Get-LocalUser # 获取本地用户账户"
+      ]
     },
     {
       "name": "New-LocalUser",
@@ -3409,7 +4946,10 @@
       "name_cn": "创建用户(PS)",
       "description": "创建本地用户",
       "usage": "New-LocalUser -Name <name>",
-      "category": "用户管理"
+      "category": "用户管理",
+      "examples": [
+        "New-LocalUser # 创建本地用户"
+      ]
     },
     {
       "name": "Remove-LocalUser",
@@ -3417,7 +4957,10 @@
       "name_cn": "删除用户(PS)",
       "description": "删除本地用户",
       "usage": "Remove-LocalUser [-Name] <name>",
-      "category": "用户管理"
+      "category": "用户管理",
+      "examples": [
+        "Remove-LocalUser # 删除本地用户"
+      ]
     },
     {
       "name": "Enable-LocalUser",
@@ -3425,7 +4968,10 @@
       "name_cn": "启用用户(PS)",
       "description": "启用本地用户",
       "usage": "Enable-LocalUser [-Name] <name>",
-      "category": "用户管理"
+      "category": "用户管理",
+      "examples": [
+        "Enable-LocalUser # 启用本地用户"
+      ]
     },
     {
       "name": "Disable-LocalUser",
@@ -3433,7 +4979,10 @@
       "name_cn": "禁用用户(PS)",
       "description": "禁用本地用户",
       "usage": "Disable-LocalUser [-Name] <name>",
-      "category": "用户管理"
+      "category": "用户管理",
+      "examples": [
+        "Disable-LocalUser # 禁用本地用户"
+      ]
     },
     {
       "name": "Get-LocalGroup",
@@ -3441,7 +4990,10 @@
       "name_cn": "本地组(PS)",
       "description": "获取本地组",
       "usage": "Get-LocalGroup",
-      "category": "用户管理"
+      "category": "用户管理",
+      "examples": [
+        "Get-LocalGroup # 获取本地组"
+      ]
     },
     {
       "name": "Add-LocalGroupMember",
@@ -3449,15 +5001,22 @@
       "name_cn": "添加组成员(PS)",
       "description": "将用户添加到本地组",
       "usage": "Add-LocalGroupMember -Group <group> -Member <user>",
-      "category": "用户管理"
+      "category": "用户管理",
+      "examples": [
+        "Add-LocalGroupMember # 将用户添加到本地组"
+      ]
     },
     {
       "name": "Debug-Process",
       "alias": [],
       "name_cn": "调试进程",
       "description": "附加调试器到进程",
-      "usage": "Debug-Process [-Name] <name>",
-      "category": "进程管理"
+      "usage": "Debug-Process [-Name] <string[]> [-Id <int[]>]",
+      "category": "进程管理",
+      "examples": [
+        "Debug-Process -Name myapp # 附加调试器到myapp进程",
+        "Debug-Process -Id 1234 # 按PID附加调试器"
+      ]
     },
     {
       "name": "wt",
@@ -3465,7 +5024,10 @@
       "name_cn": "打开终端",
       "description": "启动Windows Terminal",
       "usage": "wt",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "wt # 启动Windows Terminal"
+      ]
     },
     {
       "name": "wt -w 0 sp",
@@ -3473,7 +5035,10 @@
       "name_cn": "垂直分屏",
       "description": "Windows Terminal垂直分屏",
       "usage": "wt -w 0 sp",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "wt # Windows Terminal垂直分屏"
+      ]
     },
     {
       "name": "wt split-pane -V",
@@ -3481,7 +5046,10 @@
       "name_cn": "水平分屏",
       "description": "Windows Terminal水平分屏",
       "usage": "wt split-pane -V",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "wt # Windows Terminal水平分屏"
+      ]
     },
     {
       "name": "wt new-tab -p",
@@ -3489,7 +5057,10 @@
       "name_cn": "新标签页",
       "description": "在新标签页打开配置文件",
       "usage": "wt new-tab -p <profile>",
-      "category": "终端操作"
+      "category": "终端操作",
+      "examples": [
+        "wt # 在新标签页打开配置文件"
+      ]
     },
     {
       "name": "winget install",
@@ -3497,7 +5068,10 @@
       "name_cn": "winget安装",
       "description": "使用winget安装应用",
       "usage": "winget install <package>",
-      "category": "包管理"
+      "category": "包管理",
+      "examples": [
+        "winget # 使用winget安装应用"
+      ]
     },
     {
       "name": "winget uninstall",
@@ -3505,7 +5079,10 @@
       "name_cn": "winget卸载",
       "description": "使用winget卸载应用",
       "usage": "winget uninstall <package>",
-      "category": "包管理"
+      "category": "包管理",
+      "examples": [
+        "winget # 使用winget卸载应用"
+      ]
     },
     {
       "name": "winget upgrade",
@@ -3513,7 +5090,10 @@
       "name_cn": "winget升级",
       "description": "使用winget升级应用",
       "usage": "winget upgrade [--all]",
-      "category": "包管理"
+      "category": "包管理",
+      "examples": [
+        "winget # 使用winget升级应用"
+      ]
     },
     {
       "name": "winget search",
@@ -3521,7 +5101,10 @@
       "name_cn": "winget搜索",
       "description": "在winget仓库搜索应用",
       "usage": "winget search <keyword>",
-      "category": "包管理"
+      "category": "包管理",
+      "examples": [
+        "winget # 在winget仓库搜索应用"
+      ]
     },
     {
       "name": "winget list",
@@ -3529,7 +5112,10 @@
       "name_cn": "winget列表",
       "description": "列出已安装的应用",
       "usage": "winget list",
-      "category": "包管理"
+      "category": "包管理",
+      "examples": [
+        "winget # 列出已安装的应用"
+      ]
     },
     {
       "name": "choco install",
@@ -3539,7 +5125,10 @@
       "name_cn": "choco安装",
       "description": "使用Chocolatey安装包",
       "usage": "choco install <package> [-y]",
-      "category": "包管理"
+      "category": "包管理",
+      "examples": [
+        "choco # 使用Chocolatey安装包"
+      ]
     },
     {
       "name": "choco uninstall",
@@ -3549,7 +5138,10 @@
       "name_cn": "choco卸载",
       "description": "使用Chocolatey卸载包",
       "usage": "choco uninstall <package> [-y]",
-      "category": "包管理"
+      "category": "包管理",
+      "examples": [
+        "choco # 使用Chocolatey卸载包"
+      ]
     },
     {
       "name": "choco upgrade",
@@ -3559,7 +5151,10 @@
       "name_cn": "choco升级",
       "description": "使用Chocolatey升级包",
       "usage": "choco upgrade <package> [-y]",
-      "category": "包管理"
+      "category": "包管理",
+      "examples": [
+        "choco # 使用Chocolatey升级包"
+      ]
     },
     {
       "name": "choco search",
@@ -3569,7 +5164,10 @@
       "name_cn": "choco搜索",
       "description": "在Chocolatey中搜索包",
       "usage": "choco search <keyword>",
-      "category": "包管理"
+      "category": "包管理",
+      "examples": [
+        "choco # 在Chocolatey中搜索包"
+      ]
     },
     {
       "name": "scoop install",
@@ -3577,7 +5175,10 @@
       "name_cn": "scoop安装",
       "description": "使用Scoop安装应用",
       "usage": "scoop install <app>",
-      "category": "包管理"
+      "category": "包管理",
+      "examples": [
+        "scoop # 使用Scoop安装应用"
+      ]
     },
     {
       "name": "scoop uninstall",
@@ -3585,7 +5186,10 @@
       "name_cn": "scoop卸载",
       "description": "使用Scoop卸载应用",
       "usage": "scoop uninstall <app>",
-      "category": "包管理"
+      "category": "包管理",
+      "examples": [
+        "scoop # 使用Scoop卸载应用"
+      ]
     },
     {
       "name": "scoop update",
@@ -3593,7 +5197,10 @@
       "name_cn": "scoop更新",
       "description": "更新Scoop和应用",
       "usage": "scoop update [<app>]",
-      "category": "包管理"
+      "category": "包管理",
+      "examples": [
+        "scoop # 更新Scoop和应用"
+      ]
     },
     {
       "name": "scoop search",
@@ -3601,7 +5208,10 @@
       "name_cn": "scoop搜索",
       "description": "在Scoop中搜索应用",
       "usage": "scoop search <keyword>",
-      "category": "包管理"
+      "category": "包管理",
+      "examples": [
+        "scoop # 在Scoop中搜索应用"
+      ]
     },
     {
       "name": "scoop list",
@@ -3609,7 +5219,10 @@
       "name_cn": "scoop列表",
       "description": "列出已安装的Scoop应用",
       "usage": "scoop list",
-      "category": "包管理"
+      "category": "包管理",
+      "examples": [
+        "scoop # 列出已安装的Scoop应用"
+      ]
     },
     {
       "name": "wsl --install",
@@ -3617,7 +5230,10 @@
       "name_cn": "安装WSL",
       "description": "安装Windows子系统for Linux",
       "usage": "wsl --install [-d <distro>]",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "wsl # 安装Windows子系统for Linux"
+      ]
     },
     {
       "name": "wsl --list",
@@ -3627,7 +5243,10 @@
       "name_cn": "WSL发行版列表",
       "description": "列出已安装的WSL发行版",
       "usage": "wsl --list [--verbose]",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "wsl # 列出已安装的WSL发行版"
+      ]
     },
     {
       "name": "wsl --set-default",
@@ -3635,7 +5254,10 @@
       "name_cn": "WSL默认发行版",
       "description": "设置默认WSL发行版",
       "usage": "wsl --set-default <distro>",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "wsl # 设置默认WSL发行版"
+      ]
     },
     {
       "name": "wsl --export",
@@ -3643,7 +5265,10 @@
       "name_cn": "导出WSL",
       "description": "将WSL发行版导出为tar",
       "usage": "wsl --export <distro> <file>",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "wsl # 将WSL发行版导出为tar"
+      ]
     },
     {
       "name": "wsl --import",
@@ -3651,7 +5276,10 @@
       "name_cn": "导入WSL",
       "description": "从tar导入WSL发行版",
       "usage": "wsl --import <name> <location> <file>",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "wsl # 从tar导入WSL发行版"
+      ]
     },
     {
       "name": "wsl --shutdown",
@@ -3659,7 +5287,10 @@
       "name_cn": "关闭WSL",
       "description": "关闭所有WSL实例",
       "usage": "wsl --shutdown",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "wsl # 关闭所有WSL实例"
+      ]
     },
     {
       "name": "wsl --terminate",
@@ -3669,7 +5300,10 @@
       "name_cn": "终止WSL",
       "description": "终止指定WSL发行版",
       "usage": "wsl --terminate <distro>",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "wsl # 终止指定WSL发行版"
+      ]
     },
     {
       "name": "wsl --update",
@@ -3677,7 +5311,10 @@
       "name_cn": "更新WSL",
       "description": "更新WSL内核",
       "usage": "wsl --update",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "wsl # 更新WSL内核"
+      ]
     },
     {
       "name": "wsl --status",
@@ -3685,7 +5322,10 @@
       "name_cn": "WSL状态",
       "description": "查看WSL运行状态",
       "usage": "wsl --status",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "wsl # 查看WSL运行状态"
+      ]
     },
     {
       "name": "wsl --unregister",
@@ -3693,39 +5333,66 @@
       "name_cn": "注销WSL",
       "description": "注销并删除WSL发行版",
       "usage": "wsl --unregister <distro>",
-      "category": "开发工具"
+      "category": "开发工具",
+      "examples": [
+        "wsl # 注销并删除WSL发行版"
+      ]
     },
     {
       "name": "Get-VM",
       "alias": [],
       "name_cn": "虚拟机列表",
       "description": "获取Hyper-V虚拟机列表",
-      "usage": "Get-VM",
-      "category": "系统管理"
+      "usage": "Get-VM [[-Name] <string[]>] [-State <VMState>]",
+      "category": "系统管理",
+      "examples": [
+        "Get-VM # 列出所有虚拟机",
+        "Get-VM -Name Ubuntu* # 按名称模糊查找虚拟机",
+        "Get-VM | Where-Object State -eq 'Running' # 列出所有运行中的虚拟机",
+        "Get-VM | Select-Object Name,State,CPUUsage,MemoryAssigned | Format-Table # 以表格显示虚拟机状态"
+      ]
     },
     {
       "name": "Start-VM",
       "alias": [],
       "name_cn": "启动虚拟机",
       "description": "启动Hyper-V虚拟机",
-      "usage": "Start-VM [-Name] <vm>",
-      "category": "系统管理"
+      "usage": "Start-VM [-Name] <string[]> [-AsJob]",
+      "category": "系统管理",
+      "examples": [
+        "Start-VM -Name Ubuntu # 启动指定虚拟机",
+        "Start-VM -Name Win* # 启动所有Win开头的虚拟机",
+        "Get-VM | Where-Object State -eq 'Off' | Start-VM # 启动所有已关闭的虚拟机",
+        "Start-VM -Name TestVM -AsJob # 后台启动虚拟机"
+      ]
     },
     {
       "name": "Stop-VM",
       "alias": [],
       "name_cn": "停止虚拟机",
       "description": "停止Hyper-V虚拟机",
-      "usage": "Stop-VM [-Name] <vm> [-Force]",
-      "category": "系统管理"
+      "usage": "Stop-VM [-Name] <string[]> [-Force] [-TurnOff]",
+      "category": "系统管理",
+      "examples": [
+        "Stop-VM -Name Ubuntu # 正常关闭虚拟机",
+        "Stop-VM -Name TestVM -Force # 强制关闭虚拟机",
+        "Get-VM | Where-Object State -eq 'Running' | Stop-VM # 停止所有运行中的虚拟机",
+        "Stop-VM -Name Win10 -TurnOff # 直接断电关闭虚拟机"
+      ]
     },
     {
       "name": "Restart-VM",
       "alias": [],
       "name_cn": "重启虚拟机",
       "description": "重启Hyper-V虚拟机",
-      "usage": "Restart-VM [-Name] <vm>",
-      "category": "系统管理"
+      "usage": "Restart-VM [-Name] <string[]> [-Force]",
+      "category": "系统管理",
+      "examples": [
+        "Restart-VM -Name Ubuntu # 重启指定虚拟机",
+        "Restart-VM -Name TestVM -Force # 强制重启虚拟机",
+        "Get-VM | Where-Object State -eq 'Running' | Restart-VM # 重启所有运行中的虚拟机",
+        "Restart-VM -Name Win10 -Force # 强制重启不等待正常关机"
+      ]
     },
     {
       "name": "Checkpoint-VM",
@@ -3733,7 +5400,10 @@
       "name_cn": "创建快照",
       "description": "创建虚拟机检查点",
       "usage": "Checkpoint-VM [-Name] <vm>",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "Checkpoint-VM # 创建虚拟机检查点"
+      ]
     },
     {
       "name": "Get-VMSnapshot",
@@ -3741,7 +5411,10 @@
       "name_cn": "虚拟机快照",
       "description": "获取虚拟机快照列表",
       "usage": "Get-VMSnapshot [-VMName] <vm>",
-      "category": "系统管理"
+      "category": "系统管理",
+      "examples": [
+        "Get-VMSnapshot # 获取虚拟机快照列表"
+      ]
     },
     {
       "name": "Get-VHD",
@@ -3749,7 +5422,10 @@
       "name_cn": "虚拟硬盘信息",
       "description": "获取虚拟硬盘信息",
       "usage": "Get-VHD [-Path] <path>",
-      "category": "磁盘管理"
+      "category": "磁盘管理",
+      "examples": [
+        "Get-VHD # 获取虚拟硬盘信息"
+      ]
     },
     {
       "name": "Get-VMNetworkAdapter",
@@ -3757,7 +5433,10 @@
       "name_cn": "虚拟网络适配器",
       "description": "获取虚拟机网络适配器",
       "usage": "Get-VMNetworkAdapter [-VMName] <vm>",
-      "category": "网络"
+      "category": "网络",
+      "examples": [
+        "Get-VMNetworkAdapter # 获取虚拟机网络适配器"
+      ]
     },
     {
       "name": "[Environment]::GetEnvironmentVariable",
@@ -3765,7 +5444,10 @@
       "name_cn": "获取环境变量(永久)",
       "description": "获取永久环境变量",
       "usage": "[Environment]::GetEnvironmentVariable(<var>, User)",
-      "category": "环境变量"
+      "category": "环境变量",
+      "examples": [
+        "[Environment]::GetEnvironmentVariable(<var>, # 获取永久环境变量"
+      ]
     },
     {
       "name": "Get-ItemProperty",
@@ -3775,7 +5457,10 @@
       "name_cn": "获取注册表值",
       "description": "获取注册表键值",
       "usage": "Get-ItemProperty -Path HKLM:\\<path>",
-      "category": "注册表"
+      "category": "注册表",
+      "examples": [
+        "Get-ItemProperty # 获取注册表键值"
+      ]
     },
     {
       "name": "Set-ItemProperty",
@@ -3785,7 +5470,10 @@
       "name_cn": "设置注册表值",
       "description": "设置注册表键值",
       "usage": "Set-ItemProperty -Path HKLM:\\<path> -Name <name> -Value <val>",
-      "category": "注册表"
+      "category": "注册表",
+      "examples": [
+        "Set-ItemProperty # 设置注册表键值"
+      ]
     },
     {
       "name": "New-ItemProperty",
@@ -3793,7 +5481,10 @@
       "name_cn": "新建注册表值",
       "description": "创建新的注册表值",
       "usage": "New-ItemProperty -Path HKLM:\\<path> -Name <name> -Value <val>",
-      "category": "注册表"
+      "category": "注册表",
+      "examples": [
+        "New-ItemProperty # 创建新的注册表值"
+      ]
     },
     {
       "name": "Remove-ItemProperty",
@@ -3801,7 +5492,10 @@
       "name_cn": "删除注册表值",
       "description": "删除注册表值",
       "usage": "Remove-ItemProperty -Path HKLM:\\<path> -Name <name>",
-      "category": "注册表"
+      "category": "注册表",
+      "examples": [
+        "Remove-ItemProperty # 删除注册表值"
+      ]
     },
     {
       "name": "Compress-Archive",
@@ -3809,7 +5503,10 @@
       "name_cn": "压缩文件(PS)",
       "description": "创建压缩归档文件",
       "usage": "Compress-Archive -Path <src> -DestinationPath <dest>",
-      "category": "压缩解压"
+      "category": "压缩解压",
+      "examples": [
+        "Compress-Archive # 创建压缩归档文件"
+      ]
     },
     {
       "name": "Expand-Archive",
@@ -3817,7 +5514,10 @@
       "name_cn": "解压文件(PS)",
       "description": "解压归档文件",
       "usage": "Expand-Archive -Path <archive> -DestinationPath <dest>",
-      "category": "压缩解压"
+      "category": "压缩解压",
+      "examples": [
+        "Expand-Archive # 解压归档文件"
+      ]
     }
   ]
 }

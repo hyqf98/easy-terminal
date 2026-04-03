@@ -1,0 +1,118 @@
+{
+  "id": "yarn",
+  "label": "yarn",
+  "kind": "custom",
+  "platforms": [],
+  "language": "Node.js",
+  "commands": [
+    {
+      "name": "yarn",
+      "name_cn": "yarn 主命令",
+      "description": "Yarn 包管理入口命令",
+      "usage": "yarn <command>",
+      "category": "yarn",
+      "examples": [
+        "yarn --version # 查看 yarn 版本",
+        "yarn config current # 查看当前配置",
+        "yarn help # 查看帮助信息"
+      ]
+    },
+    {
+      "name": "yarn install",
+      "alias": ["yarn"],
+      "name_cn": "安装依赖",
+      "description": "安装当前项目依赖",
+      "usage": "yarn install",
+      "category": "yarn",
+      "examples": [
+        "yarn install # 安装依赖",
+        "yarn install --immutable # 严格按锁文件安装",
+        "yarn install --mode=skip-build # 跳过 postinstall 构建"
+      ]
+    },
+    {
+      "name": "yarn add",
+      "name_cn": "添加依赖",
+      "description": "为项目添加依赖包",
+      "usage": "yarn add <package>",
+      "category": "yarn",
+      "examples": [
+        "yarn add axios # 添加运行时依赖",
+        "yarn add -D vite # 添加开发依赖",
+        "yarn add react@latest # 安装指定版本"
+      ]
+    },
+    {
+      "name": "yarn remove",
+      "name_cn": "移除依赖",
+      "description": "移除项目中的依赖包",
+      "usage": "yarn remove <package>",
+      "category": "yarn",
+      "examples": [
+        "yarn remove axios # 移除依赖",
+        "yarn remove eslint prettier # 批量移除依赖",
+        "yarn remove react-dom # 删除指定包"
+      ]
+    },
+    {
+      "name": "yarn dev",
+      "name_cn": "启动开发服务",
+      "description": "运行开发脚本",
+      "usage": "yarn dev",
+      "category": "yarn",
+      "examples": [
+        "yarn dev # 启动开发环境",
+        "yarn dev --host # 对外开放访问",
+        "yarn dev --port 3001 # 指定端口"
+      ]
+    },
+    {
+      "name": "yarn build",
+      "name_cn": "构建项目",
+      "description": "执行构建脚本",
+      "usage": "yarn build",
+      "category": "yarn",
+      "examples": [
+        "yarn build # 执行构建",
+        "yarn build:prod # 运行生产构建脚本",
+        "yarn workspaces foreach -pt run build # 工作区批量构建"
+      ]
+    },
+    {
+      "name": "yarn test",
+      "name_cn": "执行测试",
+      "description": "运行项目测试脚本",
+      "usage": "yarn test",
+      "category": "yarn",
+      "examples": [
+        "yarn test # 执行测试",
+        "yarn test --watch # 监听模式",
+        "yarn test --coverage # 生成覆盖率报告"
+      ]
+    },
+    {
+      "name": "yarn dlx",
+      "name_cn": "临时执行包",
+      "description": "临时执行 npm 包中的 CLI",
+      "usage": "yarn dlx <package>",
+      "category": "yarn",
+      "examples": [
+        "yarn dlx create-next-app@latest demo # 运行脚手架",
+        "yarn dlx eslint . # 临时执行 eslint",
+        "yarn dlx serve dist # 临时启动静态服务"
+      ]
+    },
+    {
+      "name": "yarn workspaces",
+      "name_cn": "工作区管理",
+      "description": "管理 Yarn workspaces",
+      "usage": "yarn workspaces <command>",
+      "category": "yarn",
+      "examples": [
+        "yarn workspaces list # 查看所有工作区",
+        "yarn workspaces foreach -pt run lint # 批量执行脚本",
+        "yarn workspace web dev # 在指定工作区执行脚本"
+      ]
+    }
+  ]
+}

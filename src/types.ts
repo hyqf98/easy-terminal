@@ -28,12 +28,15 @@ export interface SnapPoint {
 
 export interface CanvasController {
   getState(): CanvasState;
+  setState?(state: Partial<CanvasState>): void;
   snapPoint(x: number, y: number, sourceId?: string): SnapPoint;
   snapRect(rect: Rect, options: SnapOptions): Rect;
   clearGuides(): void;
 }
 
 export interface CommandEntry {
+  id?: number;
+  commandKey?: string;
   name: string;
   alias: string[];
   name_cn: string;
@@ -48,10 +51,14 @@ export interface CommandEntry {
   triggers?: string[];
   keywords?: string[];
   weight?: number;
+  enabled?: boolean;
+  exampleCount?: number;
+  firstExample?: string;
   libraryId?: string;
 }
 
 export interface CommandConfig {
+  schemaVersion?: number;
   id: string;
   kind: string;
   platforms: string[];
@@ -60,11 +67,115 @@ export interface CommandConfig {
   label?: string;
   language?: string;
   sourceType?: string;
+  enabled?: boolean;
+}
+
+export interface CommandLibrarySummary {
+  id: string;
+  label: string;
+  kind: string;
+  sourceType: string;
+  platforms: string[];
+  language: string;
+  enabled: boolean;
+  commandCount: number;
+  current: boolean;
+}
+
+export interface CommandSummary {
+  id: number;
+  libraryId: string;
+  commandKey: string;
+  name: string;
+  alias: string[];
+  name_cn: string;
+  description: string;
+  usage: string;
+  category: string;
+  command: string;
+  tags: string[];
+  hint: string;
+  language: string;
+  triggers: string[];
+  keywords: string[];
+  weight: number;
+  enabled: boolean;
+  exampleCount: number;
+  firstExample?: string | null;
+  libraryKind: string;
+  sourceType: string;
+  libraryLabel: string;
+}
+
+export interface CommandDetail extends CommandSummary {
+  examples: string[];
+}
+
+export interface CommandSummaryPage {
+  items: CommandSummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface CommandLibraryPayload {
+  id: string;
+  label: string;
+  kind: string;
+  sourceType: string;
+  platforms: string[];
+  language: string;
+  enabled: boolean;
+}
+
+export interface CommandPayload {
+  id?: number | null;
+  libraryId: string;
+  commandKey?: string;
+  name: string;
+  alias: string[];
+  name_cn: string;
+  description: string;
+  usage: string;
+  category: string;
+  command: string;
+  tags: string[];
+  examples: string[];
+  hint: string;
+  language: string;
+  triggers: string[];
+  keywords: string[];
+  weight: number;
+  enabled: boolean;
+}
+
+export interface CommandQueryParams {
+  libraryId?: string;
+  keyword?: string;
+  kind?: string;
+  category?: string;
+  page?: number;
+  pageSize?: number;
+  enabledOnly?: boolean;
+}
+
+export interface CommandSearchParams {
+  keyword: string;
+  libraryIds?: string[];
+  limit?: number;
+  enabledOnly?: boolean;
 }
 
 export interface CommandHistoryEntry {
   id: string;
   command: string;
+  cwd: string;
+  timestamp: number;
+  count: number;
+  variants: CommandHistoryVariant[];
+}
+
+export interface CommandHistoryVariant {
   cwd: string;
   timestamp: number;
   count: number;
@@ -79,6 +190,8 @@ export interface CommandMapping {
   examples: string[];
   hint?: string;
   enabled: boolean;
+  sourceType?: string;
+  platforms?: string[];
 }
 
 export interface SSHProfile {
@@ -101,6 +214,25 @@ export interface TerminalLaunchOptions {
   profileName?: string;
   profileId?: string;
   passwordSequence?: string[];
+}
+
+export interface TerminalSessionState {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  title: string;
+  cwd: string;
+  minimized?: boolean;
+  maximized?: boolean;
+  launchOptions?: TerminalLaunchOptions;
+}
+
+export interface WorkspaceState {
+  terminals: TerminalSessionState[];
+  canvas: CanvasState;
+  pendingSshProfileId: string;
+  activeTerminalId: string;
 }
 
 export interface FilePreviewData {
@@ -128,6 +260,7 @@ export type SuggestionSourceType = 'command' | 'mapping' | 'history' | 'completi
 export interface SuggestionItem {
   id: string;
   type: SuggestionSourceType;
+  commandId?: number;
   title: string;
   subtitle: string;
   description: string;
@@ -144,6 +277,8 @@ export interface SuggestionItem {
   matchedField?: string;
   language?: string;
   libraryId?: string;
+  exampleCount?: number;
+  firstExample?: string;
 }
 
 export interface TerminalInstance {

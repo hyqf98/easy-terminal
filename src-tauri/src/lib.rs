@@ -1,7 +1,8 @@
-mod pty;
-mod fs;
-mod settings;
 mod commands;
+mod db;
+mod fs;
+mod pty;
+mod settings;
 mod ssh;
 
 use pty::PtyManager;
@@ -12,6 +13,7 @@ use tauri::State;
 struct AppState {
     pty_manager: Mutex<PtyManager>,
     settings: Mutex<AppSettings>,
+    command_db: db::Db,
 }
 
 // === PTY Commands ===
@@ -29,11 +31,7 @@ fn create_pty(
 }
 
 #[tauri::command]
-fn write_pty(
-    state: State<'_, AppState>,
-    session_id: String,
-    data: String,
-) -> Result<(), String> {
+fn write_pty(state: State<'_, AppState>, session_id: String, data: String) -> Result<(), String> {
     let mut manager = state.pty_manager.lock().map_err(|e| e.to_string())?;
     manager.write(&session_id, &data)
 }
@@ -50,10 +48,7 @@ fn resize_pty(
 }
 
 #[tauri::command]
-fn kill_pty(
-    state: State<'_, AppState>,
-    session_id: String,
-) -> Result<(), String> {
+fn kill_pty(state: State<'_, AppState>, session_id: String) -> Result<(), String> {
     let mut manager = state.pty_manager.lock().map_err(|e| e.to_string())?;
     manager.kill(&session_id)
 }
@@ -73,6 +68,11 @@ fn create_file(path: String) -> Result<(), String> {
 #[tauri::command]
 fn create_dir(path: String) -> Result<(), String> {
     fs::create_dir_entry(&path)
+}
+
+#[tauri::command]
+fn write_text_file(path: String, content: String) -> Result<(), String> {
+    fs::write_text_file(&path, &content)
 }
 
 #[tauri::command]
@@ -139,6 +139,16 @@ fn load_terminal_state() -> Result<Vec<settings::TerminalSession>, String> {
 }
 
 #[tauri::command]
+fn save_workspace_state(state: settings::WorkspaceState) -> Result<(), String> {
+    settings::save_workspace_state(state)
+}
+
+#[tauri::command]
+fn load_workspace_state() -> Result<settings::WorkspaceState, String> {
+    settings::load_workspace_state()
+}
+
+#[tauri::command]
 fn load_command_history() -> Result<Vec<settings::CommandHistoryEntry>, String> {
     settings::load_command_history()
 }
@@ -149,7 +159,9 @@ fn save_command_history(entries: Vec<settings::CommandHistoryEntry>) -> Result<(
 }
 
 #[tauri::command]
-fn record_command_history(entry: settings::CommandHistoryEntry) -> Result<Vec<settings::CommandHistoryEntry>, String> {
+fn record_command_history(
+    entry: settings::CommandHistoryEntry,
+) -> Result<Vec<settings::CommandHistoryEntry>, String> {
     settings::record_command_history(entry)
 }
 
@@ -261,43 +273,106 @@ fn get_platforms() -> Vec<String> {
 }
 
 #[tauri::command]
-fn load_commands() -> Result<Vec<commands::CommandConfig>, String> {
-    commands::load_command_configs()
+fn list_command_libraries(
+    state: State<'_, AppState>,
+) -> Result<Vec<db::CommandLibrarySummary>, String> {
+    state.command_db.list_command_libraries()
 }
 
 #[tauri::command]
-fn save_commands(config: commands::CommandConfig) -> Result<(), String> {
-    commands::save_command_config(config)
+fn create_command_library(
+    state: State<'_, AppState>,
+    payload: db::CommandLibraryPayload,
+) -> Result<db::CommandLibrarySummary, String> {
+    state.command_db.create_command_library(payload)
 }
 
 #[tauri::command]
-fn load_quick_commands() -> Result<Vec<commands::CommandEntry>, String> {
-    commands::load_quick_commands()
+fn update_command_library(
+    state: State<'_, AppState>,
+    payload: db::CommandLibraryPayload,
+) -> Result<db::CommandLibrarySummary, String> {
+    state.command_db.update_command_library(payload)
 }
 
 #[tauri::command]
-fn save_quick_commands(commands: Vec<commands::CommandEntry>) -> Result<(), String> {
-    commands::save_quick_commands(commands)
+fn delete_command_library(state: State<'_, AppState>, library_id: String) -> Result<(), String> {
+    state.command_db.delete_command_library(&library_id)
 }
 
 #[tauri::command]
-fn list_available_custom_templates() -> Result<Vec<commands::CommandConfig>, String> {
-    commands::list_available_custom_templates()
+fn query_command_summaries(
+    state: State<'_, AppState>,
+    params: db::CommandQueryParams,
+) -> Result<db::CommandSummaryPage, String> {
+    state.command_db.query_command_summaries(params)
 }
 
 #[tauri::command]
-fn get_installed_custom_ids() -> Result<Vec<String>, String> {
-    commands::get_installed_custom_ids()
+fn search_command_summaries(
+    state: State<'_, AppState>,
+    params: db::CommandSearchParams,
+) -> Result<Vec<db::CommandSummary>, String> {
+    state.command_db.search_command_summaries(params)
+}
+
+#[tauri::command]
+fn get_command_detail(
+    state: State<'_, AppState>,
+    id: i64,
+) -> Result<Option<db::CommandDetail>, String> {
+    state.command_db.get_command_detail(id)
+}
+
+#[tauri::command]
+fn create_command(
+    state: State<'_, AppState>,
+    payload: db::CommandPayload,
+) -> Result<db::CommandDetail, String> {
+    state.command_db.create_command(payload)
+}
+
+#[tauri::command]
+fn update_command(
+    state: State<'_, AppState>,
+    payload: db::CommandPayload,
+) -> Result<db::CommandDetail, String> {
+    state.command_db.update_command(payload)
+}
+
+#[tauri::command]
+fn delete_command_entry(state: State<'_, AppState>, id: i64) -> Result<(), String> {
+    state.command_db.delete_command(id)
+}
+
+#[tauri::command]
+fn import_command_library(
+    state: State<'_, AppState>,
+    json: String,
+) -> Result<db::CommandLibrarySummary, String> {
+    state.command_db.import_command_library(&json)
+}
+
+#[tauri::command]
+fn export_command_library(
+    state: State<'_, AppState>,
+    library_id: String,
+) -> Result<String, String> {
+    state.command_db.export_command_library(&library_id)
+}
+
+#[tauri::command]
+fn reset_builtin_library(
+    state: State<'_, AppState>,
+    library_id: String,
+) -> Result<db::CommandLibrarySummary, String> {
+    state.command_db.reset_builtin_library(&library_id)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let loaded_settings = settings::load_settings().unwrap_or_default();
-
-    // Initialize default command configs (new directory structure)
-    if let Err(e) = commands::init_default_commands() {
-        eprintln!("Warning: Failed to init command configs: {}", e);
-    }
+    let command_db = db::Db::new().expect("failed to initialize command database");
 
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -312,6 +387,7 @@ pub fn run() {
         .manage(AppState {
             pty_manager: Mutex::new(PtyManager::new()),
             settings: Mutex::new(loaded_settings),
+            command_db,
         })
         .invoke_handler(tauri::generate_handler![
             create_pty,
@@ -321,6 +397,7 @@ pub fn run() {
             read_dir,
             create_file,
             create_dir,
+            write_text_file,
             rename_entry,
             move_entries,
             delete_entries,
@@ -332,6 +409,8 @@ pub fn run() {
             save_settings,
             save_terminal_state,
             load_terminal_state,
+            save_workspace_state,
+            load_workspace_state,
             load_command_history,
             save_command_history,
             record_command_history,
@@ -349,12 +428,19 @@ pub fn run() {
             load_default_shortcuts,
             get_platform,
             get_platforms,
-            load_commands,
-            save_commands,
-            load_quick_commands,
-            save_quick_commands,
-            list_available_custom_templates,
-            get_installed_custom_ids,
+            list_command_libraries,
+            create_command_library,
+            update_command_library,
+            delete_command_library,
+            query_command_summaries,
+            search_command_summaries,
+            get_command_detail,
+            create_command,
+            update_command,
+            delete_command_entry,
+            import_command_library,
+            export_command_library,
+            reset_builtin_library,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

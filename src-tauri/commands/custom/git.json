@@ -1,0 +1,117 @@
+{
+  "id": "git",
+  "label": "git",
+  "kind": "custom",
+  "platforms": [],
+  "language": "Git",
+  "commands": [
+    {
+      "name": "git status",
+      "name_cn": "查看状态",
+      "description": "查看当前仓库工作区状态",
+      "usage": "git status",
+      "category": "git",
+      "examples": [
+        "git status # 查看工作区状态",
+        "git status -sb # 查看简洁分支状态",
+        "git status --ignored # 包含忽略文件"
+      ]
+    },
+    {
+      "name": "git pull",
+      "name_cn": "拉取更新",
+      "description": "从远程拉取并合并分支",
+      "usage": "git pull",
+      "category": "git",
+      "examples": [
+        "git pull # 拉取当前跟踪分支",
+        "git pull origin main # 拉取指定远程分支",
+        "git pull --rebase # 使用 rebase 同步远程提交"
+      ]
+    },
+    {
+      "name": "git push",
+      "name_cn": "推送提交",
+      "description": "将本地提交推送到远程仓库",
+      "usage": "git push",
+      "category": "git",
+      "examples": [
+        "git push # 推送当前分支",
+        "git push origin feature/login # 推送指定分支",
+        "git push --force-with-lease # 安全强推"
+      ]
+    },
+    {
+      "name": "git checkout",
+      "name_cn": "切换分支",
+      "description": "切换分支或恢复文件",
+      "usage": "git checkout <branch>",
+      "category": "git",
+      "examples": [
+        "git checkout main # 切换到主分支",
+        "git checkout -b feature/auth # 创建并切换新分支",
+        "git checkout -- src/main.ts # 恢复文件内容"
+      ]
+    },
+    {
+      "name": "git switch",
+      "name_cn": "切换分支新语法",
+      "description": "使用新语法切换或创建分支",
+      "usage": "git switch <branch>",
+      "category": "git",
+      "examples": [
+        "git switch main # 切换到主分支",
+        "git switch -c feature/cache # 创建并切换分支",
+        "git switch - # 切回上一个分支"
+      ]
+    },
+    {
+      "name": "git rebase",
+      "name_cn": "变基",
+      "description": "将当前分支提交变基到目标分支",
+      "usage": "git rebase <branch>",
+      "category": "git",
+      "examples": [
+        "git rebase main # 变基到主分支",
+        "git rebase --continue # 处理冲突后继续变基",
+        "git rebase --abort # 终止变基"
+      ]
+    },
+    {
+      "name": "git log",
+      "name_cn": "查看提交历史",
+      "description": "查看提交历史记录",
+      "usage": "git log",
+      "category": "git",
+      "examples": [
+        "git log --oneline --graph --decorate -20 # 查看简洁图形化历史",
+        "git log --stat # 查看提交及文件改动统计",
+        "git log -- path/to/file # 查看指定文件历史"
+      ]
+    },
+    {
+      "name": "git diff",
+      "name_cn": "查看差异",
+      "description": "查看工作区、暂存区或提交间差异",
+      "usage": "git diff",
+      "category": "git",
+      "examples": [
+        "git diff # 查看工作区未暂存改动",
+        "git diff --cached # 查看已暂存改动",
+        "git diff main...feature/login # 比较两个分支差异"
+      ]
+    },
+    {
+      "name": "git stash",
+      "name_cn": "暂存工作区",
+      "description": "临时保存当前工作区改动",
+      "usage": "git stash",
+      "category": "git",
+      "examples": [
+        "git stash push -u -m 'wip login' # 暂存包含未跟踪文件的改动",
+        "git stash list # 查看暂存列表",
+        "git stash pop # 恢复最近一次暂存"
+      ]
+    }
+  ]
+}

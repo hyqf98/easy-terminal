@@ -41,6 +41,19 @@ export class Canvas implements CanvasController {
     };
   }
 
+  setState(state: Partial<CanvasState>) {
+    if (typeof state.panX === 'number') {
+      this.panX = state.panX;
+    }
+    if (typeof state.panY === 'number') {
+      this.panY = state.panY;
+    }
+    if (typeof state.zoom === 'number' && Number.isFinite(state.zoom)) {
+      this.zoom = Math.max(0.2, Math.min(3, state.zoom));
+    }
+    this.applyTransform();
+  }
+
   getZoom(): number {
     return this.zoom;
   }
@@ -171,8 +184,10 @@ export class Canvas implements CanvasController {
     // Otherwise: pan canvas
     e.preventDefault();
     if (e.shiftKey) {
-      this.panX -= e.deltaY;
+      const horizontalDelta = Math.abs(e.deltaX) > 0 ? e.deltaX : e.deltaY;
+      this.panX -= horizontalDelta;
     } else {
+      this.panX -= e.deltaX;
       this.panY -= e.deltaY;
     }
     this.applyTransform();

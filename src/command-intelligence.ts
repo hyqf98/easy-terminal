@@ -1,35 +1,21 @@
 import { invoke } from '@tauri-apps/api/core';
-import { Document } from 'flexsearch';
 import type {
-  CommandConfig,
+  CommandDetail,
   CommandEntry,
   CommandHistoryEntry,
+  CommandLibrarySummary,
   CommandMapping,
+  CommandSummary,
   SuggestionItem,
   SuggestionSourceType,
 } from './types';
-import { t } from './i18n';
+import { getLang, t } from './i18n';
 
 type Listener = () => void;
 
 interface CandidateText {
   value: string;
   weight: number;
-}
-
-interface SearchDocument {
-  [key: string]: string;
-  id: string;
-  title: string;
-  subtitle: string;
-  aliases: string;
-  tags: string;
-  description: string;
-  usage: string;
-  examples: string;
-  category: string;
-  sourceLabel: string;
-  language: string;
 }
 
 export interface GhostSuggestion {
@@ -45,12 +31,11 @@ export interface ExecutionResolution {
 
 export class CommandIntelligence {
   private platform = '';
-  private commandConfigs: CommandConfig[] = [];
+  private libraries: CommandLibrarySummary[] = [];
   private mappings: CommandMapping[] = [];
   private history: CommandHistoryEntry[] = [];
+  private detailCache = new Map<number, CommandDetail>();
   private listeners = new Set<Listener>();
-  private searchIndex: Document<SearchDocument> | null = null;
-  private indexedItems = new Map<string, SuggestionItem>();
 
   async init() {
     await this.reloadAll();
@@ -66,36 +51,34 @@ export class CommandIntelligence {
   }
 
   async reloadAll() {
-    const [platform, commandConfigs, mappings, history] = await Promise.all([
+    const [platform, libraries, mappings, history] = await Promise.all([
       invoke<string>('get_platform'),
-      invoke<CommandConfig[]>('load_commands'),
+      invoke<CommandLibrarySummary[]>('list_command_libraries'),
       invoke<CommandMapping[]>('load_command_mappings'),
       invoke<CommandHistoryEntry[]>('load_command_history'),
     ]);
     this.platform = platform;
-    this.commandConfigs = commandConfigs;
+    this.libraries = libraries;
     this.mappings = mappings;
     this.history = history.sort((left, right) => right.timestamp - left.timestamp);
-    this.rebuildSearchIndex();
+    this.detailCache.clear();
     this.emitChange();
   }
 
   async reloadCommands() {
-    this.commandConfigs = await invoke<CommandConfig[]>('load_commands');
-    this.rebuildSearchIndex();
+    this.libraries = await invoke<CommandLibrarySummary[]>('list_command_libraries');
+    this.detailCache.clear();
     this.emitChange();
   }
 
   async reloadMappings() {
     this.mappings = await invoke<CommandMapping[]>('load_command_mappings');
-    this.rebuildSearchIndex();
     this.emitChange();
   }
 
   async reloadHistory() {
     this.history = await invoke<CommandHistoryEntry[]>('load_command_history');
     this.history.sort((left, right) => right.timestamp - left.timestamp);
-    this.rebuildSearchIndex();
     this.emitChange();
   }
 
@@ -103,10 +86,10 @@ export class CommandIntelligence {
     return this.platform;
   }
 
-  getCommandConfigs(): CommandConfig[] {
-    return this.commandConfigs.map((config) => ({
-      ...config,
-      commands: config.commands.map((command) => normalizeCommandEntry(command)),
+  getLibraries(): CommandLibrarySummary[] {
+    return this.libraries.map((library) => ({
+      ...library,
+      platforms: [...library.platforms],
     }));
   }
 
@@ -114,25 +97,27 @@ export class CommandIntelligence {
     return this.mappings.map((mapping) => ({
       ...mapping,
       tags: [...mapping.tags],
+      platforms: [...(mapping.platforms || [])],
       examples: [...mapping.examples],
     }));
   }
 
   getHistory(): CommandHistoryEntry[] {
-    return this.history.map((entry) => ({ ...entry }));
+    return this.history.map((entry) => ({
+      ...entry,
+      variants: entry.variants.map((variant) => ({ ...variant })),
+    }));
   }
 
   async saveMappings(entries: CommandMapping[]) {
     await invoke('save_command_mappings', { entries });
     this.mappings = entries;
-    this.rebuildSearchIndex();
     this.emitChange();
   }
 
   async saveHistory(entries: CommandHistoryEntry[]) {
     await invoke('save_command_history', { entries });
     this.history = entries.sort((left, right) => right.timestamp - left.timestamp);
-    this.rebuildSearchIndex();
     this.emitChange();
   }
 
@@ -147,43 +132,67 @@ export class CommandIntelligence {
       cwd: normalizedCwd,
       timestamp: Date.now(),
       count: 1,
+      variants: [],
     };
     this.history = await invoke<CommandHistoryEntry[]>('record_command_history', { entry });
     this.history.sort((left, right) => right.timestamp - left.timestamp);
-    this.rebuildSearchIndex();
     this.emitChange();
   }
 
-  getSuggestionItems(query: string): SuggestionItem[] {
+  async searchSuggestions(query: string): Promise<SuggestionItem[]> {
     const normalizedQuery = normalize(query);
     if (!normalizedQuery) return [];
 
-    const indexed = this.searchByIndex(normalizedQuery);
-    if (indexed.length > 0) {
-      return indexed;
-    }
+    const [commandItems] = await Promise.all([
+      this.searchRemoteCommands(normalizedQuery),
+    ]);
+    const localItems = this.searchLocalItems(normalizedQuery);
 
-    const items = [...this.indexedItems.values()];
-    const scored = items
-      .map((item) => ({ item, score: this.scoreItem(item, normalizedQuery) }))
-      .filter((entry) => entry.score > 0)
+    const ranked = [...commandItems, ...localItems]
       .sort((left, right) =>
-        right.score - left.score
-        || sourcePriority(right.item.type) - sourcePriority(left.item.type)
-        || left.item.title.localeCompare(right.item.title, 'zh-CN'))
-      .slice(0, 12)
-      .map((entry) => ({ ...entry.item, score: entry.score }));
+        suggestionTypeRank(right.type) - suggestionTypeRank(left.type)
+        || right.score - left.score
+        || left.title.localeCompare(right.title, 'zh-CN'))
+      .slice(0, 12);
 
-    return scored;
+    return dedupeSuggestions(ranked);
   }
 
-  getGhostSuggestion(input: string): GhostSuggestion | null {
-    const trimmed = input.trimStart();
-    if (!trimmed) return null;
+  async hydrateSuggestionItem(item: SuggestionItem): Promise<SuggestionItem> {
+    if (item.type !== 'command' || !item.commandId) {
+      return item;
+    }
+    if ((item.examples.length > 0 && item.examples.length >= (item.exampleCount || 0))
+      || (item.exampleCount || 0) === 0) {
+      return item;
+    }
 
-    const suggestions = this.getSuggestionItems(trimmed);
-    const top = this.pickGhostCandidate(trimmed, suggestions);
-    return this.getGhostSuggestionForItem(trimmed, top);
+    const detail = await this.getCommandDetail(item.commandId);
+    if (!detail) return item;
+    return {
+      ...item,
+      description: detail.description || item.description,
+      usage: detail.usage || item.usage,
+      hint: detail.hint || item.hint,
+      aliases: [...detail.alias, ...detail.triggers],
+      tags: [...detail.tags, ...detail.keywords],
+      examples: [...detail.examples],
+      exampleCount: detail.examples.length,
+      firstExample: detail.examples[0] || item.firstExample,
+      language: detail.language || item.language,
+      libraryId: detail.libraryId,
+    };
+  }
+
+  async getCommandDetail(id: number): Promise<CommandDetail | null> {
+    if (this.detailCache.has(id)) {
+      return this.detailCache.get(id)!;
+    }
+    const detail = await invoke<CommandDetail | null>('get_command_detail', { id });
+    if (detail) {
+      this.detailCache.set(id, detail);
+    }
+    return detail;
   }
 
   getGhostSuggestionForItem(input: string, item: SuggestionItem | null): GhostSuggestion | null {
@@ -198,96 +207,12 @@ export class CommandIntelligence {
     };
   }
 
-  private rebuildSearchIndex() {
-    const items = [
-      ...this.commandItems(),
-      ...this.mappingItems(),
-      ...this.historyItems(),
-    ];
-
-    this.indexedItems = new Map(items.map((item) => [item.id, item]));
-    this.searchIndex = new Document<SearchDocument>({
-      tokenize: 'forward',
-      cache: 100,
-      document: {
-        id: 'id',
-        index: [
-          { field: 'title', tokenize: 'forward' },
-          { field: 'subtitle', tokenize: 'forward' },
-          { field: 'aliases', tokenize: 'forward' },
-          { field: 'tags', tokenize: 'forward' },
-          { field: 'description', tokenize: 'strict' },
-          { field: 'usage', tokenize: 'forward' },
-          { field: 'examples', tokenize: 'strict' },
-          { field: 'category', tokenize: 'strict' },
-          { field: 'sourceLabel', tokenize: 'strict' },
-          { field: 'language', tokenize: 'strict' },
-        ],
-        store: true,
-      },
-    });
-
-    items.forEach((item) => {
-      this.searchIndex?.add({
-        id: item.id,
-        title: item.title,
-        subtitle: item.subtitle,
-        aliases: item.aliases.join(' '),
-        tags: item.tags.join(' '),
-        description: item.description,
-        usage: item.usage,
-        examples: item.examples.join(' '),
-        category: item.category,
-        sourceLabel: item.sourceLabel,
-        language: item.language || '',
-      });
-    });
-  }
-
-  private searchByIndex(query: string): SuggestionItem[] {
-    if (!this.searchIndex) return [];
-    const results = this.searchIndex.search(query, { enrich: true, limit: 20 }) as Array<{ field?: string; result?: Array<{ id: string }> }>;
-    if (!Array.isArray(results) || results.length === 0) return [];
-
-    const fieldWeights: Record<string, number> = {
-      title: 220,
-      subtitle: 190,
-      aliases: 200,
-      tags: 180,
-      usage: 155,
-      description: 110,
-      examples: 128,
-      category: 70,
-      sourceLabel: 48,
-      language: 65,
-    };
-    const ranked = new Map<string, { item: SuggestionItem; score: number; matchedField: string }>();
-
-    results.forEach((group) => {
-      const field = group.field || 'title';
-      const weight = fieldWeights[field] || 40;
-      (group.result || []).forEach((entry, index) => {
-        const item = this.indexedItems.get(entry.id);
-        if (!item) return;
-        const base = weight - index * 4 + this.scoreItem(item, query) + sourcePriority(item.type);
-        const existing = ranked.get(entry.id);
-        if (!existing || base > existing.score) {
-          ranked.set(entry.id, {
-            item: { ...item, matchedField: field },
-            score: base,
-            matchedField: field,
-          });
-        }
-      });
-    });
-
-    return [...ranked.values()]
-      .sort((left, right) =>
-        right.score - left.score
-        || sourcePriority(right.item.type) - sourcePriority(left.item.type)
-        || left.item.title.localeCompare(right.item.title, 'zh-CN'))
-      .slice(0, 12)
-      .map((entry) => ({ ...entry.item, score: entry.score, matchedField: entry.matchedField }));
+  getGhostSuggestion(input: string): GhostSuggestion | null {
+    const trimmed = input.trimStart();
+    if (!trimmed) return null;
+    const localItems = this.searchLocalItems(normalize(trimmed));
+    const top = this.pickGhostCandidate(trimmed, localItems);
+    return this.getGhostSuggestionForItem(trimmed, top);
   }
 
   resolveExecution(input: string): ExecutionResolution {
@@ -306,12 +231,36 @@ export class CommandIntelligence {
     };
   }
 
+  private async searchRemoteCommands(query: string): Promise<SuggestionItem[]> {
+    const results = await invoke<CommandSummary[]>('search_command_summaries', {
+      params: {
+        keyword: query,
+        limit: 16,
+        enabledOnly: true,
+      },
+    });
+    return results.map((item, index) => commandSummaryToSuggestionItem(item, index));
+  }
+
+  private searchLocalItems(query: string): SuggestionItem[] {
+    const items = [...this.mappingItems(), ...this.historyItems()];
+    return items
+      .map((item) => ({ item, score: this.scoreItem(item, query) }))
+      .filter((entry) => entry.score > 0)
+      .sort((left, right) =>
+        suggestionTypeRank(right.item.type) - suggestionTypeRank(left.item.type)
+        || right.score - left.score
+        || left.item.title.localeCompare(right.item.title, 'zh-CN'))
+      .map((entry) => ({ ...entry.item, score: entry.score }));
+  }
+
   private findExactMapping(input: string): CommandMapping | null {
     const normalizedInput = normalize(input);
     if (!normalizedInput) return null;
+    const preferredLang = getLang();
     for (const mapping of this.mappings) {
       if (!mapping.enabled) continue;
-      const fields = [mapping.trigger, ...mapping.tags];
+      const fields = localizedMappingFields(mapping, preferredLang);
       if (fields.some((field) => normalize(field) === normalizedInput)) {
         return mapping;
       }
@@ -405,6 +354,7 @@ export class CommandIntelligence {
 
   private scoreItem(item: SuggestionItem, query: string): number {
     const queryTokens = tokenize(query);
+    const preferredLang = getLang();
     let score = 0;
     let matchedAllTokens = true;
 
@@ -413,14 +363,15 @@ export class CommandIntelligence {
       for (const field of this.collectFields(item)) {
         const normalizedField = normalize(field.value);
         if (!normalizedField) continue;
+        const langBonus = preferredLanguageBonus(field.value, preferredLang);
         if (normalizedField === token) {
-          bestTokenScore = Math.max(bestTokenScore, 210 + field.weight);
+          bestTokenScore = Math.max(bestTokenScore, 210 + field.weight + langBonus);
         } else if (normalizedField.startsWith(token)) {
-          bestTokenScore = Math.max(bestTokenScore, 160 + field.weight + token.length);
+          bestTokenScore = Math.max(bestTokenScore, 160 + field.weight + token.length + langBonus);
         } else if (normalizedField.includes(token)) {
-          bestTokenScore = Math.max(bestTokenScore, 120 + field.weight + Math.min(token.length, 8));
+          bestTokenScore = Math.max(bestTokenScore, 120 + field.weight + Math.min(token.length, 8) + langBonus);
         } else if (token.length > 1 && tokenize(normalizedField).some((part) => part.startsWith(token))) {
-          bestTokenScore = Math.max(bestTokenScore, 96 + field.weight);
+          bestTokenScore = Math.max(bestTokenScore, 96 + field.weight + langBonus);
         }
       }
       if (bestTokenScore === 0) {
@@ -458,39 +409,6 @@ export class CommandIntelligence {
     ];
   }
 
-  private commandItems(): SuggestionItem[] {
-    const items: SuggestionItem[] = [];
-    for (const config of this.commandConfigs) {
-      const category = config.id || config.platform;
-      const sourceLabel = config.kind === 'system'
-        ? t('cmd.sourceSystem')
-        : t('cmd.sourceBuiltin');
-      for (const entry of config.commands) {
-        const normalized = normalizeCommandEntry(entry);
-        items.push({
-          id: `${category}:${normalized.name}`,
-          type: 'command',
-          title: normalized.name,
-          subtitle: normalized.name_cn,
-          description: normalized.description,
-          insertText: normalized.command || normalized.name,
-          executeText: normalized.command || normalized.name,
-          usage: normalized.usage,
-          hint: normalized.hint || resolveEntryHint(normalized),
-          examples: normalized.examples,
-          aliases: [...normalized.alias, ...(normalized.triggers || [])],
-          tags: [...normalized.tags, ...(normalized.keywords || [])],
-          category: normalized.category || category,
-          sourceLabel,
-          score: 0,
-          language: normalized.language || config.language || category,
-          libraryId: config.id || category,
-        });
-      }
-    }
-    return items;
-  }
-
   private mappingItems(): SuggestionItem[] {
     return this.mappings
       .filter((mapping) => mapping.enabled)
@@ -502,20 +420,20 @@ export class CommandIntelligence {
       id: entry.id,
       type: 'history',
       title: entry.command,
-      subtitle: entry.cwd,
-      description: new Intl.DateTimeFormat(undefined, {
+      subtitle: entry.cwd || '-',
+      description: `${new Intl.DateTimeFormat(undefined, {
         month: '2-digit',
         day: '2-digit',
         hour: '2-digit',
         minute: '2-digit',
-      }).format(new Date(entry.timestamp)),
+      }).format(new Date(entry.timestamp))} · ${entry.count}x · ${Math.max(entry.variants.length, 1)} ctx`,
       insertText: entry.command,
       executeText: entry.command,
       usage: entry.command,
       hint: '',
       examples: [],
       aliases: [],
-      tags: [],
+      tags: entry.variants.map((variant) => variant.cwd).filter(Boolean),
       category: t('history.title'),
       sourceLabel: t('history.sourceLabel'),
       score: Math.min(entry.count * 3, 30),
@@ -523,14 +441,50 @@ export class CommandIntelligence {
   }
 }
 
+function commandSummaryToSuggestionItem(item: CommandSummary, index: number): SuggestionItem {
+  const sourceLabel = item.libraryKind === 'system'
+    ? t('cmd.sourceSystem')
+    : item.sourceType === 'builtin'
+      ? t('cmd.sourceBuiltin')
+      : t('cmd.sourceUser');
+
+  return {
+    id: `${item.libraryId}:${item.commandKey}:${item.id}`,
+    commandId: item.id,
+    type: 'command',
+    title: item.name,
+    subtitle: item.name_cn,
+    description: item.description,
+    insertText: item.command || item.name,
+    executeText: item.command || item.name,
+    usage: item.usage,
+    hint: item.hint || item.firstExample || item.usage,
+    examples: item.firstExample ? [item.firstExample] : [],
+    aliases: [...item.alias, ...item.triggers],
+    tags: [...item.tags, ...item.keywords],
+    category: item.category || item.libraryLabel,
+    sourceLabel,
+    score: 140 - index * 3,
+    language: item.language || item.libraryLabel,
+    libraryId: item.libraryId,
+    exampleCount: item.exampleCount,
+    firstExample: item.firstExample || undefined,
+  };
+}
+
 function mappingToSuggestionItem(mapping: CommandMapping): SuggestionItem {
+  const preferredLang = getLang();
+  const sourceLabel = mapping.sourceType === 'builtin'
+    ? t('mapping.sourceBuiltin')
+    : t('mapping.sourceLabel');
+  const localizedTrigger = pickLocalizedValue([mapping.trigger, ...mapping.examples], preferredLang) || mapping.trigger;
   return {
     id: mapping.id,
     type: 'mapping',
-    title: mapping.trigger,
-    subtitle: t('mapping.sourceLabel'),
+    title: localizedTrigger,
+    subtitle: mapping.platforms && mapping.platforms.length > 0 ? mapping.platforms.join(', ') : t('mapping.sourceLabel'),
     description: mapping.description,
-    insertText: mapping.trigger,
+    insertText: localizedTrigger,
     executeText: mapping.command,
     usage: mapping.command,
     hint: mapping.hint || mapping.command,
@@ -538,10 +492,22 @@ function mappingToSuggestionItem(mapping: CommandMapping): SuggestionItem {
     aliases: [],
     tags: mapping.tags,
     category: t('mapping.title'),
-    sourceLabel: t('mapping.sourceLabel'),
+    sourceLabel,
     score: 0,
     language: 'mapping',
   };
+}
+
+function dedupeSuggestions(items: SuggestionItem[]): SuggestionItem[] {
+  const seen = new Set<string>();
+  const result: SuggestionItem[] = [];
+  for (const item of items) {
+    const key = item.commandId ? `command:${item.commandId}` : `${item.type}:${item.id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(item);
+  }
+  return result;
 }
 
 export function normalize(value: string): string {
@@ -564,6 +530,8 @@ function commonPrefixLength(left: string, right: string): number {
 export function normalizeCommandEntry(entry: Partial<CommandEntry>): CommandEntry {
   const command = (entry.command || entry.name || '').trim();
   return {
+    id: entry.id,
+    commandKey: entry.commandKey || '',
     name: (entry.name || command).trim(),
     alias: Array.isArray(entry.alias) ? entry.alias : [],
     name_cn: entry.name_cn || '',
@@ -578,6 +546,9 @@ export function normalizeCommandEntry(entry: Partial<CommandEntry>): CommandEntr
     triggers: Array.isArray(entry.triggers) ? entry.triggers.filter(Boolean) : [],
     keywords: Array.isArray(entry.keywords) ? entry.keywords.filter(Boolean) : [],
     weight: typeof entry.weight === 'number' ? entry.weight : 0,
+    enabled: typeof entry.enabled === 'boolean' ? entry.enabled : true,
+    exampleCount: typeof entry.exampleCount === 'number' ? entry.exampleCount : (entry.examples?.length || 0),
+    firstExample: entry.firstExample || entry.examples?.[0] || '',
     libraryId: entry.libraryId || '',
   };
 }
@@ -585,7 +556,7 @@ export function normalizeCommandEntry(entry: Partial<CommandEntry>): CommandEntr
 function resolveEntryHint(entry: Partial<CommandEntry>): string {
   if (entry.hint?.trim()) return entry.hint.trim();
   const key = normalize(entry.name || '');
-  const builtin = DEFAULT_HINTS[key];
+  const builtin = DEFAULT_HINTS[getLang()][key];
   if (builtin) return builtin;
   if (entry.usage && normalize(entry.usage) !== key) return entry.usage.trim();
   if (entry.examples && entry.examples.length > 0) return entry.examples[0];
@@ -594,7 +565,7 @@ function resolveEntryHint(entry: Partial<CommandEntry>): string {
 
 function resolveHintText(item: SuggestionItem): string {
   if (item.hint?.trim()) return item.hint.trim();
-  const builtin = DEFAULT_HINTS[normalize(item.title)];
+  const builtin = DEFAULT_HINTS[getLang()][normalize(item.title)];
   if (builtin) return builtin;
   if (item.usage && normalize(item.usage) !== normalize(item.title)) return item.usage.trim();
   if (item.examples.length > 0) return item.examples[0];
@@ -610,6 +581,20 @@ function sourcePriority(type: SuggestionSourceType): number {
     case 'completion':
       return 120;
     case 'command':
+    default:
+      return 0;
+  }
+}
+
+function suggestionTypeRank(type: SuggestionSourceType): number {
+  switch (type) {
+    case 'history':
+      return 300;
+    case 'mapping':
+      return 200;
+    case 'command':
+      return 100;
+    case 'completion':
     default:
       return 0;
   }
@@ -661,20 +646,72 @@ function containsNonAscii(value: string): boolean {
   return /[^\u0000-\u007f]/.test(value);
 }
 
-const DEFAULT_HINTS: Record<string, string> = {
-  rm: '-r 递归删除 -f 强制删除 -i 删除前确认',
-  cp: '-r 复制目录 -f 覆盖目标 -v 显示复制过程',
-  mv: '-f 强制覆盖 -n 不覆盖已有文件 -v 显示移动过程',
-  mkdir: '-p 自动创建父目录 -m 设置权限',
-  ssh: '-p 指定端口 -i 指定私钥 -L 本地端口转发',
-  scp: '-P 指定端口 -r 复制目录 -i 指定私钥',
-  git: 'status 查看状态 switch 切分支 commit -m 提交',
-  npm: 'run 执行脚本 install 安装依赖 create 创建项目',
-  pnpm: 'install 安装依赖 dev 启动开发 build 构建项目',
-  python: '-m 执行模块 -V 查看版本 script.py 运行脚本',
-  conda: 'activate 激活环境 create 创建环境 env list 查看环境',
-  java: '-jar 运行 Jar -version 查看版本',
-  docker: 'ps 查看容器 run 启动镜像 exec 进入容器',
-  codex: '--sandbox danger-full-access --full-auto --no-alt-screen',
-  claude: '--dangerously-skip-permissions --tmux',
+function localizedMappingFields(mapping: CommandMapping, lang: ReturnType<typeof getLang>): string[] {
+  const examples = mapping.examples.filter((value) => matchesLanguagePreference(value, lang));
+  const tags = mapping.tags.filter((value) => matchesLanguagePreference(value, lang));
+  const fallbackExamples = mapping.examples.filter((value) => !examples.includes(value));
+  const fallbackTags = mapping.tags.filter((value) => !tags.includes(value));
+  return [mapping.trigger, ...examples, ...tags, ...fallbackExamples, ...fallbackTags].filter(Boolean);
+}
+
+function preferredLanguageBonus(value: string, lang: ReturnType<typeof getLang>): number {
+  if (!value) return 0;
+  const hasCjk = containsCjk(value);
+  if (lang === 'zh-CN') {
+    return hasCjk ? 18 : -6;
+  }
+  return hasCjk ? -8 : 14;
+}
+
+function pickLocalizedValue(values: string[], lang: ReturnType<typeof getLang>): string {
+  const trimmed = values.map((value) => value.trim()).filter(Boolean);
+  return trimmed.find((value) => matchesLanguagePreference(value, lang))
+    || trimmed[0]
+    || '';
+}
+
+function matchesLanguagePreference(value: string, lang: ReturnType<typeof getLang>): boolean {
+  const hasCjk = containsCjk(value);
+  return lang === 'zh-CN' ? hasCjk : !hasCjk;
+}
+
+function containsCjk(value: string): boolean {
+  return /[\p{Script=Han}]/u.test(value);
+}
+
+const DEFAULT_HINTS: Record<ReturnType<typeof getLang>, Record<string, string>> = {
+  'zh-CN': {
+    rm: '-r 递归删除 -f 强制删除 -i 删除前确认',
+    cp: '-r 复制目录 -f 覆盖目标 -v 显示复制过程',
+    mv: '-f 强制覆盖 -n 不覆盖已有文件 -v 显示移动过程',
+    mkdir: '-p 自动创建父目录 -m 设置权限',
+    ssh: '-p 指定端口 -i 指定私钥 -L 本地端口转发',
+    scp: '-P 指定端口 -r 复制目录 -i 指定私钥',
+    git: 'status 查看状态 switch 切分支 commit -m 提交',
+    npm: 'run 执行脚本 install 安装依赖 create 创建项目',
+    pnpm: 'install 安装依赖 dev 启动开发 build 构建项目',
+    python: '-m 执行模块 -V 查看版本 script.py 运行脚本',
+    conda: 'activate 激活环境 create 创建环境 env list 查看环境',
+    java: '-jar 运行 Jar -version 查看版本',
+    docker: 'ps 查看容器 run 启动镜像 exec 进入容器',
+    codex: '--sandbox danger-full-access --full-auto --no-alt-screen',
+    claude: '--dangerously-skip-permissions --tmux',
+  },
+  'en-US': {
+    rm: '-r recursive -f force -i confirm before delete',
+    cp: '-r copy directories -f overwrite target -v verbose output',
+    mv: '-f force overwrite -n no clobber -v verbose output',
+    mkdir: '-p create parent directories -m set permissions',
+    ssh: '-p custom port -i identity file -L local port forward',
+    scp: '-P custom port -r recursive copy -i identity file',
+    git: 'status inspect repo switch branches commit -m message',
+    npm: 'run scripts install dependencies create new project',
+    pnpm: 'install dependencies dev start dev server build project',
+    python: '-m run module -V show version script.py run script',
+    conda: 'activate env create env env list show environments',
+    java: '-jar run jar -version show version',
+    docker: 'ps list containers run start image exec open shell',
+    codex: '--sandbox danger-full-access --full-auto --no-alt-screen',
+    claude: '--dangerously-skip-permissions --tmux',
+  },
 };

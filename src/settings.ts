@@ -7,6 +7,7 @@ interface AppSettings {
   theme: string;
   language: string;
   autoCheckUpdate: boolean;
+  restoreSession: boolean;
   lastUpdateCheck: string;
 }
 
@@ -15,6 +16,7 @@ export class Settings {
   private currentTheme = 'light';
   private currentLang: Lang = 'zh-CN';
   private autoCheckUpdate = true;
+  private restoreSession = true;
   private lastPersistedUpdateCheck = '';
   public ready: Promise<void>;
   public onThemeChange?: (theme: string) => void;
@@ -51,6 +53,7 @@ export class Settings {
       this.currentTheme = settings.theme;
       this.currentLang = (settings.language as Lang) || 'zh-CN';
       this.autoCheckUpdate = settings.autoCheckUpdate ?? true;
+      this.restoreSession = settings.restoreSession ?? true;
       this.lastPersistedUpdateCheck = settings.lastUpdateCheck || '';
       this.updater.setLastChecked(settings.lastUpdateCheck || '');
       setLang(this.currentLang);
@@ -129,6 +132,15 @@ export class Settings {
         </div>
       </div>
 
+      <h3 style="margin-top:20px">${t('settings.session')}</h3>
+      <label class="mapping-toggle-row settings-toggle-row">
+        <input id="settings-restore-session" type="checkbox" ${this.restoreSession ? 'checked' : ''}>
+        <div>
+          <span>${t('settings.restoreSession')}</span>
+          <small style="display:block;margin-top:2px;opacity:0.55">${t('settings.restoreSessionHint')}</small>
+        </div>
+      </label>
+
       <h3 style="margin-top:20px">${t('settings.update')}</h3>
       <div class="settings-update-card">
         <div class="settings-update-meta">
@@ -166,7 +178,7 @@ export class Settings {
         this.currentTheme = theme;
         this.applyTheme(theme);
         try {
-          await invoke('save_settings', { settings: { theme, language: this.currentLang, autoCheckUpdate: this.autoCheckUpdate, lastUpdateCheck: updateState.lastChecked } });
+          await invoke('save_settings', { settings: { theme, language: this.currentLang, autoCheckUpdate: this.autoCheckUpdate, restoreSession: this.restoreSession, lastUpdateCheck: updateState.lastChecked } });
         } catch (e) {
           console.error('Save settings failed:', e);
         }
@@ -182,7 +194,7 @@ export class Settings {
         this.currentLang = lang;
         setLang(lang);
         try {
-          await invoke('save_settings', { settings: { theme: this.currentTheme, language: lang, autoCheckUpdate: this.autoCheckUpdate, lastUpdateCheck: updateState.lastChecked } });
+          await invoke('save_settings', { settings: { theme: this.currentTheme, language: lang, autoCheckUpdate: this.autoCheckUpdate, restoreSession: this.restoreSession, lastUpdateCheck: updateState.lastChecked } });
         } catch (e) {
           console.error('Save settings failed:', e);
         }
@@ -192,6 +204,12 @@ export class Settings {
 
     content.querySelector('#settings-auto-check')?.addEventListener('change', async (event) => {
       this.autoCheckUpdate = (event.target as HTMLInputElement).checked;
+      await this.persistSettings(updateState.lastChecked);
+      this.render();
+    });
+
+    content.querySelector('#settings-restore-session')?.addEventListener('change', async (event) => {
+      this.restoreSession = (event.target as HTMLInputElement).checked;
       await this.persistSettings(updateState.lastChecked);
       this.render();
     });
@@ -223,6 +241,10 @@ export class Settings {
     return this.autoCheckUpdate;
   }
 
+  getRestoreSession(): boolean {
+    return this.restoreSession;
+  }
+
   private async persistSettings(lastUpdateCheck: string) {
     try {
       this.lastPersistedUpdateCheck = lastUpdateCheck;
@@ -231,6 +253,7 @@ export class Settings {
           theme: this.currentTheme,
           language: this.currentLang,
           autoCheckUpdate: this.autoCheckUpdate,
+          restoreSession: this.restoreSession,
           lastUpdateCheck,
         },
       });

@@ -1,0 +1,105 @@
+{
+  "id": "kubectl",
+  "label": "kubectl",
+  "kind": "custom",
+  "platforms": [],
+  "language": "Kubernetes",
+  "commands": [
+    {
+      "name": "kubectl get pods",
+      "name_cn": "查看 Pod",
+      "description": "查看当前或指定命名空间下的 Pod",
+      "usage": "kubectl get pods",
+      "category": "kubernetes",
+      "examples": [
+        "kubectl get pods -A # 查看所有命名空间 Pod",
+        "kubectl get pods -n default -o wide # 查看指定命名空间 Pod 详情",
+        "kubectl get pods --watch # 持续观察 Pod 状态"
+      ]
+    },
+    {
+      "name": "kubectl logs",
+      "name_cn": "查看日志",
+      "description": "查看 Pod 或容器日志",
+      "usage": "kubectl logs <pod>",
+      "category": "kubernetes",
+      "examples": [
+        "kubectl logs deploy/api -n prod # 查看 deployment 对应 Pod 日志",
+        "kubectl logs pod-123 -c app # 查看指定容器日志",
+        "kubectl logs pod-123 -f # 持续跟踪日志"
+      ]
+    },
+    {
+      "name": "kubectl describe",
+      "name_cn": "查看资源详情",
+      "description": "查看 Kubernetes 资源的详细信息和事件",
+      "usage": "kubectl describe <resource>",
+      "category": "kubernetes",
+      "examples": [
+        "kubectl describe pod api-123 # 查看 Pod 详情",
+        "kubectl describe node worker-1 # 查看节点详情",
+        "kubectl describe svc api -n prod # 查看服务详情"
+      ]
+    },
+    {
+      "name": "kubectl exec",
+      "name_cn": "进入容器",
+      "description": "在容器中执行命令",
+      "usage": "kubectl exec -it <pod> -- <command>",
+      "category": "kubernetes",
+      "examples": [
+        "kubectl exec -it api-123 -- /bin/sh # 进入容器 shell",
+        "kubectl exec -it api-123 -c app -- env # 查看容器环境变量",
+        "kubectl exec deploy/api -- python -V # 在 deployment 对应容器执行命令"
+      ]
+    },
+    {
+      "name": "kubectl apply",
+      "name_cn": "应用配置",
+      "description": "应用 Kubernetes 清单文件",
+      "usage": "kubectl apply -f <file>",
+      "category": "kubernetes",
+      "examples": [
+        "kubectl apply -f k8s/deploy.yaml # 应用单个清单",
+        "kubectl apply -f k8s/ # 应用目录中的所有清单",
+        "kubectl apply -k overlays/prod # 应用 kustomize 配置"
+      ]
+    },
+    {
+      "name": "kubectl delete",
+      "name_cn": "删除资源",
+      "description": "删除 Kubernetes 资源",
+      "usage": "kubectl delete <resource>",
+      "category": "kubernetes",
+      "examples": [
+        "kubectl delete pod api-123 # 删除 Pod",
+        "kubectl delete -f k8s/deploy.yaml # 按清单删除资源",
+        "kubectl delete job cleanup -n ops # 删除指定命名空间资源"
+      ]
+    },
+    {
+      "name": "kubectl rollout",
+      "name_cn": "发布状态管理",
+      "description": "查看或控制 Deployment/DaemonSet 的发布进度",
+      "usage": "kubectl rollout <command>",
+      "category": "kubernetes",
+      "examples": [
+        "kubectl rollout status deploy/api -n prod # 查看发布状态",
+        "kubectl rollout restart deploy/api # 重启 Deployment",
+        "kubectl rollout undo deploy/api # 回滚上一次发布"
+      ]
+    },
+    {
+      "name": "kubectl top",
+      "name_cn": "查看资源用量",
+      "description": "查看 Pod 或 Node 的 CPU / Memory 使用量",
+      "usage": "kubectl top <resource>",
+      "category": "kubernetes",
+      "examples": [
+        "kubectl top pods -A # 查看所有 Pod 资源占用",
+        "kubectl top pod api-123 -n prod # 查看单个 Pod 资源占用",
+        "kubectl top nodes # 查看节点资源占用"
+      ]
+    }
+  ]
+}

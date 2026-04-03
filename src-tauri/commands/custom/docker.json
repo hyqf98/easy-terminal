@@ -3,16 +3,164 @@
   "kind": "custom",
   "platforms": [],
   "commands": [
-    { "name": "docker", "alias": [], "name_cn": "Docker容器", "description": "容器管理工具", "usage": "docker <command>", "category": "Docker" },
-    { "name": "docker-compose", "alias": ["docker compose"], "name_cn": "Docker编排", "description": "Docker 容器编排", "usage": "docker-compose <command>", "category": "Docker" },
-    { "name": "kubectl", "alias": ["k8s"], "name_cn": "Kubernetes", "description": "Kubernetes 命令行工具", "usage": "kubectl <command>", "category": "Docker" },
-    { "name": "helm", "alias": [], "name_cn": "Helm", "description": "Kubernetes 包管理器", "usage": "helm <command>", "category": "Docker" },
-    { "name": "podman", "alias": [], "name_cn": "Podman", "description": "无守护进程容器工具", "usage": "podman <command>", "category": "Docker" },
-    { "name": "docker build", "alias": [], "name_cn": "构建镜像", "description": "构建Docker镜像", "usage": "docker build -t <name> .", "category": "Docker" },
-    { "name": "docker run", "alias": [], "name_cn": "运行容器", "description": "运行Docker容器", "usage": "docker run <image>", "category": "Docker" },
-    { "name": "docker ps", "alias": [], "name_cn": "容器列表", "description": "列出运行中的容器", "usage": "docker ps [-a]", "category": "Docker" },
-    { "name": "docker images", "alias": [], "name_cn": "镜像列表", "description": "列出Docker镜像", "usage": "docker images", "category": "Docker" },
-    { "name": "docker pull", "alias": [], "name_cn": "拉取镜像", "description": "拉取远程镜像", "usage": "docker pull <image>", "category": "Docker" },
-    { "name": "docker exec", "alias": [], "name_cn": "执行命令", "description": "在容器中执行命令", "usage": "docker exec -it <container> <cmd>", "category": "Docker" }
+    {
+      "name": "docker",
+      "alias": [],
+      "name_cn": "Docker容器",
+      "description": "容器管理工具",
+      "usage": "docker <command>",
+      "category": "Docker",
+      "examples": [
+        "docker --version # 查看Docker版本",
+        "docker info # 查看Docker系统信息",
+        "docker system df # 查看磁盘使用情况",
+        "docker system prune # 清理未使用的资源"
+      ]
+    },
+    {
+      "name": "docker-compose",
+      "alias": ["docker compose"],
+      "name_cn": "Docker编排",
+      "description": "Docker 容器编排",
+      "usage": "docker-compose <command>",
+      "category": "Docker",
+      "examples": [
+        "docker-compose up -d # 后台启动所有服务",
+        "docker-compose down # 停止并删除所有容器",
+        "docker-compose ps # 查看服务状态",
+        "docker-compose logs -f # 实时查看日志",
+        "docker-compose build # 重新构建服务镜像"
+      ]
+    },
+    {
+      "name": "kubectl",
+      "alias": ["k8s"],
+      "name_cn": "Kubernetes",
+      "description": "Kubernetes 命令行工具",
+      "usage": "kubectl <command>",
+      "category": "Docker",
+      "examples": [
+        "kubectl get pods # 查看所有Pod",
+        "kubectl get svc # 查看所有Service",
+        "kubectl describe pod <pod-name> # 查看Pod详情",
+        "kubectl logs -f <pod-name> # 实时查看Pod日志",
+        "kubectl apply -f deployment.yaml # 应用配置文件"
+      ]
+    },
+    {
+      "name": "helm",
+      "alias": [],
+      "name_cn": "Helm",
+      "description": "Kubernetes 包管理器",
+      "usage": "helm <command>",
+      "category": "Docker",
+      "examples": [
+        "helm install my-release nginx-stable/nginx # 安装Chart",
+        "helm list # 查看已安装的Release",
+        "helm upgrade my-release nginx-stable/nginx # 升级Release",
+        "helm uninstall my-release # 卸载Release",
+        "helm repo add bitnami https://charts.bitnami.com/bitnami # 添加仓库"
+      ]
+    },
+    {
+      "name": "podman",
+      "alias": [],
+      "name_cn": "Podman",
+      "description": "无守护进程容器工具",
+      "usage": "podman <command>",
+      "category": "Docker",
+      "examples": [
+        "podman run -d nginx # 后台运行容器",
+        "podman ps -a # 查看所有容器",
+        "podman images # 列出本地镜像",
+        "podman build -t myapp . # 构建镜像"
+      ]
+    },
+    {
+      "name": "docker build",
+      "alias": [],
+      "name_cn": "构建镜像",
+      "description": "构建Docker镜像",
+      "usage": "docker build -t <name> .",
+      "category": "Docker",
+      "examples": [
+        "docker build -t myapp:latest . # 构建并命名为myapp",
+        "docker build -t myapp:v1.0 -f Dockerfile.prod . # 指定Dockerfile构建",
+        "docker build --no-cache -t myapp . # 不使用缓存构建",
+        "docker build --build-arg NODE_ENV=production -t myapp . # 传递构建参数"
+      ]
+    },
+    {
+      "name": "docker run",
+      "alias": [],
+      "name_cn": "运行容器",
+      "description": "运行Docker容器",
+      "usage": "docker run <image>",
+      "category": "Docker",
+      "examples": [
+        "docker run -d -p 8080:80 nginx # 后台运行并映射端口",
+        "docker run -it ubuntu bash # 交互式运行容器",
+        "docker run --name myapp -e DB_HOST=localhost myapp:latest # 指定名称和环境变量",
+        "docker run -v /host/data:/app/data myapp # 挂载数据卷",
+        "docker run --rm alpine echo hello # 运行后自动删除容器"
+      ]
+    },
+    {
+      "name": "docker ps",
+      "alias": [],
+      "name_cn": "容器列表",
+      "description": "列出运行中的容器",
+      "usage": "docker ps [-a]",
+      "category": "Docker",
+      "examples": [
+        "docker ps # 查看运行中的容器",
+        "docker ps -a # 查看所有容器包括已停止的",
+        "docker ps -q # 仅显示容器ID",
+        "docker ps --format '{{.Names}} {{.Status}}' # 自定义输出格式"
+      ]
+    },
+    {
+      "name": "docker images",
+      "alias": [],
+      "name_cn": "镜像列表",
+      "description": "列出Docker镜像",
+      "usage": "docker images",
+      "category": "Docker",
+      "examples": [
+        "docker images # 列出所有本地镜像",
+        "docker images nginx # 过滤指定名称的镜像",
+        "docker images -q # 仅显示镜像ID",
+        "docker images --format '{{.Repository}}:{{.Tag}}' # 自定义输出格式"
+      ]
+    },
+    {
+      "name": "docker pull",
+      "alias": [],
+      "name_cn": "拉取镜像",
+      "description": "拉取远程镜像",
+      "usage": "docker pull <image>",
+      "category": "Docker",
+      "examples": [
+        "docker pull nginx # 拉取最新版nginx镜像",
+        "docker pull nginx:1.25 # 拉取指定版本",
+        "docker pull python:3.12-slim # 拉取精简版Python镜像",
+        "docker pull --all-tags nginx # 拉取所有标签"
+      ]
+    },
+    {
+      "name": "docker exec",
+      "alias": [],
+      "name_cn": "执行命令",
+      "description": "在容器中执行命令",
+      "usage": "docker exec -it <container> <cmd>",
+      "category": "Docker",
+      "examples": [
+        "docker exec -it myapp bash # 进入容器交互终端",
+        "docker exec -it myapp sh # 使用sh进入容器",
+        "docker exec myapp ls /app # 在容器中执行ls命令",
+        "docker exec -e DEBUG=1 myapp python main.py # 传递环境变量执行命令",
+        "docker exec -u root myapp apt-get update # 以root用户执行命令"
+      ]
+    }
   ]
 }

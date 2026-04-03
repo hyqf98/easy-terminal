@@ -10,6 +10,7 @@ import { resolvePreviewPath } from './command-intercept';
 import { openFilePreview } from './file-preview';
 import { parseCommandLine } from './shell-parse';
 import type { ShortcutManager } from './shortcut-manager';
+import { onLangChange, t } from './i18n';
 
 const DARK_THEME = {
   background: '#1a1b2e',
@@ -104,12 +105,22 @@ interface PathCompletionContext {
   directoriesOnly: boolean;
 }
 
+interface PathCompletionPreviewState {
+  command: string;
+  sourceLine: string;
+  appliedLine: string;
+  context: PathCompletionContext;
+  candidates: CompletionCandidate[];
+  timestamp: number;
+}
+
 export class TerminalWindow {
   private id = '';
   private container: HTMLDivElement;
   private term: Terminal;
   private fitAddon: FitAddon;
   private unlisten: UnlistenFn | null = null;
+  private unlistenLang: (() => void) | null = null;
   private canvasController: CanvasController;
   private commandSuggest: CommandSuggest;
   private currentLine = '';
@@ -118,10 +129,12 @@ export class TerminalWindow {
   private selectionAnchor: number | null = null;
   private selectionOverlays: HTMLDivElement[] = [];
   private terminalContextMenu: HTMLDivElement | null = null;
+  private highlightedRows = new Set<HTMLDivElement>();
   private currentGhostText = '';
   private currentGhostReplacement = '';
   private currentGhostPreserveLeadingWhitespace = false;
   private overlaySyncFrame: number | null = null;
+  private syntaxRefreshFrame: number | null = null;
   private lastOverlayPositionStale = false;
   private lastTabAt = 0;
   private lastTabSignature = '';
@@ -129,6 +142,7 @@ export class TerminalWindow {
   private passwordQueue: string[] = [];
   private acceptedUnknownHost = false;
   private passwordPromptBuffer = '';
+  private lastPathCompletionPreview: PathCompletionPreviewState | null = null;
 
   // Drag state
   private isDragging = false;
@@ -189,6 +203,7 @@ export class TerminalWindow {
       lineHeight: 1.2,
       cursorBlink: true,
       cursorStyle: 'bar',
+      cursorWidth: 1,
     });
     this.container.dataset.initStage = 'terminal';
 
@@ -222,6 +237,17 @@ export class TerminalWindow {
 
     const body = this.container.querySelector('.terminal-body') as HTMLDivElement;
     this.term.open(body);
+    this.term.onRender(() => {
+      this.scheduleSyntaxHighlightRefresh();
+    });
+    this.unlistenLang = onLangChange(() => {
+      if (!this.launchOptions.profileName) {
+        const nameEl = this.container.querySelector('.terminal-name') as HTMLSpanElement | null;
+        if (nameEl) {
+          nameEl.textContent = t('terminal.unnamed');
+        }
+      }
+    });
     this.container.dataset.initStage = 'opened';
   }
 
@@ -257,7 +283,7 @@ export class TerminalWindow {
       this.cwdPath = this.launchOptions.cwd;
     }
 
-    nameEl.textContent = this.launchOptions.profileName || '未命名';
+    nameEl.textContent = this.launchOptions.profileName || t('terminal.unnamed');
 
     // Track current line for command suggestions
     this.currentLine = '';
@@ -302,6 +328,8 @@ export class TerminalWindow {
       return false;
     }
 
+    this.term.clearSelection();
+
     if (data === '\r') {
       const rawLine = this.currentLine;
       const trimmed = rawLine.trim();
@@ -309,10 +337,11 @@ export class TerminalWindow {
       this.cursorPos = 0;
       this.lineStartCell = null;
       this.lastOverlayPositionStale = false;
+      this.lastPathCompletionPreview = null;
       this.clearLineSelection();
       this.commandSuggest.hide();
+      this.hideSyntaxHighlight();
       this.hideGhostText();
-
       if (!trimmed) {
         return false;
       }
@@ -336,18 +365,22 @@ export class TerminalWindow {
     }
 
     if (this.hasLineSelection() && (this.isPrintableInput(data) || data === '\x7f' || data === '\b')) {
+      this.lastPathCompletionPreview = null;
+      this.lastOverlayPositionStale = false;
       if (data === '\x7f' || data === '\b') {
         await this.replaceLineSelection('');
       } else {
         await this.replaceLineSelection(data);
       }
-      this.refreshSuggestions();
+      void this.refreshSuggestions();
       return true;
     }
 
     if (data === '\x7f' || data === '\b') {
       // Backspace
       if (this.cursorPos > 0) {
+        this.lastPathCompletionPreview = null;
+        this.lastOverlayPositionStale = false;
         this.currentLine = `${this.currentLine.slice(0, this.cursorPos - 1)}${this.currentLine.slice(this.cursorPos)}`;
         this.cursorPos -= 1;
       }
@@ -357,16 +390,24 @@ export class TerminalWindow {
       this.cursorPos = 0;
       this.lineStartCell = null;
       this.lastOverlayPositionStale = false;
+      this.lastPathCompletionPreview = null;
       this.clearLineSelection();
+      this.hideSyntaxHighlight();
+      this.hideGhostText();
     } else if (data === '\x15') {
       // Ctrl+U - clear line
       this.currentLine = '';
       this.cursorPos = 0;
       this.lineStartCell = null;
       this.lastOverlayPositionStale = false;
+      this.lastPathCompletionPreview = null;
       this.clearLineSelection();
+      this.hideSyntaxHighlight();
+      this.hideGhostText();
     } else if (this.isPrintableInput(data)) {
       this.ensureLineStartCell();
+      this.lastPathCompletionPreview = null;
+      this.lastOverlayPositionStale = false;
       this.currentLine = `${this.currentLine.slice(0, this.cursorPos)}${data}${this.currentLine.slice(this.cursorPos)}`;
       this.cursorPos += data.length;
     } else if (data === '\t') {
@@ -374,7 +415,7 @@ export class TerminalWindow {
       return false;
     }
 
-    this.refreshSuggestions();
+    void this.refreshSuggestions();
     return false;
   }
 
@@ -389,14 +430,16 @@ export class TerminalWindow {
     return openFilePreview(path, commandLine);
   }
 
-  private refreshSuggestions() {
+  private async refreshSuggestions() {
     if (this.isInAltBuffer()) {
       this.commandSuggest.hide();
+      this.hideSyntaxHighlight();
       this.hideGhostText();
       return;
     }
     if (this.lastOverlayPositionStale) {
       this.commandSuggest.hide();
+      this.hideSyntaxHighlight();
       this.hideGhostText();
       return;
     }
@@ -409,14 +452,16 @@ export class TerminalWindow {
         if (Math.abs(expectedCell - actualCell) > 3) {
           this.lastOverlayPositionStale = true;
           this.commandSuggest.hide();
+          this.hideSyntaxHighlight();
           this.hideGhostText();
           return;
         }
       }
     }
     if (this.currentLine.trim()) {
+      this.showSyntaxHighlight();
       this.commandSuggest.clearTemporaryItems();
-      const hasSuggestions = this.commandSuggest.update(this.currentLine);
+      const hasSuggestions = await this.commandSuggest.update(this.currentLine);
       if (hasSuggestions) {
         this.positionSuggestPopup();
       }
@@ -424,6 +469,8 @@ export class TerminalWindow {
       return;
     }
     this.commandSuggest.hide();
+    this.lastPathCompletionPreview = null;
+    this.hideSyntaxHighlight();
     this.hideGhostText();
   }
 
@@ -494,13 +541,74 @@ export class TerminalWindow {
     this.ghostOverlay.style.display = 'block';
   }
 
+  private showSyntaxHighlight() {
+    if (this.isInAltBuffer()) return;
+
+    const metrics = this.getOverlayMetrics();
+    if (!metrics || !this.currentLine.trim()) return;
+
+    const rows = this.container.querySelectorAll<HTMLDivElement>('.terminal-body .xterm-rows > div');
+    if (rows.length === 0) return;
+
+    const classes = buildInputSyntaxClasses(this.currentLine);
+    const startCell = this.getLineStartCell(metrics);
+    const endCell = startCell + classes.length;
+    const startRow = Math.floor(startCell / metrics.cols);
+    const endRow = Math.floor(Math.max(startCell, endCell - 1) / metrics.cols);
+    const nextHighlightedRows = new Set<HTMLDivElement>();
+
+    for (let rowIndex = startRow; rowIndex <= endRow; rowIndex += 1) {
+      const rowEl = rows[rowIndex];
+      if (!rowEl) continue;
+      nextHighlightedRows.add(rowEl);
+
+      const rowStartCell: number = rowIndex * metrics.cols;
+      const segmentStart = Math.max(startCell, rowStartCell);
+      const segmentEnd = Math.min(endCell, rowStartCell + metrics.cols);
+      if (segmentEnd <= segmentStart) continue;
+
+      const cells = expandRenderedRowCells(rowEl, metrics.cols);
+      for (let absoluteCell = segmentStart; absoluteCell < segmentEnd; absoluteCell += 1) {
+        const colIndex = absoluteCell - rowStartCell;
+        const inputIndex = absoluteCell - startCell;
+        const syntaxClass = classes[inputIndex];
+        if (!syntaxClass || cells[colIndex]?.isCursor) continue;
+        cells[colIndex].syntaxClass = syntaxClass;
+      }
+
+      rowEl.innerHTML = cells.map((cell) => renderRowCell(cell)).join('');
+    }
+
+    for (const row of this.highlightedRows.values()) {
+      if (nextHighlightedRows.has(row)) continue;
+      this.clearSyntaxHighlightRow(row);
+    }
+
+    this.highlightedRows = nextHighlightedRows;
+  }
+
   private hideGhostText() {
     this.currentGhostText = '';
     this.currentGhostReplacement = '';
     this.currentGhostPreserveLeadingWhitespace = false;
     if (this.ghostOverlay) {
+      this.ghostOverlay.textContent = '';
       this.ghostOverlay.style.display = 'none';
     }
+  }
+
+  private hideSyntaxHighlight() {
+    if (this.highlightedRows.size === 0) return;
+    for (const row of this.highlightedRows.values()) {
+      this.clearSyntaxHighlightRow(row);
+    }
+    this.highlightedRows.clear();
+  }
+
+  private clearSyntaxHighlightRow(row: HTMLDivElement) {
+    if (!row.isConnected) return;
+    const cells = expandRenderedRowCells(row);
+    row.innerHTML = cells.map((cell) => renderRowCell({ ...cell, syntaxClass: '' })).join('');
   }
 
   private async acceptGhostText() {
@@ -611,6 +719,7 @@ export class TerminalWindow {
 
   private async replaceCurrentInput(nextValue: string, preserveLeadingWhitespace = false) {
     if (!this.id) return;
+    this.term.clearSelection();
     const leadingSpaces = this.currentLine.match(/^\s*/)?.[0] || '';
     const replacement = preserveLeadingWhitespace ? nextValue : `${leadingSpaces}${nextValue}`;
     await this.moveCursorTo(this.currentLine.length);
@@ -619,6 +728,7 @@ export class TerminalWindow {
     this.currentLine = replacement;
     this.cursorPos = replacement.length;
     this.lineStartCell = null;
+    this.lastOverlayPositionStale = false;
     this.clearLineSelection();
     this.hideGhostText();
     this.scheduleSuggestionRefresh();
@@ -629,7 +739,7 @@ export class TerminalWindow {
     this.overlaySyncFrame = window.requestAnimationFrame(() => {
       this.overlaySyncFrame = null;
       this.lineStartCell = null;
-      this.refreshSuggestions();
+      void this.refreshSuggestions();
     });
   }
 
@@ -647,12 +757,14 @@ export class TerminalWindow {
       this.overlaySyncFrame = null;
       if (this.isInAltBuffer()) {
         this.lineStartCell = null;
+        this.hideSyntaxHighlight();
         this.hideGhostText();
         this.commandSuggest.hide();
         return;
       }
       if (!this.currentLine.trim()) {
         this.lineStartCell = null;
+        this.hideSyntaxHighlight();
         this.hideGhostText();
         this.commandSuggest.hide();
         return;
@@ -668,6 +780,7 @@ export class TerminalWindow {
           if (Math.abs(expectedCell - actualCell) > 3) {
             this.lastOverlayPositionStale = true;
             this.lineStartCell = null;
+            this.hideSyntaxHighlight();
             this.hideGhostText();
             this.commandSuggest.hide();
             return;
@@ -675,6 +788,7 @@ export class TerminalWindow {
         }
       }
       this.lineStartCell = null;
+      this.showSyntaxHighlight();
       if (this.commandSuggest.isVisible()) {
         this.positionSuggestPopup();
       }
@@ -687,6 +801,20 @@ export class TerminalWindow {
       window.cancelAnimationFrame(this.overlaySyncFrame);
       this.overlaySyncFrame = null;
     }
+  }
+
+  private scheduleSyntaxHighlightRefresh() {
+    if (this.syntaxRefreshFrame !== null) {
+      window.cancelAnimationFrame(this.syntaxRefreshFrame);
+    }
+    this.syntaxRefreshFrame = window.requestAnimationFrame(() => {
+      this.syntaxRefreshFrame = null;
+      if (!this.currentLine.trim() || this.lastOverlayPositionStale || this.isInAltBuffer()) {
+        this.hideSyntaxHighlight();
+        return;
+      }
+      this.showSyntaxHighlight();
+    });
   }
 
   private async handleTabCompletion(shiftKey: boolean) {
@@ -714,7 +842,7 @@ export class TerminalWindow {
       return;
     }
 
-    const suggestions = this.commandSuggest.getSuggestions(this.currentLine.trimStart());
+    const suggestions = await this.commandSuggest.getSuggestions(this.currentLine.trimStart());
     if (suggestions.length > 0) {
       await this.replaceCurrentInput(
         this.resolveSuggestionReplacement(suggestions[0]),
@@ -749,32 +877,44 @@ export class TerminalWindow {
   private async handlePathCompletion(context: PathCompletionContext): Promise<boolean> {
     const candidates = await this.loadPathCompletionCandidates(context);
     if (candidates.length === 0) {
+      this.lastPathCompletionPreview = null;
       return false;
     }
 
     const now = Date.now();
     const signature = `${this.currentLine}|${context.command}|${context.fragment}`;
     const isDoubleTab = now - this.lastTabAt < 420 && this.lastTabSignature === signature;
+    const preview = this.lastPathCompletionPreview;
     this.lastTabAt = now;
     this.lastTabSignature = signature;
 
+    if (
+      preview
+      && now - preview.timestamp < 420
+      && preview.command === context.command
+      && preview.appliedLine === this.currentLine
+      && preview.candidates.length > 0
+    ) {
+      this.showPathCompletionItems(preview.context, preview.candidates);
+      this.lastPathCompletionPreview = null;
+      return true;
+    }
+
     if (isDoubleTab) {
-      const items = candidates.map((candidate) => this.createCompletionSuggestion(context, candidate));
-      if (this.commandSuggest.showTemporaryItems(items)) {
-        this.positionSuggestPopup();
-        this.updateGhostText();
-      }
+      this.showPathCompletionItems(context, candidates);
       return true;
     }
 
     const typedName = basenameLike(context.fragment);
     const commonName = commonStringPrefix(candidates.map((candidate) => candidate.name));
     if (candidates.length === 1) {
+      this.cachePathCompletionPreview(context, candidates, now);
       await this.applyCompletionCandidate(context, candidates[0]);
       return true;
     }
 
     if (commonName && commonName.length > typedName.length) {
+      this.cachePathCompletionPreview(context, candidates, now);
       const prefix = stripBasenamePreserveSeparator(context.fragment);
       const separator = this.getPathSeparator(candidates[0].displayValue || context.fragment || this.cwdPath);
       const nextValue = `${prefix}${commonName}`;
@@ -787,6 +927,46 @@ export class TerminalWindow {
     }
 
     return true;
+  }
+
+  private showPathCompletionItems(context: PathCompletionContext, candidates: CompletionCandidate[]) {
+    const items = candidates.map((candidate) => this.createCompletionSuggestion(context, candidate));
+    if (this.commandSuggest.showTemporaryItems(items)) {
+      this.positionSuggestPopup();
+      this.updateGhostText();
+    }
+  }
+
+  private cachePathCompletionPreview(
+    context: PathCompletionContext,
+    candidates: CompletionCandidate[],
+    timestamp: number,
+  ) {
+    if (candidates.length === 0) {
+      this.lastPathCompletionPreview = null;
+      return;
+    }
+
+    const primary = candidates[0];
+    const typedName = basenameLike(context.fragment);
+    const commonName = commonStringPrefix(candidates.map((candidate) => candidate.name));
+    let appliedValue = primary.displayValue;
+
+    if (candidates.length > 1 && commonName && commonName.length > typedName.length) {
+      const prefix = stripBasenamePreserveSeparator(context.fragment);
+      const separator = this.getPathSeparator(primary.displayValue || context.fragment || this.cwdPath);
+      const trailing = candidates.every((candidate) => candidate.is_dir && candidate.name === commonName) ? separator : '';
+      appliedValue = `${prefix}${commonName}${trailing}`;
+    }
+
+    this.lastPathCompletionPreview = {
+      command: context.command,
+      sourceLine: this.currentLine,
+      appliedLine: `${this.currentLine.slice(0, context.replaceFrom)}${context.insertPrefix}${appliedValue}`,
+      context: { ...context },
+      candidates: candidates.map((candidate) => ({ ...candidate })),
+      timestamp,
+    };
   }
 
   private async loadPathCompletionCandidates(context: PathCompletionContext): Promise<CompletionCandidate[]> {
@@ -944,8 +1124,10 @@ export class TerminalWindow {
         this.currentLine = '';
         this.cursorPos = 0;
         this.lineStartCell = null;
+        this.lastPathCompletionPreview = null;
         this.clearLineSelection();
         this.commandSuggest.hide();
+        this.hideSyntaxHighlight();
         this.hideGhostText();
         return;
       }
@@ -953,7 +1135,7 @@ export class TerminalWindow {
       this.ensureLineStartCell();
       this.currentLine = `${this.currentLine.slice(0, this.cursorPos)}${text}${this.currentLine.slice(this.cursorPos)}`;
       this.cursorPos += text.length;
-      this.refreshSuggestions();
+      void this.refreshSuggestions();
     } catch (error) {
       console.error('clipboard read failed', error);
     }
@@ -1175,7 +1357,7 @@ export class TerminalWindow {
     el.innerHTML = `
       <div class="title-bar">
         <div class="title-spacer"></div>
-        <span class="terminal-name">未命名</span>
+        <span class="terminal-name">${escapeHtml(t('terminal.unnamed'))}</span>
         <div class="window-controls">
           <button class="btn-minimize" title="Minimize"></button>
           <button class="btn-maximize" title="Maximize"></button>
@@ -1231,8 +1413,8 @@ export class TerminalWindow {
     menu.style.left = `${x}px`;
     menu.style.top = `${y}px`;
     menu.innerHTML = `
-      <div class="context-menu-item" data-terminal-copy>复制文本</div>
-      <div class="context-menu-item" data-terminal-map>添加为命令映射</div>
+      <div class="context-menu-item" data-terminal-copy>${escapeHtml(t('terminal.copyText'))}</div>
+      <div class="context-menu-item" data-terminal-map>${escapeHtml(t('terminal.addMapping'))}</div>
     `;
 
     menu.querySelector('[data-terminal-copy]')?.addEventListener('click', async () => {
@@ -1343,9 +1525,11 @@ export class TerminalWindow {
       if ((e.target as HTMLElement).closest('.window-controls')) return;
       if (this.isMaximized) return;
       if (e.button !== 0) return; // left button only
+      e.preventDefault();
       if (this.id) {
         this.onActivate?.(this.id);
       }
+      this.container.classList.remove('focus-pulse');
       // Record start position but don't start dragging yet
       dragStartX = e.clientX;
       dragStartY = e.clientY;
@@ -1354,8 +1538,10 @@ export class TerminalWindow {
       const viewportRect = this.container.closest('#app-viewport')!.getBoundingClientRect();
       const containerLeft = parseFloat(this.container.style.left) || 0;
       const containerTop = parseFloat(this.container.style.top) || 0;
-      this.dragOffsetX = e.clientX - (viewportRect.left + panX + containerLeft * zoom);
-      this.dragOffsetY = e.clientY - (viewportRect.top + panY + containerTop * zoom);
+      const pointerCanvasX = (e.clientX - viewportRect.left - panX) / zoom;
+      const pointerCanvasY = (e.clientY - viewportRect.top - panY) / zoom;
+      this.dragOffsetX = pointerCanvasX - containerLeft;
+      this.dragOffsetY = pointerCanvasY - containerTop;
       window.addEventListener('mousemove', this.boundDragMove);
       window.addEventListener('mouseup', this.boundDragEnd);
     });
@@ -1390,8 +1576,10 @@ export class TerminalWindow {
     if (!this.isDragging) return;
     const { zoom, panX, panY } = this.canvasController.getState();
     const viewportRect = this.container.closest('#app-viewport')!.getBoundingClientRect();
-    const canvasX = (e.clientX - this.dragOffsetX - viewportRect.left - panX) / zoom;
-    const canvasY = (e.clientY - this.dragOffsetY - viewportRect.top - panY) / zoom;
+    const pointerCanvasX = (e.clientX - viewportRect.left - panX) / zoom;
+    const pointerCanvasY = (e.clientY - viewportRect.top - panY) / zoom;
+    const canvasX = pointerCanvasX - this.dragOffsetX;
+    const canvasY = pointerCanvasY - this.dragOffsetY;
     const snapped = this.canvasController.snapRect({
       x: canvasX,
       y: canvasY,
@@ -1595,10 +1783,15 @@ export class TerminalWindow {
 
   async close() {
     this.cancelOverlaySync();
+    if (this.syntaxRefreshFrame !== null) {
+      window.cancelAnimationFrame(this.syntaxRefreshFrame);
+      this.syntaxRefreshFrame = null;
+    }
     this.commandSuggest.hide();
     this.closeTerminalContextMenu();
     this.selectionOverlays.forEach((overlay) => overlay.remove());
     this.selectionOverlays = [];
+    this.highlightedRows.clear();
     if (this.id) {
       try {
         await invoke('kill_pty', { sessionId: this.id });
@@ -1607,6 +1800,7 @@ export class TerminalWindow {
       }
     }
     this.unlisten?.();
+    this.unlistenLang?.();
     window.removeEventListener('mousemove', this.boundDragMove);
     window.removeEventListener('mouseup', this.boundDragEnd);
     window.removeEventListener('mousemove', this.boundResizeMove);
@@ -1626,19 +1820,24 @@ export class TerminalWindow {
 
   focus() {
     this.term.focus();
+    const wasFocused = this.container.classList.contains('focused');
     this.container.classList.add('focused');
-    this.container.classList.remove('focus-pulse');
-    void this.container.offsetWidth;
-    this.container.classList.add('focus-pulse');
+    if (!wasFocused) {
+      this.container.classList.remove('focus-pulse');
+      void this.container.offsetWidth;
+      this.container.classList.add('focus-pulse');
+    }
   }
 
   blur() {
+    this.term.blur();
     this.container.classList.remove('focused');
   }
 
   hideTransientUi() {
     this.cancelOverlaySync();
     this.commandSuggest.hide();
+    this.hideSyntaxHighlight();
     this.hideGhostText();
   }
 
@@ -1660,6 +1859,14 @@ export class TerminalWindow {
     };
   }
 
+  isWindowMinimized(): boolean {
+    return this.isMinimized;
+  }
+
+  isWindowMaximized(): boolean {
+    return this.isMaximized;
+  }
+
   getLaunchOptions(): TerminalLaunchOptions {
     if (this.launchOptions.mode === 'ssh') {
       return { ...this.launchOptions };
@@ -1667,6 +1874,58 @@ export class TerminalWindow {
     return {
       ...this.launchOptions,
       cwd: this.cwdPath || this.launchOptions.cwd,
+    };
+  }
+
+  async debugSetInput(value: string) {
+    this.focus();
+    await this.replaceCurrentInput(value, true);
+    await this.waitForSuggestionCycle();
+  }
+
+  async debugHandleSuggestionKey(key: string): Promise<boolean> {
+    this.focus();
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+    const handled = this.commandSuggest.handleKey(event);
+    if (handled) {
+      await this.waitForSuggestionCycle();
+    }
+    return handled;
+  }
+
+  async debugRefreshSuggestions() {
+    await this.refreshSuggestions();
+    await this.waitForSuggestionCycle();
+    return this.getSuggestionDebugState();
+  }
+
+  getSuggestionDebugState() {
+    const visibleItems = this.commandSuggest.getVisibleItems();
+    const activeItem = this.commandSuggest.getActiveItem();
+    return {
+      id: this.id,
+      currentLine: this.currentLine,
+      cursorPos: this.cursorPos,
+      suggestionVisible: this.commandSuggest.isVisible(),
+      suggestionCount: visibleItems.length,
+      activeItem: activeItem ? {
+        id: activeItem.id,
+        title: activeItem.title,
+        usage: activeItem.usage,
+        type: activeItem.type,
+      } : null,
+      items: visibleItems.map((item) => ({
+        id: item.id,
+        title: item.title,
+        usage: item.usage,
+        description: item.description,
+        sourceLabel: item.sourceLabel,
+        type: item.type,
+        exampleCount: item.exampleCount ?? item.examples.length,
+      })),
+      ghostText: this.currentGhostText,
+      lineStartCell: this.lineStartCell,
+      lastOverlayPositionStale: this.lastOverlayPositionStale,
     };
   }
 
@@ -1682,6 +1941,12 @@ export class TerminalWindow {
 
   setTheme(theme: string) {
     this.term.options.theme = getTermTheme(theme);
+  }
+
+  private async waitForSuggestionCycle() {
+    await new Promise<void>((resolve) => {
+      window.setTimeout(resolve, 80);
+    });
   }
 
   setZIndex(zIndex: number) {
@@ -1779,6 +2044,7 @@ export class TerminalWindow {
   private mod(value: number, divisor: number): number {
     return ((value % divisor) + divisor) % divisor;
   }
+
 }
 
 function basenameLike(value: string): string {
@@ -1849,4 +2115,97 @@ function commonStringPrefix(values: string[]): string {
 
 function normalizeSuggestionValue(value: string): string {
   return value.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function buildInputSyntaxClasses(input: string): string[] {
+  const tokens = input.match(/(\s+|[^\s]+)/g) || [];
+  let commandSeen = false;
+  const classes: string[] = [];
+
+  for (const token of tokens) {
+    if (/^\s+$/.test(token)) {
+      for (const _char of token) classes.push('');
+      continue;
+    }
+
+    let className = 'input-syntax-arg';
+    if (!commandSeen) {
+      className = 'input-syntax-command';
+      commandSeen = true;
+    } else if (/^(?:\|\||&&|\||>|>>|<|2>&1|;)$/.test(token)) {
+      className = 'input-syntax-operator';
+    } else if (/^--?[\w-]/.test(token)) {
+      className = 'input-syntax-flag';
+    } else if (/^\$[{(]?[A-Za-z_]/.test(token)) {
+      className = 'input-syntax-variable';
+    } else if (/^~[\/\\]?/.test(token) || /^[./]/.test(token) || token.includes('/') || token.includes('\\')) {
+      className = 'input-syntax-path';
+    }
+
+    for (const _char of token) classes.push(className);
+  }
+
+  return classes;
+}
+
+interface RenderedRowCell {
+  char: string;
+  className: string;
+  style: string;
+  syntaxClass: string;
+  isCursor: boolean;
+}
+
+function expandRenderedRowCells(row: HTMLDivElement, cols?: number): RenderedRowCell[] {
+  const cells: RenderedRowCell[] = [];
+  row.querySelectorAll(':scope > span').forEach((span) => {
+    const text = span.textContent || '';
+    const className = stripInputSyntaxClasses(span.className || '');
+    const style = span.getAttribute('style') || '';
+    const isCursor = className.includes('xterm-cursor');
+    for (const char of Array.from(text)) {
+      cells.push({
+        char,
+        className,
+        style,
+        syntaxClass: '',
+        isCursor,
+      });
+    }
+  });
+
+  while (typeof cols === 'number' && cells.length < cols) {
+    cells.push({
+      char: ' ',
+      className: '',
+      style: '',
+      syntaxClass: '',
+      isCursor: false,
+    });
+  }
+
+  return typeof cols === 'number' ? cells.slice(0, cols) : cells;
+}
+
+function renderRowCell(cell: RenderedRowCell): string {
+  const className = [cell.className, cell.syntaxClass].filter(Boolean).join(' ');
+  const classAttr = className ? ` class="${escapeHtml(className)}"` : '';
+  const styleAttr = cell.style ? ` style="${escapeHtml(cell.style)}"` : '';
+  const content = cell.char === ' ' ? '&nbsp;' : escapeHtml(cell.char);
+  return `<span${classAttr}${styleAttr}>${content}</span>`;
+}
+
+function stripInputSyntaxClasses(className: string): string {
+  return className
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter((token) => !token.startsWith('input-syntax-'))
+    .join(' ');
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }

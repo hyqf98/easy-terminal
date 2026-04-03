@@ -485,45 +485,6 @@ body {
 }
 
 /* ===== File Tree ===== */
-.file-tree-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px 0;
-}
-
-.file-tree-source-badge {
-  flex-shrink: 0;
-  max-width: 140px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
-}
-
-.file-tree-source-badge[data-source="remote"] {
-  color: var(--teal);
-  background: color-mix(in srgb, var(--teal) 16%, transparent);
-  border-color: color-mix(in srgb, var(--teal) 26%, transparent);
-}
-
-.file-tree-current-path {
-  min-width: 0;
-  flex: 1;
-  padding: 4px 10px;
-  border-radius: 10px;
-  font-size: 11px;
-  color: var(--text-muted);
-  background: color-mix(in srgb, var(--bg-surface0) 76%, transparent);
-  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .file-tree {
   flex: 1;
   overflow-y: auto;
@@ -986,6 +947,11 @@ body {
   border-color: transparent;
 }
 
+.cmd-toolbar-btn.danger {
+  color: var(--red);
+  border-color: color-mix(in srgb, var(--red) 30%, var(--border));
+}
+
 .cmd-platform-hint {
   font-size: 11px;
   color: var(--text-muted);
@@ -1096,6 +1062,27 @@ body {
 .cmd-detail-subtitle {
   margin-top: 6px;
   color: var(--text-muted);
+  font-size: 12px;
+}
+
+.cmd-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.cmd-detail-search {
+  margin-bottom: 12px;
+}
+
+.cmd-search-input {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+  background: color-mix(in srgb, var(--bg-base) 88%, transparent);
+  color: var(--text);
+  padding: 10px 12px;
   font-size: 12px;
 }
 
@@ -1344,6 +1331,15 @@ body {
   color: var(--accent);
   font-size: 11px;
   font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.cmd-command-example {
+  margin-top: 8px;
+  color: var(--text-muted);
+  font-size: 11px;
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
@@ -1923,17 +1919,154 @@ body {
 .cmd-detail-code {
   font-size: 12px;
   font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
-  color: var(--accent);
   background: var(--bg-surface0);
   padding: 4px 8px;
   border-radius: 4px;
   line-height: 1.5;
   word-break: break-all;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.cmd-detail-code-inline {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap;
+  overflow-x: auto;
+  line-height: 1.45;
+}
+
+.cmd-detail-code-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cmd-code-command {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.cmd-code-flag {
+  color: #7cc6ff;
+}
+
+.cmd-code-placeholder {
+  color: #f7c873;
+}
+
+.cmd-code-variable {
+  color: #8be9a8;
+}
+
+.cmd-code-operator {
+  color: var(--text-sub);
+}
+
+.cmd-code-arg {
+  color: var(--text);
 }
 
 .cmd-detail-text {
   font-size: 12px;
   color: var(--text-sub);
+}
+
+.cmd-detail-example-item {
+  background: var(--bg-surface0);
+  padding: 4px 8px;
+  border-radius: 4px;
+  line-height: 1.45;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  overflow-x: auto;
+}
+.cmd-detail-example-item:hover {
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg-surface0));
+  color: var(--accent);
+}
+
+.cmd-detail-show-more {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 2px 4px;
+  margin-top: 4px;
+  display: inline-block;
+  opacity: 0.85;
+  transition: opacity 0.12s;
+}
+.cmd-detail-show-more:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.cmd-example-comment {
+  font-family: "Manrope", "PingFang SC", system-ui, sans-serif;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-left: 2px;
+}
+
+.cmd-example-comment-inline {
+  font-family: "Manrope", "PingFang SC", system-ui, sans-serif;
+  font-size: 11px;
+  color: var(--text-muted);
+  flex: 0 0 auto;
+}
+
+/* ===== Suggest list example preview ===== */
+.cmd-suggest-examples-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.cmd-suggest-example-chip {
+  font-size: 10px;
+  font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+  color: var(--text-muted);
+  background: var(--bg-surface0);
+  padding: 1px 6px;
+  border-radius: 4px;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cmd-suggest-example-more {
+  font-size: 10px;
+  color: var(--accent);
+  opacity: 0.7;
+  font-weight: 500;
+}
+
+.history-compare-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-compare-item {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--bg-surface0);
+  border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+}
+
+.history-compare-path {
+  font-size: 12px;
+  font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+  color: var(--text);
+  word-break: break-all;
+}
+
+.history-compare-meta {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
 }
 
 /* ===== Viewport ===== */
@@ -2037,6 +2170,10 @@ body {
 }
 
 .terminal-window.dragging .title-bar { cursor: grabbing; }
+.terminal-window.dragging {
+  transition: none !important;
+  animation: none !important;
+}
 
 .terminal-window .terminal-icon {
   width: 16px;
@@ -2140,8 +2277,6 @@ body {
   user-select: none;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-shadow: 0 0 0.01px currentColor;
-  transform: translateX(2px);
 }
 
 .ghost-text-value {
@@ -2149,6 +2284,30 @@ body {
   color: inherit;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.input-syntax-command {
+  color: color-mix(in srgb, var(--yellow) 82%, white 18%);
+}
+
+.input-syntax-flag {
+  color: color-mix(in srgb, var(--peach) 82%, white 18%);
+}
+
+.input-syntax-arg {
+  color: color-mix(in srgb, var(--text) 98%, white 2%);
+}
+
+.input-syntax-variable {
+  color: color-mix(in srgb, var(--green) 82%, white 18%);
+}
+
+.input-syntax-path {
+  color: color-mix(in srgb, var(--teal) 82%, white 18%);
+}
+
+.input-syntax-operator {
+  color: color-mix(in srgb, var(--mauve) 72%, white 28%);
 }
 
 .line-selection-overlay {
@@ -2167,6 +2326,54 @@ body {
 }
 .terminal-window.focused .terminal-body .xterm-screen {
   /* Boost selection contrast in focused terminal */
+}
+.terminal-body .xterm .xterm-accessibility-tree:not(.debug) {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+.terminal-body .xterm .xterm-accessibility-tree:not(.debug) *::selection {
+  background: transparent !important;
+  color: transparent !important;
+}
+.terminal-body .xterm .xterm-helper-textarea:focus {
+  outline: none !important;
+}
+.terminal-body .xterm .xterm-cursor,
+.terminal-body .xterm .xterm-rows .xterm-cursor,
+.terminal-body .xterm .xterm-cursor-layer {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+.terminal-body .xterm .xterm-cursor.xterm-cursor-outline,
+.terminal-body .xterm .xterm-rows .xterm-cursor.xterm-cursor-outline {
+  outline: none !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+  border-left: 1px solid var(--accent) !important;
+  display: inline-block !important;
+  box-sizing: border-box !important;
+  min-width: 1px !important;
+  vertical-align: top !important;
+}
+.terminal-body .xterm .xterm-cursor.xterm-cursor-block,
+.terminal-body .xterm .xterm-rows .xterm-cursor.xterm-cursor-block {
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border-left: 1px solid var(--accent) !important;
+  display: inline-block !important;
+  box-sizing: border-box !important;
+  min-width: 1px !important;
+  vertical-align: top !important;
+}
+.terminal-body .xterm .xterm-cursor.xterm-cursor-bar,
+.terminal-body .xterm .xterm-rows .xterm-cursor.xterm-cursor-bar {
+  box-shadow: none !important;
+  border-left: 1px solid var(--accent) !important;
+  display: inline-block !important;
+  box-sizing: border-box !important;
+  min-width: 1px !important;
+  width: auto !important;
+  vertical-align: top !important;
 }
 
 /* ===== Thin Scrollbar for xterm.js ===== */
@@ -2808,7 +3015,7 @@ body {
 
 /* ===== File Tree Filter ===== */
 .file-tree-filter {
-  padding: 8px 12px;
+  padding: 10px 12px 8px;
   flex-shrink: 0;
   display: flex;
   gap: 8px;
@@ -2818,19 +3025,22 @@ body {
 .file-filter-input {
   width: 100%;
   min-width: 0;
-  padding: 6px 10px;
-  background: var(--bg-surface0);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  height: 34px;
+  padding: 0 12px;
+  background: color-mix(in srgb, var(--bg-surface0) 84%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+  border-radius: 10px;
   color: var(--text);
   font-size: 12px;
   font-family: inherit;
   outline: none;
-  transition: border-color 0.15s;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 20%, transparent);
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
 }
 
 .file-filter-input:focus {
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
 }
 
 .file-filter-input::placeholder {
@@ -2840,21 +3050,52 @@ body {
 .file-sort-select,
 .file-sort-order-btn {
   flex-shrink: 0;
-  height: 32px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
   background: color-mix(in srgb, var(--bg-surface0) 82%, transparent);
   color: var(--text);
   font-size: 12px;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 20%, transparent);
+  transition: border-color 0.15s, background 0.15s, transform 0.15s, box-shadow 0.15s;
 }
 
 .file-sort-select {
-  padding: 0 10px;
+  padding: 0 34px 0 12px;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
+    linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 16px) calc(50% - 3px),
+    calc(100% - 11px) calc(50% - 3px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
 }
 
 .file-sort-order-btn {
   width: 34px;
   font-weight: 700;
+  cursor: pointer;
+}
+
+.file-sort-select:hover,
+.file-sort-order-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 44%, var(--border));
+  background-color: color-mix(in srgb, var(--bg-surface1) 82%, transparent);
+}
+
+.file-sort-select:focus,
+.file-sort-order-btn:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.file-sort-order-btn:active {
+  transform: translateY(1px);
 }
 
 .file-no-results {

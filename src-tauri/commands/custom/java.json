@@ -3,17 +3,178 @@
   "kind": "custom",
   "platforms": [],
   "commands": [
-    { "name": "java", "alias": [], "name_cn": "运行Java", "description": "运行Java程序", "usage": "java -jar <file>", "category": "Java" },
-    { "name": "javac", "alias": [], "name_cn": "编译Java", "description": "编译Java源文件", "usage": "javac <file>.java", "category": "Java" },
-    { "name": "mvn", "alias": ["maven"], "name_cn": "Maven构建", "description": "Maven 项目构建工具", "usage": "mvn <command>", "category": "Java" },
-    { "name": "gradle", "alias": [], "name_cn": "Gradle构建", "description": "Gradle 构建工具", "usage": "gradle <task>", "category": "Java" },
-    { "name": "javadoc", "alias": [], "name_cn": "生成文档", "description": "生成API文档", "usage": "javadoc <packages>", "category": "Java" },
-    { "name": "jps", "alias": [], "name_cn": "Java进程", "description": "列出Java进程", "usage": "jps [-l]", "category": "Java" },
-    { "name": "jstat", "alias": [], "name_cn": "JVM统计", "description": "JVM统计监控", "usage": "jstat <pid>", "category": "Java" },
-    { "name": "jstack", "alias": [], "name_cn": "线程堆栈", "description": "打印线程堆栈", "usage": "jstack <pid>", "category": "Java" },
-    { "name": "jmap", "alias": [], "name_cn": "堆内存", "description": "打印堆内存映射", "usage": "jmap -heap <pid>", "category": "Java" },
-    { "name": "jar", "alias": [], "name_cn": "JAR包", "description": "JAR包管理工具", "usage": "jar -cf <name>.jar <files>", "category": "Java" },
-    { "name": "keytool", "alias": [], "name_cn": "密钥管理", "description": "密钥和证书管理", "usage": "keytool -genkey", "category": "Java" },
-    { "name": "spring", "alias": [], "name_cn": "Spring CLI", "description": "Spring Boot CLI", "usage": "spring run <file>", "category": "Java" }
+    {
+      "name": "java",
+      "alias": [],
+      "name_cn": "运行Java",
+      "description": "运行Java程序",
+      "usage": "java -jar <file>",
+      "category": "Java",
+      "examples": [
+        "java -jar app.jar # 运行JAR包",
+        "java -cp target/classes com.example.Main # 运行指定主类",
+        "java -Xmx512m -jar app.jar # 设置最大堆内存",
+        "java -Dspring.profiles.active=prod -jar app.jar # 传递系统属性",
+        "java --version # 查看Java版本"
+      ]
+    },
+    {
+      "name": "javac",
+      "alias": [],
+      "name_cn": "编译Java",
+      "description": "编译Java源文件",
+      "usage": "javac <file>.java",
+      "category": "Java",
+      "examples": [
+        "javac Main.java # 编译Java文件",
+        "javac -d out/ src/*.java # 编译到指定输出目录",
+        "javac -cp lib/* Main.java # 指定classpath编译",
+        "javac -encoding UTF-8 Main.java # 指定编码编译"
+      ]
+    },
+    {
+      "name": "mvn",
+      "alias": ["maven"],
+      "name_cn": "Maven构建",
+      "description": "Maven 项目构建工具",
+      "usage": "mvn <command>",
+      "category": "Java",
+      "examples": [
+        "mvn clean install # 清理并安装到本地仓库",
+        "mvn spring-boot:run # 运行Spring Boot项目",
+        "mvn package -DskipTests # 打包跳过测试",
+        "mvn dependency:tree # 查看依赖树",
+        "mvn compile # 编译项目"
+      ]
+    },
+    {
+      "name": "gradle",
+      "alias": [],
+      "name_cn": "Gradle构建",
+      "description": "Gradle 构建工具",
+      "usage": "gradle <task>",
+      "category": "Java",
+      "examples": [
+        "gradle build # 构建项目",
+        "gradle bootRun # 运行Spring Boot项目",
+        "gradle clean build -x test # 清理构建并跳过测试",
+        "gradle dependencies # 查看依赖",
+        "gradle tasks # 列出所有可用任务"
+      ]
+    },
+    {
+      "name": "javadoc",
+      "alias": [],
+      "name_cn": "生成文档",
+      "description": "生成API文档",
+      "usage": "javadoc <packages>",
+      "category": "Java",
+      "examples": [
+        "javadoc -d docs/ src/*.java # 生成文档到docs目录",
+        "javadoc -subpackages com.example -d docs/ # 生成子包文档",
+        "javadoc -private -d docs/ src/*.java # 包含私有成员",
+        "javadoc -author -version src/*.java # 包含作者和版本信息"
+      ]
+    },
+    {
+      "name": "jps",
+      "alias": [],
+      "name_cn": "Java进程",
+      "description": "列出Java进程",
+      "usage": "jps [-l]",
+      "category": "Java",
+      "examples": [
+        "jps # 列出Java进程",
+        "jps -l # 显示完整包名",
+        "jps -v # 显示JVM参数",
+        "jps -mlv # 显示完整信息"
+      ]
+    },
+    {
+      "name": "jstat",
+      "alias": [],
+      "name_cn": "JVM统计",
+      "description": "JVM统计监控",
+      "usage": "jstat <pid>",
+      "category": "Java",
+      "examples": [
+        "jstat -gc 12345 # 查看GC统计信息",
+        "jstat -gcutil 12345 # 查看GC使用百分比",
+        "jstat -gc 12345 1000 10 # 每秒采样一次共10次",
+        "jstat -class 12345 # 查看类加载统计"
+      ]
+    },
+    {
+      "name": "jstack",
+      "alias": [],
+      "name_cn": "线程堆栈",
+      "description": "打印线程堆栈",
+      "usage": "jstack <pid>",
+      "category": "Java",
+      "examples": [
+        "jstack 12345 # 打印线程堆栈",
+        "jstack -l 12345 # 打印锁信息",
+        "jstack 12345 > thread_dump.txt # 保存到文件",
+        "jstack -F 12345 # 强制打印无响应进程的堆栈"
+      ]
+    },
+    {
+      "name": "jmap",
+      "alias": [],
+      "name_cn": "堆内存",
+      "description": "打印堆内存映射",
+      "usage": "jmap -heap <pid>",
+      "category": "Java",
+      "examples": [
+        "jmap -heap 12345 # 查看堆内存配置和使用",
+        "jmap -histo 12345 # 查看对象统计",
+        "jmap -dump:format=b,file=heap.hprof 12345 # 导出堆转储",
+        "jmap -histo:live 12345 # 仅统计存活对象"
+      ]
+    },
+    {
+      "name": "jar",
+      "alias": [],
+      "name_cn": "JAR包",
+      "description": "JAR包管理工具",
+      "usage": "jar -cf <name>.jar <files>",
+      "category": "Java",
+      "examples": [
+        "jar -cf app.jar -C target/classes . # 创建JAR包",
+        "jar -tf app.jar # 列出JAR包内容",
+        "jar -xf app.jar # 解压JAR包",
+        "jar -cvf app.jar src/ # 创建并显示详细过程",
+        "jar -uf app.jar newfile.class # 更新JAR包中的文件"
+      ]
+    },
+    {
+      "name": "keytool",
+      "alias": [],
+      "name_cn": "密钥管理",
+      "description": "密钥和证书管理",
+      "usage": "keytool -genkey",
+      "category": "Java",
+      "examples": [
+        "keytool -genkey -alias mykey -keyalg RSA -keysize 2048 # 生成RSA密钥对",
+        "keytool -list -keystore keystore.jks # 列出密钥库条目",
+        "keytool -export -alias mykey -file cert.cer # 导出证书",
+        "keytool -import -alias ca -file ca.cer -keystore truststore.jks # 导入证书",
+        "keytool -delete -alias oldkey -keystore keystore.jks # 删除密钥条目"
+      ]
+    },
+    {
+      "name": "spring",
+      "alias": [],
+      "name_cn": "Spring CLI",
+      "description": "Spring Boot CLI",
+      "usage": "spring run <file>",
+      "category": "Java",
+      "examples": [
+        "spring run app.groovy # 运行Groovy脚本",
+        "spring init --dependencies=web,data-jpa myproject # 初始化Spring项目",
+        "spring init --java-version=17 --type=maven-project myproject # 指定Java版本和构建工具",
+        "spring jar myapp.jar app.groovy # 打包为可执行JAR"
+      ]
+    }
   ]
 }

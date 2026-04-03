@@ -2,7 +2,14 @@ import { TerminalWindow } from './terminal-window';
 import { CommandSuggest } from './command-suggest';
 import { buildSshPasswordSequence, buildSshStartupCommand } from './command-intercept';
 import type { ShortcutManager } from './shortcut-manager';
-import type { CanvasController, Rect, SSHProfile, SnapTarget, TerminalLaunchOptions } from './types';
+import type {
+  CanvasController,
+  Rect,
+  SSHProfile,
+  SnapTarget,
+  TerminalLaunchOptions,
+  TerminalSessionState,
+} from './types';
 
 export class TerminalManager {
   private terminals: Map<string, TerminalWindow> = new Map();
@@ -152,7 +159,10 @@ export class TerminalManager {
   blurActive() {
     if (this.activeId) {
       const tw = this.terminals.get(this.activeId);
-      if (tw) tw.blur();
+      if (tw) {
+        tw.hideTransientUi();
+        tw.blur();
+      }
       this.activeId = null;
       this.onActiveTerminalCwdChange?.('');
       this.onActiveTerminalChange?.(null);
@@ -169,21 +179,64 @@ export class TerminalManager {
     return this.activeId;
   }
 
-  getTerminalStates(): Array<{ id: string; x: number; y: number; w: number; h: number; title: string; cwd: string }> {
-    const states: Array<{ id: string; x: number; y: number; w: number; h: number; title: string; cwd: string }> = [];
-    for (const [id, tw] of this.terminals) {
+  async debugSetFocusedInput(value: string): Promise<boolean> {
+    if (!this.activeId) return false;
+    const tw = this.terminals.get(this.activeId);
+    if (!tw) return false;
+    await tw.debugSetInput(value);
+    return true;
+  }
+
+  async debugHandleFocusedSuggestionKey(key: string): Promise<boolean> {
+    if (!this.activeId) return false;
+    const tw = this.terminals.get(this.activeId);
+    if (!tw) return false;
+    return tw.debugHandleSuggestionKey(key);
+  }
+
+  async debugRefreshFocusedSuggestions() {
+    if (!this.activeId) return null;
+    const tw = this.terminals.get(this.activeId);
+    return tw ? tw.debugRefreshSuggestions() : null;
+  }
+
+  getFocusedSuggestionState() {
+    if (!this.activeId) return null;
+    const tw = this.terminals.get(this.activeId);
+    return tw ? tw.getSuggestionDebugState() : null;
+  }
+
+  getTerminalStates(): TerminalSessionState[] {
+    const states: TerminalSessionState[] = [];
+    for (const [, tw] of this.terminals) {
       const rect = tw.getRect();
       states.push({
-        id,
         x: rect.x,
         y: rect.y,
         w: rect.w,
         h: rect.h,
         title: tw.getTitle(),
         cwd: tw.getCwd(),
+        minimized: tw.isWindowMinimized(),
+        maximized: tw.isWindowMaximized(),
+        launchOptions: this.cloneLaunchOptions(tw.getLaunchOptions()),
       });
     }
     return states;
+  }
+
+  async restoreTerminalSession(session: TerminalSessionState) {
+    const launchOptions = this.resolveRestoreLaunchOptions(session);
+    await this.createTerminal(session.x, session.y, session.w, session.h, launchOptions);
+    const active = this.activeId ? this.terminals.get(this.activeId) : null;
+    if (!active) return;
+
+    if (session.minimized) {
+      active.toggleMinimize();
+    }
+    if (session.maximized) {
+      active.toggleMaximize();
+    }
   }
 
   /** Copy the active terminal's info (cwd, w, h) */
@@ -303,6 +356,27 @@ export class TerminalManager {
     return {
       ...options,
       passwordSequence: options.passwordSequence ? [...options.passwordSequence] : undefined,
+    };
+  }
+
+  private resolveRestoreLaunchOptions(session: TerminalSessionState): TerminalLaunchOptions {
+    const options = session.launchOptions || {};
+    if (options.mode === 'ssh' && options.profileId) {
+      const profile = this.sshProfiles.find((item) => item.id === options.profileId);
+      if (profile) {
+        return {
+          mode: 'ssh',
+          profileId: profile.id,
+          profileName: profile.name,
+          startupCommand: buildSshStartupCommand(profile, this.sshProfiles),
+          passwordSequence: buildSshPasswordSequence(profile, this.sshProfiles),
+        };
+      }
+    }
+
+    return {
+      mode: 'local',
+      cwd: session.cwd || options.cwd,
     };
   }
 }

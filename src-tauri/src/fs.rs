@@ -57,11 +57,7 @@ pub fn read_dir_entries(dir_path: &str) -> Result<Vec<FileEntry>, String> {
     for entry in read_dir {
         let entry = entry.map_err(|e| e.to_string())?;
         let metadata = entry.metadata().map_err(|e| e.to_string())?;
-        let name = entry
-            .file_name()
-            .to_str()
-            .unwrap_or("?")
-            .to_string();
+        let name = entry.file_name().to_str().unwrap_or("?").to_string();
         let file_path = entry.path().to_str().unwrap_or("").to_string();
         let modified = metadata
             .modified()
@@ -79,7 +75,9 @@ pub fn read_dir_entries(dir_path: &str) -> Result<Vec<FileEntry>, String> {
         });
     }
     entries.sort_by(|a, b| {
-        b.is_dir.cmp(&a.is_dir).then(a.name.to_lowercase().cmp(&b.name.to_lowercase()))
+        b.is_dir
+            .cmp(&a.is_dir)
+            .then(a.name.to_lowercase().cmp(&b.name.to_lowercase()))
     });
     Ok(entries)
 }
@@ -100,6 +98,10 @@ pub fn create_dir_entry(path: &str) -> Result<(), String> {
     }
     fs::create_dir(p).map_err(|e| e.to_string())?;
     Ok(())
+}
+
+pub fn write_text_file(path: &str, content: &str) -> Result<(), String> {
+    fs::write(path, content).map_err(|e| e.to_string())
 }
 
 pub fn rename_entry(old_path: &str, new_path: &str) -> Result<(), String> {

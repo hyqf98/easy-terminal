@@ -70,11 +70,12 @@ export class HistoryPanel {
   }
 
   private renderItem(item: CommandHistoryEntry): string {
+    const variantCount = Math.max(item.variants.length, item.cwd ? 1 : 0);
     return `
       <div class="history-item${item.id === this.activeId ? ' active' : ''}" data-history-id="${escapeHtml(item.id)}" role="button" tabindex="0">
         <div class="history-main">
           <div class="history-command">${escapeHtml(item.command)}</div>
-          <div class="history-meta">${escapeHtml(item.cwd || '-') } · ${formatTime(item.timestamp)} · ${t('history.count', String(item.count))}</div>
+          <div class="history-meta">${escapeHtml(item.cwd || '-') } · ${formatTime(item.timestamp)} · ${t('history.count', String(item.count))} · ${variantCount} ctx</div>
         </div>
         <button class="cmd-mini-btn" data-history-send="${escapeHtml(item.id)}" title="${t('cmd.sendToTerminal')}">${sendIcon()}</button>
       </div>
@@ -105,10 +106,38 @@ export class HistoryPanel {
           <span>Runs</span>
           <strong>${item.count}</strong>
         </div>
+        <div class="cmd-summary-card">
+          <span>Contexts</span>
+          <strong>${Math.max(item.variants.length, item.cwd ? 1 : 0)}</strong>
+        </div>
       </div>
       <div class="cmd-detail-section">${t('cmd.command')}</div>
       <div class="cmd-detail-code">${escapeHtml(item.command)}</div>
+      <div class="cmd-detail-section">${t('history.compareTitle')}</div>
+      <div class="history-compare-list">
+        ${this.renderContextCompare(item)}
+      </div>
     `;
+  }
+
+  private renderContextCompare(item: CommandHistoryEntry): string {
+    const variants = item.variants.length > 0
+      ? item.variants
+      : [{ cwd: item.cwd, count: item.count, timestamp: item.timestamp }];
+    const total = Math.max(item.count, variants.reduce((sum, variant) => sum + variant.count, 0), 1);
+
+    return variants
+      .slice(0, 8)
+      .map((variant) => {
+        const percent = Math.round((variant.count / total) * 100);
+        return `
+          <div class="history-compare-item">
+            <div class="history-compare-path">${escapeHtml(variant.cwd || '-')}</div>
+            <div class="history-compare-meta">${variant.count}x · ${percent}% · ${formatTime(variant.timestamp)}</div>
+          </div>
+        `;
+      })
+      .join('');
   }
 
   private bindEvents() {

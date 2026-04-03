@@ -3,17 +3,184 @@
   "kind": "custom",
   "platforms": [],
   "commands": [
-    { "name": "python", "alias": ["py", "python3"], "name_cn": "运行Python", "description": "运行Python程序", "usage": "python <file>", "category": "Python" },
-    { "name": "pip", "alias": ["pip3"], "name_cn": "PIP包管理", "description": "Python 包管理器", "usage": "pip <command>", "category": "Python" },
-    { "name": "pipenv", "alias": [], "name_cn": "Pipenv", "description": "Python 虚拟环境管理", "usage": "pipenv <command>", "category": "Python" },
-    { "name": "poetry", "alias": [], "name_cn": "Poetry", "description": "Python 依赖管理工具", "usage": "poetry <command>", "category": "Python" },
-    { "name": "conda", "alias": [], "name_cn": "Conda", "description": "Anaconda 包和环境管理", "usage": "conda <command>", "category": "Python" },
-    { "name": "virtualenv", "alias": ["venv"], "name_cn": "虚拟环境", "description": "创建Python虚拟环境", "usage": "virtualenv <name>", "category": "Python" },
-    { "name": "pytest", "alias": [], "name_cn": "Pytest测试", "description": "Python 测试框架", "usage": "pytest [options]", "category": "Python" },
-    { "name": "black", "alias": [], "name_cn": "代码格式化", "description": "Python 代码格式化工具", "usage": "black <file>", "category": "Python" },
-    { "name": "flake8", "alias": [], "name_cn": "代码检查", "description": "Python 代码检查工具", "usage": "flake8 <file>", "category": "Python" },
-    { "name": "mypy", "alias": [], "name_cn": "类型检查", "description": "Python 静态类型检查", "usage": "mypy <file>", "category": "Python" },
-    { "name": "jupyter", "alias": [], "name_cn": "Jupyter", "description": "Jupyter Notebook", "usage": "jupyter notebook", "category": "Python" },
-    { "name": "uv", "alias": [], "name_cn": "UV包管理", "description": "极速Python包管理器", "usage": "uv <command>", "category": "Python" }
+    {
+      "name": "python",
+      "alias": ["py", "python3"],
+      "name_cn": "运行Python",
+      "description": "运行Python程序",
+      "usage": "python <file>",
+      "category": "Python",
+      "examples": [
+        "python main.py # 运行Python脚本",
+        "python -m http.server 8080 # 启动简易HTTP服务器",
+        "python -c \"print('hello')\" # 执行单行Python代码",
+        "python -m venv .venv # 创建虚拟环境",
+        "python --version # 查看Python版本"
+      ]
+    },
+    {
+      "name": "pip",
+      "alias": ["pip3"],
+      "name_cn": "PIP包管理",
+      "description": "Python 包管理器",
+      "usage": "pip <command>",
+      "category": "Python",
+      "examples": [
+        "pip install requests # 安装包",
+        "pip install -r requirements.txt # 从文件安装依赖",
+        "pip list # 列出已安装的包",
+        "pip uninstall flask # 卸载包",
+        "pip install flask==2.3.0 # 安装指定版本"
+      ]
+    },
+    {
+      "name": "pipenv",
+      "alias": [],
+      "name_cn": "Pipenv",
+      "description": "Python 虚拟环境管理",
+      "usage": "pipenv <command>",
+      "category": "Python",
+      "examples": [
+        "pipenv install # 安装项目依赖",
+        "pipenv install requests # 安装包并更新Pipfile",
+        "pipenv shell # 激活虚拟环境",
+        "pipenv run python main.py # 在虚拟环境中运行脚本",
+        "pipenv graph # 查看依赖树"
+      ]
+    },
+    {
+      "name": "poetry",
+      "alias": [],
+      "name_cn": "Poetry",
+      "description": "Python 依赖管理工具",
+      "usage": "poetry <command>",
+      "category": "Python",
+      "examples": [
+        "poetry init # 初始化新项目",
+        "poetry add requests # 添加依赖",
+        "poetry install # 安装所有依赖",
+        "poetry run python main.py # 在虚拟环境中运行",
+        "poetry build # 构建分发包"
+      ]
+    },
+    {
+      "name": "conda",
+      "alias": [],
+      "name_cn": "Conda",
+      "description": "Anaconda 包和环境管理",
+      "usage": "conda <command>",
+      "category": "Python",
+      "examples": [
+        "conda create -n myenv python=3.12 # 创建新环境",
+        "conda activate myenv # 激活环境",
+        "conda install numpy # 安装包",
+        "conda env list # 列出所有环境",
+        "conda deactivate # 退出当前环境"
+      ]
+    },
+    {
+      "name": "virtualenv",
+      "alias": ["venv"],
+      "name_cn": "虚拟环境",
+      "description": "创建Python虚拟环境",
+      "usage": "virtualenv <name>",
+      "category": "Python",
+      "examples": [
+        "virtualenv venv # 创建名为venv的虚拟环境",
+        "virtualenv -p python3.12 venv # 指定Python版本",
+        "source venv/bin/activate # 激活虚拟环境(Linux/Mac)",
+        "venv\\Scripts\\activate # 激活虚拟环境(Windows)"
+      ]
+    },
+    {
+      "name": "pytest",
+      "alias": [],
+      "name_cn": "Pytest测试",
+      "description": "Python 测试框架",
+      "usage": "pytest [options]",
+      "category": "Python",
+      "examples": [
+        "pytest # 运行所有测试",
+        "pytest tests/test_user.py # 运行指定测试文件",
+        "pytest -v # 详细输出模式",
+        "pytest --cov=src # 生成覆盖率报告",
+        "pytest -k 'test_login' # 运行名称匹配的测试"
+      ]
+    },
+    {
+      "name": "black",
+      "alias": [],
+      "name_cn": "代码格式化",
+      "description": "Python 代码格式化工具",
+      "usage": "black <file>",
+      "category": "Python",
+      "examples": [
+        "black main.py # 格式化单个文件",
+        "black src/ # 格式化整个目录",
+        "black --check src/ # 仅检查不修改",
+        "black --diff main.py # 显示格式化差异",
+        "black -l 120 src/ # 设置每行最大字符数"
+      ]
+    },
+    {
+      "name": "flake8",
+      "alias": [],
+      "name_cn": "代码检查",
+      "description": "Python 代码检查工具",
+      "usage": "flake8 <file>",
+      "category": "Python",
+      "examples": [
+        "flake8 main.py # 检查单个文件",
+        "flake8 src/ # 检查整个目录",
+        "flake8 --max-line-length=120 src/ # 设置最大行长度",
+        "flake8 --ignore=E501,W503 src/ # 忽略指定规则",
+        "flake8 --exclude=migrations src/ # 排除目录"
+      ]
+    },
+    {
+      "name": "mypy",
+      "alias": [],
+      "name_cn": "类型检查",
+      "description": "Python 静态类型检查",
+      "usage": "mypy <file>",
+      "category": "Python",
+      "examples": [
+        "mypy main.py # 检查单个文件",
+        "mypy src/ # 检查整个目录",
+        "mypy --strict src/ # 严格模式检查",
+        "mypy --ignore-missing-imports src/ # 忽略缺失的导入",
+        "mypy --config-file mypy.ini src/ # 使用配置文件"
+      ]
+    },
+    {
+      "name": "jupyter",
+      "alias": [],
+      "name_cn": "Jupyter",
+      "description": "Jupyter Notebook",
+      "usage": "jupyter notebook",
+      "category": "Python",
+      "examples": [
+        "jupyter notebook # 启动Jupyter Notebook",
+        "jupyter lab # 启动JupyterLab",
+        "jupyter nbconvert --to script notebook.ipynb # 转换为Python脚本",
+        "jupyter kernelspec list # 列出已安装的内核",
+        "jupyter notebook --port 8889 # 指定端口启动"
+      ]
+    },
+    {
+      "name": "uv",
+      "alias": [],
+      "name_cn": "UV包管理",
+      "description": "极速Python包管理器",
+      "usage": "uv <command>",
+      "category": "Python",
+      "examples": [
+        "uv init demo-app # 初始化新项目",
+        "uv add requests # 添加依赖",
+        "uv sync # 同步项目依赖",
+        "uv run python main.py # 在项目环境中运行脚本",
+        "uv pip list # 列出已安装的包"
+      ]
+    }
   ]
 }

@@ -114,23 +114,19 @@ export class FileTree {
       <div class="panel-header">
         <h2>${folderHeaderSvg()} ${t('file.title')}</h2>
       </div>
-      <div class="file-tree-toolbar">
-        <div class="file-tree-source-badge" id="file-tree-source-badge">Local</div>
-        <div class="file-tree-current-path" id="file-tree-current-path">/</div>
-      </div>
       <div class="file-tree-filter" id="file-tree-filter">
         <input type="text" class="file-filter-input" placeholder="${t('file.filterPlaceholder')}" spellcheck="false" />
         <select class="file-sort-select" id="file-sort-select">
-          <option value="name">名称</option>
-          <option value="modified">时间</option>
-          <option value="size">大小</option>
+          <option value="name">${t('file.sortName')}</option>
+          <option value="modified">${t('file.sortModified')}</option>
+          <option value="size">${t('file.sortSize')}</option>
         </select>
-        <button class="file-sort-order-btn" id="file-sort-order-btn" title="切换排序方向">↓</button>
+        <button class="file-sort-order-btn" id="file-sort-order-btn" title="${t('file.sortDirection')}">↓</button>
       </div>
       <div class="file-tree-columns">
-        <span class="file-col-name">名称</span>
-        <span class="file-col-modified">修改时间</span>
-        <span class="file-col-size">大小</span>
+        <span class="file-col-name">${t('file.sortName')}</span>
+        <span class="file-col-modified">${t('file.modified')}</span>
+        <span class="file-col-size">${t('file.sortSize')}</span>
       </div>
       <div class="panel-body">
         <div class="file-tree" id="file-tree-body"></div>

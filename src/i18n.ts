@@ -40,6 +40,9 @@ const messages: Record<Lang, Record<string, string>> = {
     'settings.updateIdle': '可以手动检查新版本',
     'settings.updateUnsupported': '当前环境不支持自动更新',
     'settings.updateFailed': '更新失败: {0}',
+    'settings.session': '启动恢复',
+    'settings.restoreSession': '打开时恢复上次的终端',
+    'settings.restoreSessionHint': '开启后会恢复画布缩放/平移、终端布局以及可重连的 SSH 会话',
 
     // Command Config
     'cmd.config.title': '命令管理',
@@ -53,6 +56,7 @@ const messages: Record<Lang, Record<string, string>> = {
     'cmd.count': '{0} 条',
     'cmd.countCmd': '{0} 条命令',
     'cmd.import': '导入 JSON 文件',
+    'cmd.export': '导出 JSON',
     'cmd.importHint': '格式：{"id":"名称","kind":"custom","commands":[{name,alias,description,usage,category}]}',
     'cmd.format': '格式化',
     'cmd.save': '保存',
@@ -83,7 +87,10 @@ const messages: Record<Lang, Record<string, string>> = {
     'cmd.categoryRequired': '分类名称不能为空',
     'cmd.categoryExists': '该分类已存在',
     'cmd.platformHint': '当前系统已启用：{0}',
+    'cmd.platforms': '平台',
     'cmd.recommended': '推荐模板',
+    'cmd.reset': '恢复内置',
+    'cmd.searchPlaceholder': '搜索当前库中的命令...',
     'cmd.sendToTerminal': '发送到当前终端',
     'cmd.noActiveTerminal': '请先选中一个终端',
     'cmd.sourceSystem': '系统级别',
@@ -92,7 +99,11 @@ const messages: Record<Lang, Record<string, string>> = {
     'cmd.emptySection': '当前没有可显示的命令分类',
     'cmd.alias': '别名',
     'cmd.tags': '标签',
+    'cmd.triggers': '触发词',
+    'cmd.keywords': '关键词',
+    'cmd.languageField': '语言',
     'cmd.examples': '示例',
+    'cmd.loadingExamples': '正在加载完整示例...',
 
     // File Tree
     'file.title': '文件管理',
@@ -110,6 +121,11 @@ const messages: Record<Lang, Record<string, string>> = {
     'file.renameFailed': '重命名失败: {0}',
     'file.deleteFailed': '删除失败: {0}',
     'file.filterPlaceholder': '筛选文件...',
+    'file.sortName': '名称',
+    'file.sortModified': '时间',
+    'file.sortSize': '大小',
+    'file.modified': '修改时间',
+    'file.sortDirection': '切换排序方向',
     'file.noResults': '没有匹配的文件',
 
     // Hints
@@ -124,9 +140,20 @@ const messages: Record<Lang, Record<string, string>> = {
     'suggest.tags': '标签',
     'suggest.examples': '示例',
     'suggest.source': '来源',
+    'suggest.showMore': '查看更多',
+    'suggest.showLess': '收起',
+    'suggest.copyExample': '点击复制到输入',
 
     // Terminal
     'terminal.copied': '成功复制终端',
+    'terminal.unnamed': '未命名',
+    'terminal.copyText': '复制文本',
+    'terminal.addMapping': '添加为命令映射',
+    'terminal.selectionToMapping': '从终端选中文本快速创建',
+
+    // Canvas
+    'canvas.alignAll': '一键对齐终端',
+    'canvas.newTerminal': '新建终端',
 
     // History
     'history.title': '历史命令',
@@ -136,6 +163,7 @@ const messages: Record<Lang, Record<string, string>> = {
     'history.delete': '删除记录',
     'history.count': '使用 {0} 次',
     'history.sourceLabel': '历史命令',
+    'history.compareTitle': '上下文对比',
 
     // Mapping
     'mapping.title': '命令映射',
@@ -148,6 +176,8 @@ const messages: Record<Lang, Record<string, string>> = {
     'mapping.trigger': '触发词',
     'mapping.required': '触发词和执行命令不能为空',
     'mapping.sourceLabel': '命令映射',
+    'mapping.sourceBuiltin': '内置映射',
+    'mapping.platforms': '适用平台',
     'mapping.descriptionPlaceholder': '例如：快速跳到固定工作目录',
     'mapping.modalTitle': '新增命令映射',
 
@@ -227,6 +257,11 @@ const messages: Record<Lang, Record<string, string>> = {
     'settings.updateUnsupported': 'Auto update is unavailable in this environment',
     'settings.updateFailed': 'Update failed: {0}',
 
+    // Session
+    'settings.session': 'Startup Restore',
+    'settings.restoreSession': 'Restore previous terminals on startup',
+    'settings.restoreSessionHint': 'Restore canvas zoom/pan, terminal layout, and reconnectable SSH sessions',
+
     // Command Config
     'cmd.config.title': 'Commands',
     'cmd.loaded': 'Loaded {0} commands',
@@ -239,6 +274,7 @@ const messages: Record<Lang, Record<string, string>> = {
     'cmd.count': '{0}',
     'cmd.countCmd': '{0} commands',
     'cmd.import': 'Import JSON',
+    'cmd.export': 'Export JSON',
     'cmd.importHint': 'Format: {"id":"name","kind":"custom","commands":[{name,alias,description,usage,category}]}',
     'cmd.format': 'Format',
     'cmd.save': 'Save',
@@ -269,7 +305,10 @@ const messages: Record<Lang, Record<string, string>> = {
     'cmd.categoryRequired': 'Category name is required',
     'cmd.categoryExists': 'This category already exists',
     'cmd.platformHint': 'Enabled for current system: {0}',
+    'cmd.platforms': 'Platforms',
     'cmd.recommended': 'Recommended',
+    'cmd.reset': 'Reset Built-in',
+    'cmd.searchPlaceholder': 'Search commands in this library...',
     'cmd.sendToTerminal': 'Send to Active Terminal',
     'cmd.noActiveTerminal': 'Select a terminal first',
     'cmd.sourceSystem': 'System',
@@ -278,7 +317,11 @@ const messages: Record<Lang, Record<string, string>> = {
     'cmd.emptySection': 'No command categories yet',
     'cmd.alias': 'Aliases',
     'cmd.tags': 'Tags',
+    'cmd.triggers': 'Triggers',
+    'cmd.keywords': 'Keywords',
+    'cmd.languageField': 'Language',
     'cmd.examples': 'Examples',
+    'cmd.loadingExamples': 'Loading examples...',
 
     // File Tree
     'file.title': 'Files',
@@ -296,6 +339,11 @@ const messages: Record<Lang, Record<string, string>> = {
     'file.renameFailed': 'Rename failed: {0}',
     'file.deleteFailed': 'Delete failed: {0}',
     'file.filterPlaceholder': 'Filter files...',
+    'file.sortName': 'Name',
+    'file.sortModified': 'Time',
+    'file.sortSize': 'Size',
+    'file.modified': 'Modified',
+    'file.sortDirection': 'Toggle sort direction',
     'file.noResults': 'No matching files',
 
     // Hints
@@ -310,9 +358,22 @@ const messages: Record<Lang, Record<string, string>> = {
     'suggest.tags': 'Tags',
     'suggest.examples': 'Examples',
     'suggest.source': 'Source',
+    'suggest.showMore': 'Show more',
+    'suggest.showLess': 'Show less',
+    'suggest.copyExample': 'Click to copy to input',
+
+    // Terminal
 
     // Terminal
     'terminal.copied': 'Terminal copied',
+    'terminal.unnamed': 'Untitled',
+    'terminal.copyText': 'Copy text',
+    'terminal.addMapping': 'Add as command mapping',
+    'terminal.selectionToMapping': 'Create quickly from terminal selection',
+
+    // Canvas
+    'canvas.alignAll': 'Align all terminals',
+    'canvas.newTerminal': 'New terminal',
 
     // History
     'history.title': 'History',
@@ -322,6 +383,7 @@ const messages: Record<Lang, Record<string, string>> = {
     'history.delete': 'Delete',
     'history.count': 'Used {0} times',
     'history.sourceLabel': 'History',
+    'history.compareTitle': 'Context Comparison',
 
     // Mapping
     'mapping.title': 'Mappings',
@@ -334,6 +396,8 @@ const messages: Record<Lang, Record<string, string>> = {
     'mapping.trigger': 'Trigger',
     'mapping.required': 'Trigger and command are required',
     'mapping.sourceLabel': 'Mapping',
+    'mapping.sourceBuiltin': 'Built-in Mapping',
+    'mapping.platforms': 'Platforms',
     'mapping.descriptionPlaceholder': 'For example: jump to a fixed workspace',
     'mapping.modalTitle': 'New Mapping',
 

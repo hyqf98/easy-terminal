@@ -30,3 +30,4 @@ tauri-plugin-mcp-bridge = "0.10"
 tauri-plugin-updater = "2"
 tauri-plugin-dialog = "2"
 ssh2 = "0.9"
+rusqlite = { version = "0.32", features = ["bundled"] }

@@ -16,6 +16,7 @@ import { t, onLangChange } from './i18n';
 import { defaultWindowIcon } from '@tauri-apps/api/app';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import type { WorkspaceState } from './types';
 import './styles.css';
 
 function showToast(message: string) {
@@ -78,12 +79,30 @@ window.addEventListener('DOMContentLoaded', async () => {
   const terminalManager = new TerminalManager(canvasEl, canvas, commandSuggest, shortcutManager, async (command, cwd) => {
     await intelligence.recordHistory(command, cwd);
   });
+  const isDevRuntime = /localhost|127\.0\.0\.1/.test(window.location.hostname);
+  if (isDevRuntime) {
+    (window as Window & {
+      __EASY_TERMINAL_DEBUG__?: {
+        setFocusedInput: (value: string) => Promise<boolean>;
+        handleFocusedSuggestionKey: (key: string) => Promise<boolean>;
+        getFocusedSuggestionState: () => unknown;
+        refreshFocusedSuggestions: () => Promise<unknown>;
+        searchSuggestions: (value: string) => Promise<unknown>;
+      };
+    }).__EASY_TERMINAL_DEBUG__ = {
+      setFocusedInput: (value: string) => terminalManager.debugSetFocusedInput(value),
+      handleFocusedSuggestionKey: (key: string) => terminalManager.debugHandleFocusedSuggestionKey(key),
+      getFocusedSuggestionState: () => terminalManager.getFocusedSuggestionState(),
+      refreshFocusedSuggestions: () => terminalManager.debugRefreshFocusedSuggestions(),
+      searchSuggestions: (value: string) => intelligence.searchSuggestions(value),
+    };
+  }
   canvas.getSnapTargets = (excludeId) => terminalManager.getSnapTargets(excludeId);
   canvas.onCanvasContextMenu = (cvs, clientX, clientY) => {
     const items: Array<{ label: string; action: () => void }> = [];
     if (terminalManager.getTerminalCount() > 0) {
       items.push({
-        label: '一键对齐终端',
+        label: t('canvas.alignAll'),
         action: () => {
           const rect = viewport.getBoundingClientRect();
           terminalManager.alignAll({ w: rect.width, h: rect.height });
@@ -92,7 +111,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       });
     }
     items.push({
-      label: '新建终端',
+      label: t('canvas.newTerminal'),
       action: () => {
         terminalManager.createTerminal(80, 80, 700, 450);
       },
@@ -155,7 +174,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     mappingPanel.openCreate({
       trigger: text.slice(0, 24),
       command: text,
-      description: '从终端选中文本快速创建',
+      description: t('terminal.selectionToMapping'),
       hint: text,
     });
     sidebar.openTab('mappings');
@@ -181,6 +200,29 @@ window.addEventListener('DOMContentLoaded', async () => {
     await terminalManager.createSshTerminal(profile);
   };
 
+  const persistWorkspace = async () => {
+    if (!settings.getRestoreSession()) {
+      await invoke('save_workspace_state', {
+        state: {
+          terminals: [],
+          canvas: canvas.getState(),
+          pendingSshProfileId: '',
+          activeTerminalId: '',
+        },
+      });
+      return;
+    }
+
+    await invoke('save_workspace_state', {
+      state: {
+        terminals: terminalManager.getTerminalStates(),
+        canvas: canvas.getState(),
+        pendingSshProfileId: terminalManager.getPendingSshProfile()?.id || '',
+        activeTerminalId: terminalManager.getActiveId() || '',
+      },
+    });
+  };
+
   // Hint
   hint = document.createElement('div');
   hint.className = 'canvas-hint';
@@ -202,25 +244,32 @@ window.addEventListener('DOMContentLoaded', async () => {
     terminalManager.createTerminal(x, y, w, h);
   };
 
-  // Restore terminals from previous session
-  try {
-    const saved = await invoke<Array<{ x: number; y: number; w: number; h: number; title: string; cwd: string }>>('load_terminal_state');
-    if (saved.length > 0) {
-      hintDismissed = true;
-      updateCanvasHintVisibility();
-      for (const s of saved) {
-        await terminalManager.createTerminal(s.x, s.y, s.w, s.h, { cwd: s.cwd || undefined, mode: 'local' });
+  await sshPanel.ready;
+
+  // Restore workspace from previous session
+  if (settings.getRestoreSession()) {
+    try {
+      const saved = await invoke<WorkspaceState>('load_workspace_state');
+      canvas.setState(saved.canvas);
+      if (saved.pendingSshProfileId) {
+        sshPanel.setActiveProfile(saved.pendingSshProfileId);
       }
+      if (saved.terminals.length > 0) {
+        hintDismissed = true;
+        updateCanvasHintVisibility();
+        for (const session of saved.terminals) {
+          await terminalManager.restoreTerminalSession(session);
+        }
+      }
+    } catch (e) {
+      // No saved state or error - ignore
     }
-  } catch (e) {
-    // No saved state or error - ignore
   }
 
-  // Save terminal state before window closes
+  // Save terminal state before window closes (only if restore session is enabled)
   appWin.onCloseRequested(async () => {
     try {
-      const states = terminalManager.getTerminalStates();
-      await invoke('save_terminal_state', { sessions: states });
+      await persistWorkspace();
     } catch {
       // Ignore save errors on close
     }
@@ -249,16 +298,18 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   });
   bindControl('app-close', () => {
-    // Save terminal state before closing
-    try {
-      const states = terminalManager.getTerminalStates();
-      void invoke('save_terminal_state', { sessions: states });
-    } catch { /* ignore save errors */ }
-    // Use destroy() to force-close (bypasses onCloseRequested lifecycle)
-    void appWin.destroy().catch((error) => {
-      console.error('window destroy failed, falling back to close', error);
-      void appWin.close().catch((e) => console.error('window close also failed', e));
-    });
+    void (async () => {
+      try {
+        await persistWorkspace();
+      } catch {
+        // Ignore save errors on close
+      }
+      // Use destroy() to force-close (bypasses onCloseRequested lifecycle)
+      await appWin.destroy().catch((error) => {
+        console.error('window destroy failed, falling back to close', error);
+        return appWin.close().catch((e) => console.error('window close also failed', e));
+      });
+    })();
   });
 
   const startWindowDrag = async (event: MouseEvent) => {
