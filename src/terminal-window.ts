@@ -723,7 +723,11 @@ export class TerminalWindow {
     const leadingSpaces = this.currentLine.match(/^\s*/)?.[0] || '';
     const replacement = preserveLeadingWhitespace ? nextValue : `${leadingSpaces}${nextValue}`;
     await this.moveCursorTo(this.currentLine.length);
-    await invoke('write_pty', { sessionId: this.id, data: '\x15' });
+    // Use backspace-space-backspace to erase the current line instead of Ctrl+U (\x15).
+    // Ctrl+U does not reliably clear the input line on Windows PowerShell, causing
+    // the control character to appear literally in the terminal (e.g. "cd^Ucd").
+    const erase = '\b \b'.repeat(this.currentLine.length);
+    await invoke('write_pty', { sessionId: this.id, data: erase });
     await invoke('write_pty', { sessionId: this.id, data: replacement });
     this.currentLine = replacement;
     this.cursorPos = replacement.length;
@@ -1185,9 +1189,21 @@ export class TerminalWindow {
   private positionSuggestPopup() {
     const metrics = this.getOverlayMetrics();
     if (!metrics) return;
-    const pixelX = metrics.offsetX + metrics.cursorX * metrics.colWidth;
-    const pixelY = metrics.offsetY + (metrics.cursorY + 1) * metrics.rowHeight;
-    this.commandSuggest.positionAt(metrics.terminalBody, pixelX, pixelY);
+
+    // Use getBoundingClientRect() which reflects the current CSS transform
+    // (canvas translate + scale) to get accurate screen-space coordinates.
+    const screen = metrics.terminalBody.querySelector('.xterm-screen') as HTMLElement | null;
+    const host = screen || metrics.terminalBody;
+    const hostRect = host.getBoundingClientRect();
+
+    // Screen-space cell dimensions (already scaled by canvas zoom)
+    const scaledColWidth = hostRect.width / metrics.cols;
+    const scaledRowHeight = hostRect.height / metrics.rows;
+
+    const cursorScreenX = hostRect.left + metrics.cursorX * scaledColWidth;
+    const cursorScreenY = hostRect.top + (metrics.cursorY + 1) * scaledRowHeight;
+
+    this.commandSuggest.positionAtScreen(cursorScreenX, cursorScreenY);
   }
 
   private hasLineSelection(): boolean {
@@ -1960,10 +1976,14 @@ export class TerminalWindow {
   }
 
   private calcFontSize(w: number, h: number): number {
-    const area = w * h;
+    // Subtract title bar (38px) and terminal-body padding (2+4+4=10px)
+    // so the calculation is based on the actual rendering area.
+    const bodyW = w - 8; // 4px padding on each side
+    const bodyH = h - 38 - 10; // title bar + vertical padding
+    const area = Math.max(bodyW, 100) * Math.max(bodyH, 60);
     const refArea = 700 * 450;
     const scale = Math.pow(area / refArea, 0.35);
-    return Math.max(8, Math.min(20, Math.round(12 * scale)));
+    return Math.max(10, Math.min(22, Math.round(14 * scale)));
   }
 
   private updateFontSizeAndFit() {
@@ -2003,13 +2023,28 @@ export class TerminalWindow {
     const terminalRect = terminalBody.getBoundingClientRect();
     if (!hostRect.width || !hostRect.height) return null;
 
+    // Use xterm.js internal cell dimensions for precise overlay positioning.
+    // This avoids rounding errors and DPI discrepancies on Windows where
+    // hostRect.width/cols can drift from the actual rendered cell width.
+    let cellWidth = hostRect.width / this.term.cols;
+    let cellHeight = hostRect.height / this.term.rows;
+    try {
+      const dims = (this.term as any)._core?._renderService?.dimensions?.css?.cell;
+      if (dims && dims.width > 0 && dims.height > 0) {
+        cellWidth = dims.width;
+        cellHeight = dims.height;
+      }
+    } catch {
+      // Fall back to computed values if internal API is unavailable
+    }
+
     const buffer = this.term.buffer.active;
     return {
       terminalBody,
       offsetX: hostRect.left - terminalRect.left,
       offsetY: hostRect.top - terminalRect.top,
-      colWidth: hostRect.width / this.term.cols,
-      rowHeight: hostRect.height / this.term.rows,
+      colWidth: cellWidth,
+      rowHeight: cellHeight,
       cols: this.term.cols,
       rows: this.term.rows,
       cursorX: buffer.cursorX,

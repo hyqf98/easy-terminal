@@ -131,6 +131,16 @@ export class CommandSuggest {
     const rect = terminalEl.getBoundingClientRect();
     const cursorScreenX = rect.left + Math.max(0, cursorX);
     const cursorScreenY = rect.top + Math.max(0, cursorY);
+    this.applyPopupPosition(cursorScreenX, cursorScreenY);
+  }
+
+  positionAtScreen(screenX: number, screenY: number) {
+    if (!this.popup) return;
+    this.applyPopupPosition(screenX, screenY);
+  }
+
+  private applyPopupPosition(cursorScreenX: number, cursorScreenY: number) {
+    const popup = this.popup!;
     const popupWidth = Math.min(520, Math.max(320, window.innerWidth * 0.26));
     const gap = 4;
     const spaceBelow = window.innerHeight - cursorScreenY - gap;
@@ -153,12 +163,12 @@ export class CommandSuggest {
       left = Math.max(8, window.innerWidth - popupWidth - 8);
     }
 
-    this.popup.style.minWidth = '240px';
-    this.popup.style.width = `${popupWidth}px`;
-    this.popup.style.maxWidth = `${Math.min(popupWidth, window.innerWidth - 16)}px`;
-    this.popup.style.maxHeight = `${maxH}px`;
-    this.popup.style.left = `${left}px`;
-    this.popup.style.top = `${top}px`;
+    popup.style.minWidth = '240px';
+    popup.style.width = `${popupWidth}px`;
+    popup.style.maxWidth = `${Math.min(popupWidth, window.innerWidth - 16)}px`;
+    popup.style.maxHeight = `${maxH}px`;
+    popup.style.left = `${left}px`;
+    popup.style.top = `${top}px`;
   }
 
   handleKey(e: KeyboardEvent): boolean {
