@@ -218,7 +218,7 @@ pub fn read_file_preview(path: &str) -> Result<FilePreviewData, String> {
     })
 }
 
-fn detect_language(path: &Path) -> String {
+pub fn detect_language(path: &Path) -> String {
     match path
         .extension()
         .and_then(|ext| ext.to_str())

@@ -2,6 +2,7 @@ import type { SSHProfile } from './types';
 import { parseCommandLine } from './shell-parse';
 
 const PREVIEW_COMMANDS = new Set(['cat', 'type', 'more', 'less', 'bat', 'vim', 'nvim', 'vi']);
+const FILE_EDITOR_COMMANDS = new Set(['vim', 'nvim', 'vi']);
 
 export function resolvePreviewPath(commandLine: string, cwd: string): string | null {
   const args = parseCommandLine(commandLine);
@@ -17,6 +18,28 @@ export function resolvePreviewPath(commandLine: string, cwd: string): string | n
 
   if (!fileArg || isRemoteTarget(fileArg)) return null;
   return resolvePath(cwd, fileArg);
+}
+
+export function resolveSshPreviewPath(commandLine: string): string | null {
+  const args = parseCommandLine(commandLine);
+  if (args.length < 2) return null;
+
+  const command = args[0].toLowerCase();
+  if (!PREVIEW_COMMANDS.has(command)) return null;
+
+  const candidates = args.slice(1).filter((arg) => arg && !arg.startsWith('-') && !arg.startsWith('+'));
+  const fileArg = FILE_EDITOR_COMMANDS.has(command)
+    ? candidates[candidates.length - 1]
+    : candidates[0];
+
+  if (!fileArg || isRemoteTarget(fileArg)) return null;
+  return fileArg;
+}
+
+export function isFileEditorCommand(commandLine: string): boolean {
+  const args = parseCommandLine(commandLine);
+  if (args.length < 2) return false;
+  return FILE_EDITOR_COMMANDS.has(args[0].toLowerCase());
 }
 
 export function buildSshStartupCommand(profile: SSHProfile, profiles: SSHProfile[]): string {

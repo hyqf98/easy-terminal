@@ -9,6 +9,99 @@ use std::process::Command;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 
+struct ConvertedKey {
+    path: PathBuf,
+    cleaned_up: bool,
+}
+
+impl ConvertedKey {
+    fn new(path: PathBuf) -> Self {
+        ConvertedKey {
+            path,
+            cleaned_up: false,
+        }
+    }
+}
+
+impl Drop for ConvertedKey {
+    fn drop(&mut self) {
+        if !self.cleaned_up {
+            let _ = local_fs::remove_file(&self.path);
+        }
+    }
+}
+
+fn convert_openssh_key_to_pem(key_path: &Path) -> Result<ConvertedKey, String> {
+    let tmp_dir = std::env::temp_dir();
+    let tmp_name = format!(
+        "easy-terminal-ssh-key-{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis()
+    );
+    let tmp_path = tmp_dir.join(tmp_name);
+
+    let output = Command::new("ssh-keygen")
+        .args(["-e", "-f", &key_path.to_string_lossy(), "-m", "pem"])
+        .output()
+        .map_err(|e| format!("无法执行 ssh-keygen: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("密钥格式转换失败: {}", stderr.trim()));
+    }
+
+    local_fs::write(&tmp_path, &output.stdout)
+        .map_err(|e| format!("无法写入临时密钥文件: {}", e))?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = local_fs::set_permissions(&tmp_path, local_fs::Permissions::from_mode(0o600));
+    }
+
+    Ok(ConvertedKey::new(tmp_path))
+}
+
+fn authenticate_with_key(
+    session: &Session,
+    user: &str,
+    key_path: &Path,
+    passphrase: Option<&str>,
+) -> Result<(), String> {
+    let result = session.userauth_pubkey_file(user, None, key_path, passphrase);
+
+    if let Err(e) = result {
+        let err_msg = format!("{}", e);
+        let needs_conversion = err_msg.contains("Invalid")
+            || err_msg.contains("failed")
+            || err_msg.contains("Bad")
+            || err_msg.contains("Unable")
+            || err_msg.contains("invalid");
+
+        if needs_conversion {
+            let converted = convert_openssh_key_to_pem(key_path)?;
+            session
+                .userauth_pubkey_file(user, None, &converted.path, passphrase)
+                .map_err(|e2| {
+                    let err2 = format!("{}", e2);
+                    format!(
+                        "密钥认证失败(已尝试PEM转换): {}\n原始错误: {}\n密钥文件: {}",
+                        err2,
+                        err_msg,
+                        key_path.display()
+                    )
+                })?;
+            Ok(())
+        } else {
+            Err(format!("密钥认证失败: {}", err_msg))
+        }
+    } else {
+        Ok(())
+    }
+}
+
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FileTransferProgress {
@@ -19,6 +112,86 @@ pub struct FileTransferProgress {
     pub transferred_bytes: u64,
     pub total_bytes: u64,
     pub progress_percent: u64,
+}
+
+pub fn read_remote_file(
+    profile: settings::SSHProfile,
+    path: String,
+    _profiles: Vec<settings::SSHProfile>,
+) -> Result<fs::FilePreviewData, String> {
+    let session = connect_session(&profile)?;
+    let sftp = session
+        .sftp()
+        .map_err(|e| format!("无法创建 SFTP 会话: {}", e))?;
+    let remote_path = Path::new(&path);
+
+    let stat = sftp
+        .stat(remote_path)
+        .map_err(|e| format!("读取远程文件信息失败: {}", e))?;
+    if stat.is_dir() {
+        return Err(format!("不能预览目录: {}", path));
+    }
+
+    const MAX_PREVIEW_BYTES: usize = 2 * 1024 * 1024;
+    let file_size = stat.size.unwrap_or(0) as usize;
+    let mut remote_file = sftp
+        .open(remote_path)
+        .map_err(|e| format!("打开远程文件失败: {}", e))?;
+
+    let read_size = if file_size > MAX_PREVIEW_BYTES {
+        MAX_PREVIEW_BYTES
+    } else {
+        file_size
+    };
+    let mut buf = vec![0u8; read_size];
+    let mut total_read = 0;
+    while total_read < read_size {
+        let n = remote_file
+            .read(&mut buf[total_read..])
+            .map_err(|e| format!("读取远程文件失败: {}", e))?;
+        if n == 0 {
+            break;
+        }
+        total_read += n;
+    }
+    buf.truncate(total_read);
+
+    if buf.iter().take(4096).any(|b| *b == 0) {
+        return Err("二进制文件暂不支持预览".to_string());
+    }
+
+    let truncated = file_size > MAX_PREVIEW_BYTES;
+    Ok(fs::FilePreviewData {
+        path: path.clone(),
+        language: fs::detect_language(Path::new(&path)),
+        content: String::from_utf8_lossy(&buf).to_string(),
+        truncated,
+        size: file_size as u64,
+    })
+}
+
+pub fn write_remote_file(
+    profile: settings::SSHProfile,
+    path: String,
+    content: String,
+    _profiles: Vec<settings::SSHProfile>,
+) -> Result<(), String> {
+    let session = connect_session(&profile)?;
+    let sftp = session
+        .sftp()
+        .map_err(|e| format!("无法创建 SFTP 会话: {}", e))?;
+    let remote_path = Path::new(&path);
+
+    let mut remote_file = sftp
+        .create(remote_path)
+        .map_err(|e| format!("创建远程文件失败: {}", e))?;
+    remote_file
+        .write_all(content.as_bytes())
+        .map_err(|e| format!("写入远程文件失败: {}", e))?;
+    remote_file
+        .flush()
+        .map_err(|e| format!("刷新远程文件失败: {}", e))?;
+    Ok(())
 }
 
 pub fn test_connection(
@@ -278,14 +451,18 @@ fn test_direct_connection(
 
     if auth_type == "key" {
         let key_path = expand_home(private_key_path)?;
+
+        if !key_path.exists() {
+            return Err(format!("密钥文件不存在: {}", key_path.display()));
+        }
+
         let passphrase = if password.trim().is_empty() {
             None
         } else {
             Some(password.as_str())
         };
-        session
-            .userauth_pubkey_file(&user, None, &key_path, passphrase)
-            .map_err(|e| format!("密钥认证失败: {}", e))?;
+
+        authenticate_with_key(&session, &user, &key_path, passphrase)?;
     } else {
         if password.trim().is_empty() {
             return Err("密码认证需要填写密码".to_string());
@@ -401,14 +578,18 @@ fn connect_session(profile: &settings::SSHProfile) -> Result<Session, String> {
 
     if profile.auth_type == "key" {
         let key_path = expand_home(profile.private_key_path.clone())?;
+
+        if !key_path.exists() {
+            return Err(format!("密钥文件不存在: {}", key_path.display()));
+        }
+
         let passphrase = if profile.password.trim().is_empty() {
             None
         } else {
             Some(profile.password.as_str())
         };
-        session
-            .userauth_pubkey_file(&profile.user, None, &key_path, passphrase)
-            .map_err(|e| format!("密钥认证失败: {}", e))?;
+
+        authenticate_with_key(&session, &profile.user, &key_path, passphrase)?;
     } else {
         if profile.password.trim().is_empty() {
             return Err("密码认证需要填写密码".to_string());

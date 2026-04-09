@@ -146,6 +146,7 @@ const messages: Record<Lang, Record<string, string>> = {
 
     // Terminal
     'terminal.copied': '成功复制终端',
+    'terminal.textCopied': '已复制到剪贴板',
     'terminal.unnamed': '未命名',
     'terminal.copyText': '复制文本',
     'terminal.addMapping': '添加为命令映射',
@@ -366,6 +367,7 @@ const messages: Record<Lang, Record<string, string>> = {
 
     // Terminal
     'terminal.copied': 'Terminal copied',
+    'terminal.textCopied': 'Copied to clipboard',
     'terminal.unnamed': 'Untitled',
     'terminal.copyText': 'Copy text',
     'terminal.addMapping': 'Add as command mapping',

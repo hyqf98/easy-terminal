@@ -2131,7 +2131,7 @@ body {
   animation: windowAppear 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   min-width: 200px;
   min-height: 100px;
-  transition: border-color 0.15s, box-shadow 0.2s ease, transform 0.2s ease;
+  transition: border-color 0.15s, box-shadow 0.2s ease;
 }
 
 .terminal-window.focused {
@@ -2142,18 +2142,18 @@ body {
 }
 
 .terminal-window.focus-pulse {
-  animation: focusPulse 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: focusPulse 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes focusPulse {
-  0% { transform: scale(0.985); }
-  50% { transform: scale(1.01); }
-  100% { transform: scale(1); }
+  0% { box-shadow: 0 8px 32px var(--shadow), 0 0 0 2px color-mix(in srgb, var(--accent) 50%, transparent), 0 0 0 6px color-mix(in srgb, var(--accent) 15%, transparent); }
+  50% { box-shadow: 0 8px 32px var(--shadow), 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent), 0 0 0 8px color-mix(in srgb, var(--accent) 5%, transparent); }
+  100% { box-shadow: 0 8px 32px var(--shadow), 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent), 0 0 0 5px color-mix(in srgb, var(--accent) 8%, transparent); }
 }
 
 @keyframes windowAppear {
-  from { transform: scale(0.92); }
-  to { transform: scale(1); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .terminal-window .title-bar {
@@ -2223,7 +2223,7 @@ body {
 .terminal-window .terminal-body {
   flex: 1;
   overflow: hidden;
-  padding: 2px 4px 4px;
+  padding: 0;
   background: var(--bg-base);
   position: relative;
 }
@@ -2277,6 +2277,7 @@ body {
   user-select: none;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: normal;
 }
 
 .ghost-text-value {
@@ -2339,10 +2340,56 @@ body {
   outline: none !important;
 }
 .terminal-body .xterm .xterm-cursor,
-.terminal-body .xterm .xterm-rows .xterm-cursor,
-.terminal-body .xterm .xterm-cursor-layer {
+.terminal-body .xterm .xterm-rows .xterm-cursor {
   visibility: visible !important;
   opacity: 1 !important;
+}
+.terminal-body .xterm .xterm-cursor.xterm-cursor-outline,
+.terminal-body .xterm .xterm-rows .xterm-cursor.xterm-cursor-outline {
+  outline: none !important;
+  box-shadow: none !important;
+  background: none !important;
+  border: none !important;
+  border-left: 1.5px solid var(--accent) !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: inline-block !important;
+  box-sizing: border-box !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  vertical-align: top !important;
+}
+.terminal-body .xterm .xterm-cursor.xterm-cursor-block,
+.terminal-body .xterm .xterm-rows .xterm-cursor.xterm-cursor-block {
+  background: none !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-left: 1.5px solid var(--accent) !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: inline-block !important;
+  box-sizing: border-box !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  vertical-align: top !important;
+}
+.terminal-body .xterm .xterm-cursor.xterm-cursor-bar,
+.terminal-body .xterm .xterm-rows .xterm-cursor.xterm-cursor-bar {
+  box-shadow: none !important;
+  background: none !important;
+  border: none !important;
+  border-left: 1.5px solid var(--accent) !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: inline-block !important;
+  box-sizing: border-box !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  vertical-align: top !important;
 }
 .terminal-body .xterm .xterm-cursor.xterm-cursor-outline,
 .terminal-body .xterm .xterm-rows .xterm-cursor.xterm-cursor-outline {
@@ -2757,6 +2804,203 @@ body {
   font-family: "Cascadia Code", "Fira Code", "JetBrains Mono", Consolas, monospace;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* ===== File Editor (CodeMirror) ===== */
+.file-editor-card {
+  width: min(1080px, 100%);
+  max-height: min(92vh, 960px);
+}
+
+.file-editor-body {
+  flex: 1;
+  min-height: 0;
+  padding: 0 18px 0;
+  overflow: hidden;
+}
+
+.file-editor-body .cm-editor {
+  height: 100%;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  overflow: hidden;
+}
+
+.file-editor-body .cm-editor .cm-scroller {
+  overflow: auto;
+}
+
+.file-editor-body .cm-editor.cm-focused {
+  outline: none !important;
+}
+
+.file-editor-body .cm-editor .cm-content {
+  padding: 12px 0;
+}
+
+.file-editor-body .cm-editor .cm-gutters {
+  background: color-mix(in srgb, var(--bg-crust) 80%, transparent);
+  border-right: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.file-editor-body .cm-editor .cm-activeLineGutter {
+  background: color-mix(in srgb, var(--bg-surface0) 50%, transparent);
+  color: var(--text);
+}
+
+.file-editor-body .cm-editor .cm-activeLine {
+  background: color-mix(in srgb, var(--bg-surface0) 30%, transparent);
+}
+
+.file-editor-body .cm-editor .cm-selectionBackground,
+.file-editor-body .cm-editor.cm-focused .cm-selectionBackground {
+  background: color-mix(in srgb, var(--accent) 28%, transparent) !important;
+}
+
+.file-editor-body .cm-editor .cm-cursor {
+  border-left: 2px solid var(--accent);
+}
+
+.file-editor-body .cm-editor .cm-searchMatch {
+  background: color-mix(in srgb, var(--yellow) 30%, transparent);
+}
+
+.file-editor-body .cm-editor .cm-searchMatch.cm-searchMatch-selected {
+  background: color-mix(in srgb, var(--yellow) 50%, transparent);
+}
+
+.file-editor-body .cm-editor .cm-foldGutter {
+  width: 16px;
+}
+
+.file-editor-body .cm-editor .cm-foldPlaceholder {
+  background: color-mix(in srgb, var(--bg-surface0) 60%, transparent);
+  border: none;
+  color: var(--text-sub);
+  font-size: 12px;
+  padding: 0 4px;
+}
+
+.file-editor-body .cm-editor .cm-tooltip {
+  background: var(--bg-mantle);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px var(--shadow);
+}
+
+.file-editor-body .cm-editor .cm-tooltip-autocomplete > ul > li {
+  padding: 4px 8px;
+}
+
+.file-editor-body .cm-editor .cm-tooltip-autocomplete > ul > li[aria-selected] {
+  background: color-mix(in srgb, var(--accent) 18%, var(--bg-surface0));
+  color: var(--text);
+}
+
+.file-editor-body .cm-editor .cm-panels {
+  background: var(--bg-crust);
+  border-top: 1px solid var(--border);
+}
+
+.file-editor-body .cm-editor .cm-panels input,
+.file-editor-body .cm-editor .cm-panels button {
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.file-editor-body .cm-editor .cm-search {
+  padding: 6px 10px;
+}
+
+.file-editor-body .cm-editor .cm-search input {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  background: var(--bg-surface0);
+  color: var(--text);
+}
+
+.file-editor-body .cm-editor .cm-search button {
+  border-radius: 6px;
+  padding: 4px 10px;
+  background: var(--bg-surface1);
+  color: var(--text);
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.file-editor-body .cm-editor .cm-lintRange-error {
+  text-decoration: wavy underline var(--red);
+}
+
+.file-editor-body .cm-editor .cm-lintRange-warning {
+  text-decoration: wavy underline var(--yellow);
+}
+
+.file-editor-save-btn {
+  padding: 5px 14px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.file-editor-save-btn:hover {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.file-editor-save-btn:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.file-editor-statusbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 6px 18px 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.file-editor-status-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+[data-theme="light"] .file-editor-body .cm-editor {
+  background: #fafafa;
+  color: #1a1a2e;
+}
+
+[data-theme="light"] .file-editor-body .cm-editor .cm-gutters {
+  background: #f0f0f0;
+  border-right: 1px solid #e0e0e0;
+  color: #888;
+}
+
+[data-theme="light"] .file-editor-body .cm-editor .cm-activeLineGutter {
+  background: #e8e8e8;
+  color: #333;
+}
+
+[data-theme="light"] .file-editor-body .cm-editor .cm-activeLine {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .file-editor-body .cm-editor .cm-cursor {
+  border-left: 2px solid #0071e3;
+}
+
+[data-theme="light"] .file-editor-body .cm-editor .cm-selectionBackground {
+  background: rgba(0, 113, 227, 0.15) !important;
 }
 
 .history-main,

@@ -171,6 +171,8 @@ fn build_unix_command(cwd: Option<&str>) -> Result<CommandBuilder, String> {
         c.arg("-i");
         c.env("ZDOTDIR", zdotdir);
         c.env("EASY_TERMINAL", "1");
+        c.env("LANG", "en_US.UTF-8");
+        c.env("LC_ALL", "en_US.UTF-8");
         apply_cwd(&mut c, cwd);
         return Ok(c);
     }
@@ -179,6 +181,8 @@ fn build_unix_command(cwd: Option<&str>) -> Result<CommandBuilder, String> {
     c.env("PROMPT_COMMAND", r#"printf "\033]0;%s\007" "$PWD""#);
     c.env("PS1", r#"\[\e]0;\w\a\]\w $ "#);
     c.env("EASY_TERMINAL", "1");
+    c.env("LANG", "en_US.UTF-8");
+    c.env("LC_ALL", "en_US.UTF-8");
     apply_cwd(&mut c, cwd);
     Ok(c)
 }

@@ -114,17 +114,15 @@ export class SSHPanel {
   private renderCard(profile: SSHProfile): string {
     const isActive = profile.id === this.activeDrawId;
     return `
-      <div class="ssh-profile-item${isActive ? ' active' : ''}">
+      <div class="ssh-profile-item${isActive ? ' active' : ''}" data-ssh-profile="${escapeHtml(profile.id)}">
         <div class="ssh-profile-main">
           <div class="ssh-profile-name-row">
             <span class="ssh-profile-name">${escapeHtml(profile.name)}</span>
-            ${isActive ? `<span class="cmd-chip accent">${t('ssh.activeBadge')}</span>` : ''}
           </div>
           <div class="ssh-profile-host">${escapeHtml(profile.user)}@${escapeHtml(profile.host)}:${profile.port}</div>
         </div>
         <div class="ssh-profile-actions">
           <button class="ssh-action-btn" data-ssh-connect="${escapeHtml(profile.id)}" title="${t('ssh.connectNow')}">${connectIcon()}</button>
-          <button class="ssh-action-btn" data-ssh-activate="${escapeHtml(profile.id)}" title="${t('ssh.activate')}">${activateIcon()}</button>
           <button class="ssh-action-btn" data-ssh-edit="${escapeHtml(profile.id)}" title="${t('cmd.edit')}">${editIcon()}</button>
           <button class="ssh-action-btn danger" data-ssh-delete="${escapeHtml(profile.id)}" title="${t('cmd.delete')}">${deleteIcon()}</button>
         </div>
@@ -180,13 +178,13 @@ export class SSHPanel {
           <span>${t('ssh.password')}</span>
           <input id="ssh-password" type="password" value="${escapeHtml(profile.password || '')}" placeholder="${t('ssh.passwordPlaceholder')}">
         </label>
-        <label class="cmd-field ssh-key-field" style="display:${isKey ? 'flex' : 'none'}">
+        <div class="cmd-field ssh-key-field" style="display:${isKey ? 'flex' : 'none'}">
           <span>${t('ssh.privateKeyPath')}<em class="ssh-required">*</em></span>
           <div class="ssh-file-row">
             <input id="ssh-key-path" type="text" value="${escapeHtml(profile.privateKeyPath || '')}" placeholder="${t('ssh.privateKeyPathPlaceholder')}">
-            <button class="ssh-file-btn" id="ssh-pick-key">${folderIcon()}</button>
+            <button type="button" class="ssh-file-btn" id="ssh-pick-key">${folderIcon()}</button>
           </div>
-        </label>
+        </div>
         <label class="cmd-field">
           <span>${t('ssh.proxyJump')}</span>
           <select id="ssh-jump-profile">
@@ -241,7 +239,9 @@ export class SSHPanel {
     });
 
     // Pick key file
-    root.querySelector('#ssh-pick-key')?.addEventListener('click', async () => {
+    root.querySelector('#ssh-pick-key')?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       try {
         const selected = await open({
           title: t('ssh.privateKeyPath'),
@@ -367,21 +367,36 @@ export class SSHPanel {
       });
     });
 
-    this.body.querySelectorAll<HTMLElement>('[data-ssh-activate]').forEach((button) => {
-      button.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.activeDrawId = button.dataset.sshActivate || '';
-        const profile = this.profiles.find((item) => item.id === this.activeDrawId) || null;
-        this.onSelectionChange?.(profile, this.profiles);
-        this.render();
-      });
-    });
-
     this.body.querySelectorAll<HTMLElement>('[data-ssh-connect]').forEach((button) => {
       button.addEventListener('click', async (e) => {
         e.stopPropagation();
         const profile = this.profiles.find((item) => item.id === button.dataset.sshConnect);
         if (profile) {
+          this.activeDrawId = profile.id;
+          this.render();
+          this.onSelectionChange?.(profile, this.profiles);
+          await this.onConnect?.(profile, this.profiles);
+        }
+      });
+    });
+
+    this.body.querySelectorAll<HTMLElement>('[data-ssh-profile]').forEach((card) => {
+      card.addEventListener('click', (e) => {
+        if ((e.target as HTMLElement).closest('[data-ssh-connect],[data-ssh-edit],[data-ssh-delete]')) return;
+        const profileId = card.dataset.sshProfile || '';
+        this.activeDrawId = this.activeDrawId === profileId ? '' : profileId;
+        const active = this.profiles.find((p) => p.id === this.activeDrawId) || null;
+        this.onSelectionChange?.(active, this.profiles);
+        this.render();
+      });
+
+      card.addEventListener('dblclick', async (e) => {
+        e.stopPropagation();
+        const profile = this.profiles.find((item) => item.id === card.dataset.sshProfile);
+        if (profile) {
+          this.activeDrawId = profile.id;
+          this.render();
+          this.onSelectionChange?.(profile, this.profiles);
           await this.onConnect?.(profile, this.profiles);
         }
       });
@@ -470,10 +485,6 @@ function addIcon(): string {
 
 function connectIcon(): string {
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>`;
-}
-
-function activateIcon(): string {
-  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
 }
 
 function editIcon(): string {

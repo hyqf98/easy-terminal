@@ -248,6 +248,25 @@ fn upload_local_entries(
 }
 
 #[tauri::command]
+fn read_remote_file(
+    profile: settings::SSHProfile,
+    path: String,
+    profiles: Vec<settings::SSHProfile>,
+) -> Result<fs::FilePreviewData, String> {
+    ssh::read_remote_file(profile, path, profiles)
+}
+
+#[tauri::command]
+fn write_remote_file(
+    profile: settings::SSHProfile,
+    path: String,
+    content: String,
+    profiles: Vec<settings::SSHProfile>,
+) -> Result<(), String> {
+    ssh::write_remote_file(profile, path, content, profiles)
+}
+
+#[tauri::command]
 fn load_shortcuts() -> Result<Vec<settings::ShortcutBinding>, String> {
     settings::load_shortcuts()
 }
@@ -423,6 +442,8 @@ pub fn run() {
             read_remote_dir,
             download_remote_entries,
             upload_local_entries,
+            read_remote_file,
+            write_remote_file,
             load_shortcuts,
             save_shortcuts,
             load_default_shortcuts,

@@ -127,7 +127,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     hint.classList.toggle('hidden', layout !== 'canvas' || hintDismissed);
   };
   const updateLayoutMode = (tab: string | null) => {
-    appBody.dataset.layout = tab === 'files' ? 'files' : tab ? 'workspace' : 'canvas';
+    appBody.dataset.layout = tab === 'files' || tab === 'ssh' ? 'files' : tab ? 'workspace' : 'canvas';
     updateCanvasHintVisibility();
   };
   sidebar.onTabChange = updateLayoutMode;
@@ -185,13 +185,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     terminalManager.setSshProfiles(profiles);
     fileTree.setSshProfiles(profiles);
   };
-
-  new ShortcutPanel(panelShortcuts, shortcutManager);
-  sshPanel.onSelectionChange = (profile, profiles) => {
-    terminalManager.setSshProfiles(profiles);
-    fileTree.setSshProfiles(profiles);
+  sshPanel.onSelectionChange = (profile) => {
     terminalManager.setPendingSshProfile(profile);
   };
+
+  new ShortcutPanel(panelShortcuts, shortcutManager);
   sshPanel.onConnect = async (profile, profiles) => {
     terminalManager.setSshProfiles(profiles);
     fileTree.setSshProfiles(profiles);
@@ -254,11 +252,16 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (saved.pendingSshProfileId) {
         sshPanel.setActiveProfile(saved.pendingSshProfileId);
       }
-      if (saved.terminals.length > 0) {
+      const valid = saved.terminals.filter((s) => {
+        if (s.minimized) return false;
+        if (s.w <= 200 && s.h <= 100 && s.launchOptions?.mode !== 'ssh') return false;
+        return true;
+      });
+      if (valid.length > 0) {
         hintDismissed = true;
         updateCanvasHintVisibility();
-        for (const session of saved.terminals) {
-          await terminalManager.restoreTerminalSession(session);
+        for (const session of valid) {
+          terminalManager.restoreTerminalSession(session);
         }
       }
     } catch (e) {
@@ -267,12 +270,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Save terminal state before window closes (only if restore session is enabled)
-  appWin.onCloseRequested(async () => {
+  appWin.onCloseRequested(async (event) => {
+    event.preventDefault();
     try {
       await persistWorkspace();
     } catch {
       // Ignore save errors on close
     }
+    await appWin.destroy();
   });
 
   // App window controls — use mousedown to avoid WebKit backdrop-filter compositing issues
@@ -368,8 +373,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   terminalManager.onTerminalCopied = () => {
     showToast(t('terminal.copied'));
   };
+  terminalManager.onTextCopied = () => {
+    showToast(t('terminal.textCopied'));
+  };
 
-  // Global terminal duplicate shortcuts
+  // Global terminal duplicate shortcuts (Ctrl/Cmd+D and Ctrl/Cmd+Shift+D)
   document.addEventListener('keydown', (e) => {
     const activeEl = document.activeElement;
     if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') && !activeEl.classList.contains('xterm-helper-textarea')) return;

@@ -4,6 +4,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { open } from '@tauri-apps/plugin-dialog';
 import { t } from './i18n';
 import type { SSHProfile, TerminalLaunchOptions } from './types';
+import { openLocalFileEditor, openRemoteFileEditor } from './file-editor';
 
 interface FileEntry {
   name: string;
@@ -387,6 +388,10 @@ export class FileTree {
         this.currentPath = entry.path;
         this.updateContextHeader();
       });
+      item.addEventListener('dblclick', (event) => {
+        event.stopPropagation();
+        this.openFileInEditor(entry);
+      });
     }
 
     item.addEventListener('contextmenu', (event) => {
@@ -462,6 +467,20 @@ export class FileTree {
 
     item.append(arrow, icon, name, modified, size);
     return item;
+  }
+
+  private openFileInEditor(entry: FileEntry) {
+    if (entry.is_dir) return;
+    if (this.source.kind === 'remote') {
+      openRemoteFileEditor(entry.path, this.getRemoteProfile(), this.sshProfiles);
+    } else {
+      openLocalFileEditor(entry.path);
+    }
+  }
+
+  private getRemoteProfile(): SSHProfile {
+    const source = this.source as { kind: 'remote'; profileId: string; home: string };
+    return this.sshProfiles.find((p) => p.id === source.profileId) || this.sshProfiles[0];
   }
 
   private handleClick(path: string, shiftKey: boolean) {

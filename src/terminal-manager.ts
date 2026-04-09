@@ -28,6 +28,8 @@ export class TerminalManager {
 
   /** Called when Ctrl+C successfully copies a terminal (for toast) */
   public onTerminalCopied: (() => void) | null = null;
+  /** Called when text selection is auto-copied */
+  public onTextCopied: (() => void) | null = null;
   public onActiveTerminalCwdChange: ((cwd: string) => void) | null = null;
   public onActiveTerminalChange: ((context: { cwd: string; launchOptions: TerminalLaunchOptions } | null) => void) | null = null;
   public onAddMappingFromSelection: ((text: string) => void) | null = null;
@@ -59,6 +61,7 @@ export class TerminalManager {
     );
     await tw.initPty(launchOptions);
     tw.onActivate = (id) => this.focusTerminal(id);
+    tw.onCloseRequested = (id) => this.closeTerminal(id);
     tw.onCommandExecuted = (command, currentCwd) => this.onCommandExecuted?.(command, currentCwd);
     tw.onCwdChange = (cwd) => {
       if (this.activeId === tw.getId() && launchOptions.mode !== 'ssh') {
@@ -72,6 +75,7 @@ export class TerminalManager {
       }
     };
     tw.onAddMappingFromSelection = (text) => this.onAddMappingFromSelection?.(text);
+    tw.onSelectionCopied = () => this.onTextCopied?.();
 
     this.terminals.set(tw.getId(), tw);
     this.focusTerminal(tw.getId());
@@ -209,7 +213,10 @@ export class TerminalManager {
   getTerminalStates(): TerminalSessionState[] {
     const states: TerminalSessionState[] = [];
     for (const [, tw] of this.terminals) {
+      if (tw.isWindowMinimized()) continue;
       const rect = tw.getRect();
+      const opts = tw.getLaunchOptions();
+      if (rect.w <= 200 && rect.h <= 100 && opts.mode !== 'ssh') continue;
       states.push({
         x: rect.x,
         y: rect.y,
@@ -217,9 +224,9 @@ export class TerminalManager {
         h: rect.h,
         title: tw.getTitle(),
         cwd: tw.getCwd(),
-        minimized: tw.isWindowMinimized(),
+        minimized: false,
         maximized: tw.isWindowMaximized(),
-        launchOptions: this.cloneLaunchOptions(tw.getLaunchOptions()),
+        launchOptions: this.cloneLaunchOptions(opts),
       });
     }
     return states;
