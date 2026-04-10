@@ -111,6 +111,11 @@ export class TerminalWindow {
   private passwordQueue: string[] = [];
   private acceptedUnknownHost = false;
   private passwordPromptBuffer = '';
+  private sshHandshakeDone = false;
+
+  // Freeze state: pause terminal writes during drag/resize
+  private frozen = false;
+  private frozenOutput: string[] = [];
 
   // Drag state
   private isDragging = false;
@@ -118,8 +123,9 @@ export class TerminalWindow {
   private dragOffsetY = 0;
   private boundDragMove: (e: MouseEvent) => void;
   private boundDragEnd: () => void;
+  private dragRaf: number | null = null;
+  private pendingDragEvent: MouseEvent | null = null;
 
-  // Resize state
   private isResizing = false;
   private resizeDirection = '';
   private resizeStartX = 0;
@@ -130,6 +136,8 @@ export class TerminalWindow {
   private resizeStartTop = 0;
   private boundResizeMove: (e: MouseEvent) => void;
   private boundResizeEnd: () => void;
+  private resizeRaf: number | null = null;
+  private pendingResizeEvent: MouseEvent | null = null;
 
   // Minimize/Maximize state
   private isMinimized = false;
@@ -210,6 +218,7 @@ export class TerminalWindow {
     this.installZoomMouseFix(body);
     this.bindSelectionCopy(body);
     this.term.onRender(() => {
+      if (!this.currentLine.trim() || this.isInAltBuffer()) return;
       this.scheduleSyntaxHighlightRefresh();
     });
     this.unlistenLang = onLangChange(() => {
@@ -238,6 +247,10 @@ export class TerminalWindow {
     this.unlisten = await listen<PtyOutputEvent>('pty-output', (event) => {
       if (event.payload.session_id === sessionId) {
         const data = event.payload.data;
+        if (this.frozen) {
+          this.frozenOutput.push(data);
+          return;
+        }
         this.extractTitleFromOsc(data);
         this.handleSshHandshakeOutput(data);
         this.term.write(data, () => {
@@ -1094,20 +1107,27 @@ export class TerminalWindow {
 
   private handleSshHandshakeOutput(data: string) {
     if (this.launchOptions.mode !== 'ssh') return;
+    if (this.sshHandshakeDone) return;
 
-    this.passwordPromptBuffer = `${this.passwordPromptBuffer}${data}`.slice(-2048);
+    this.passwordPromptBuffer = `${this.passwordPromptBuffer}${data}`.slice(-1024);
     const normalized = this.passwordPromptBuffer.toLowerCase();
 
     if (!this.acceptedUnknownHost && normalized.includes('continue connecting (yes/no')) {
       this.acceptedUnknownHost = true;
       invoke('write_pty', { sessionId: this.id, data: 'yes\r' }).catch(console.error);
+      this.passwordPromptBuffer = '';
       return;
     }
 
-    if (/(password|passphrase).*:\s*$/.test(normalized) && this.passwordQueue.length > 0) {
+    if (this.passwordQueue.length > 0 && /(?:password|passphrase|验证|密码)[:：]\s*$/m.test(normalized)) {
       const nextPassword = this.passwordQueue.shift();
       if (!nextPassword) return;
       invoke('write_pty', { sessionId: this.id, data: `${nextPassword}\r` }).catch(console.error);
+      this.passwordPromptBuffer = '';
+    }
+
+    if (this.passwordQueue.length === 0 && (this.acceptedUnknownHost || !normalized.includes('continue connecting'))) {
+      this.sshHandshakeDone = true;
       this.passwordPromptBuffer = '';
     }
   }
@@ -1271,11 +1291,15 @@ export class TerminalWindow {
   private installZoomMouseFix(body: HTMLDivElement) {
     let redispatching = false;
     let capturing = false;
+    let lastZoom = 1;
 
-    const cachedZoom = () => this.canvasController.getState().zoom;
+    const cachedZoom = () => {
+      lastZoom = this.canvasController.getState().zoom;
+      return lastZoom;
+    };
 
     const makeAdjusted = (e: MouseEvent): MouseEvent | null => {
-      const zoom = cachedZoom();
+      const zoom = lastZoom;
       if (zoom === 1) return null;
 
       const xtermScreen = body.querySelector('.xterm-screen') as HTMLElement | null;
@@ -1312,7 +1336,8 @@ export class TerminalWindow {
     body.addEventListener('mousedown', (e: MouseEvent) => {
       if (redispatching) return;
       if (!(e.target as HTMLElement).closest('.xterm')) return;
-      if (cachedZoom() === 1) return;
+      cachedZoom();
+      if (lastZoom === 1) return;
 
       e.stopImmediatePropagation();
       e.preventDefault();
@@ -1324,8 +1349,9 @@ export class TerminalWindow {
 
     const onMove = (e: MouseEvent) => {
       if (redispatching) return;
-      if (!(e.target as HTMLElement).closest('.xterm') && !capturing) return;
-      if (cachedZoom() === 1) { capturing = false; return; }
+      if (!capturing) return;
+      cachedZoom();
+      if (lastZoom === 1) { capturing = false; return; }
 
       e.stopImmediatePropagation();
       e.preventDefault();
@@ -1335,11 +1361,11 @@ export class TerminalWindow {
     };
 
     const onUp = (e: MouseEvent) => {
-      if (!capturing && !(e.target as HTMLElement).closest('.xterm')) return;
       if (!capturing) return;
 
       capturing = false;
-      if (cachedZoom() === 1) return;
+      cachedZoom();
+      if (lastZoom === 1) return;
 
       e.stopImmediatePropagation();
       e.preventDefault();
@@ -1393,7 +1419,6 @@ export class TerminalWindow {
         this.onActivate?.(this.id);
       }
       this.container.classList.remove('focus-pulse');
-      // Record start position but don't start dragging yet
       dragStartX = e.clientX;
       dragStartY = e.clientY;
       dragStarted = false;
@@ -1409,15 +1434,15 @@ export class TerminalWindow {
       window.addEventListener('mouseup', this.boundDragEnd);
     });
 
-    // Override drag move to require minimum movement threshold
     const origDragMove = this.boundDragMove;
     this.boundDragMove = (e: MouseEvent) => {
       if (!dragStarted) {
         const dx = Math.abs(e.clientX - dragStartX);
         const dy = Math.abs(e.clientY - dragStartY);
-        if (dx < 4 && dy < 4) return; // Not enough movement yet
+        if (dx < 4 && dy < 4) return;
         dragStarted = true;
         this.isDragging = true;
+        this.freeze();
         this.container.classList.add('dragging');
       }
       origDragMove.call(this, e);
@@ -1427,6 +1452,12 @@ export class TerminalWindow {
     this.boundDragEnd = () => {
       this.isDragging = false;
       dragStarted = false;
+      this.thaw();
+      if (this.dragRaf !== null) {
+        cancelAnimationFrame(this.dragRaf);
+        this.dragRaf = null;
+      }
+      this.pendingDragEvent = null;
       this.container.classList.remove('dragging');
       this.canvasController.clearGuides();
       window.removeEventListener('mousemove', this.boundDragMove);
@@ -1437,27 +1468,41 @@ export class TerminalWindow {
 
   private onDragMove(e: MouseEvent) {
     if (!this.isDragging) return;
-    const { zoom, panX, panY } = this.canvasController.getState();
-    const viewportRect = this.container.closest('#app-viewport')!.getBoundingClientRect();
-    const pointerCanvasX = (e.clientX - viewportRect.left - panX) / zoom;
-    const pointerCanvasY = (e.clientY - viewportRect.top - panY) / zoom;
-    const canvasX = pointerCanvasX - this.dragOffsetX;
-    const canvasY = pointerCanvasY - this.dragOffsetY;
-    const snapped = this.canvasController.snapRect({
-      x: canvasX,
-      y: canvasY,
-      w: this.container.offsetWidth,
-      h: this.container.offsetHeight,
-    }, {
-      sourceId: this.id,
-      mode: 'drag',
+    this.pendingDragEvent = e;
+    if (this.dragRaf !== null) return;
+    this.dragRaf = requestAnimationFrame(() => {
+      this.dragRaf = null;
+      const ev = this.pendingDragEvent;
+      if (!ev) return;
+      const { zoom, panX, panY } = this.canvasController.getState();
+      const viewportRect = this.container.closest('#app-viewport')!.getBoundingClientRect();
+      const pointerCanvasX = (ev.clientX - viewportRect.left - panX) / zoom;
+      const pointerCanvasY = (ev.clientY - viewportRect.top - panY) / zoom;
+      const canvasX = pointerCanvasX - this.dragOffsetX;
+      const canvasY = pointerCanvasY - this.dragOffsetY;
+      const currentW = parseFloat(this.container.style.width) || this.container.offsetWidth;
+      const currentH = parseFloat(this.container.style.height) || this.container.offsetHeight;
+      const snapped = this.canvasController.snapRect({
+        x: canvasX,
+        y: canvasY,
+        w: currentW,
+        h: currentH,
+      }, {
+        sourceId: this.id,
+        mode: 'drag',
+      });
+      this.container.style.left = `${snapped.x}px`;
+      this.container.style.top = `${snapped.y}px`;
     });
-    this.container.style.left = `${snapped.x}px`;
-    this.container.style.top = `${snapped.y}px`;
   }
 
   private onDragEnd() {
     this.isDragging = false;
+    if (this.dragRaf !== null) {
+      cancelAnimationFrame(this.dragRaf);
+      this.dragRaf = null;
+    }
+    this.pendingDragEvent = null;
     this.container.classList.remove('dragging');
     this.canvasController.clearGuides();
     window.removeEventListener('mousemove', this.boundDragMove);
@@ -1478,11 +1523,12 @@ export class TerminalWindow {
           handle.classList.contains(`resize-${d}`)
         ) || '';
         this.isResizing = true;
+        this.freeze();
         this.resizeDirection = dir;
         this.resizeStartX = e.clientX;
         this.resizeStartY = e.clientY;
-        this.resizeStartW = this.container.offsetWidth;
-        this.resizeStartH = this.container.offsetHeight;
+        this.resizeStartW = parseFloat(this.container.style.width) || this.container.offsetWidth;
+        this.resizeStartH = parseFloat(this.container.style.height) || this.container.offsetHeight;
         this.resizeStartLeft = parseFloat(this.container.style.left) || 0;
         this.resizeStartTop = parseFloat(this.container.style.top) || 0;
         window.addEventListener('mousemove', this.boundResizeMove);
@@ -1548,58 +1594,70 @@ export class TerminalWindow {
 
   private onResizeMove(e: MouseEvent) {
     if (!this.isResizing) return;
-    const { zoom } = this.canvasController.getState();
-    const dx = (e.clientX - this.resizeStartX) / zoom;
-    const dy = (e.clientY - this.resizeStartY) / zoom;
-    const dir = this.resizeDirection;
+    this.pendingResizeEvent = e;
+    if (this.resizeRaf !== null) return;
+    this.resizeRaf = requestAnimationFrame(() => {
+      this.resizeRaf = null;
+      const ev = this.pendingResizeEvent;
+      if (!ev) return;
+      const { zoom } = this.canvasController.getState();
+      const dx = (ev.clientX - this.resizeStartX) / zoom;
+      const dy = (ev.clientY - this.resizeStartY) / zoom;
+      const dir = this.resizeDirection;
 
-    let newLeft = this.resizeStartLeft;
-    let newTop = this.resizeStartTop;
-    let newW = this.resizeStartW;
-    let newH = this.resizeStartH;
+      let newLeft = this.resizeStartLeft;
+      let newTop = this.resizeStartTop;
+      let newW = this.resizeStartW;
+      let newH = this.resizeStartH;
 
-    if (dir.includes('e')) newW = Math.max(200, this.resizeStartW + dx);
-    if (dir.includes('s')) newH = Math.max(100, this.resizeStartH + dy);
-    if (dir.includes('w')) {
-      const proposedW = this.resizeStartW - dx;
-      if (proposedW >= 200) {
-        newW = proposedW;
-        newLeft = this.resizeStartLeft + dx;
+      if (dir.includes('e')) newW = Math.max(200, this.resizeStartW + dx);
+      if (dir.includes('s')) newH = Math.max(100, this.resizeStartH + dy);
+      if (dir.includes('w')) {
+        const proposedW = this.resizeStartW - dx;
+        if (proposedW >= 200) {
+          newW = proposedW;
+          newLeft = this.resizeStartLeft + dx;
+        }
       }
-    }
-    if (dir.includes('n')) {
-      const proposedH = this.resizeStartH - dy;
-      if (proposedH >= 100) {
-        newH = proposedH;
-        newTop = this.resizeStartTop + dy;
+      if (dir.includes('n')) {
+        const proposedH = this.resizeStartH - dy;
+        if (proposedH >= 100) {
+          newH = proposedH;
+          newTop = this.resizeStartTop + dy;
+        }
       }
-    }
 
-    const snapped = this.canvasController.snapRect({
-      x: newLeft,
-      y: newTop,
-      w: newW,
-      h: newH,
-    }, {
-      sourceId: this.id,
-      mode: 'resize',
-      direction: dir,
+      const snapped = this.canvasController.snapRect({
+        x: newLeft,
+        y: newTop,
+        w: newW,
+        h: newH,
+      }, {
+        sourceId: this.id,
+        mode: 'resize',
+        direction: dir,
+      });
+
+      this.container.style.left = `${snapped.x}px`;
+      this.container.style.top = `${snapped.y}px`;
+      this.container.style.width = `${snapped.w}px`;
+      this.container.style.height = `${snapped.h}px`;
     });
-
-    this.container.style.left = `${snapped.x}px`;
-    this.container.style.top = `${snapped.y}px`;
-    this.container.style.width = `${snapped.w}px`;
-    this.container.style.height = `${snapped.h}px`;
   }
 
   private onResizeEnd() {
     if (!this.isResizing) return;
     this.isResizing = false;
+    this.thaw();
+    if (this.resizeRaf !== null) {
+      cancelAnimationFrame(this.resizeRaf);
+      this.resizeRaf = null;
+    }
+    this.pendingResizeEvent = null;
     window.removeEventListener('mousemove', this.boundResizeMove);
     window.removeEventListener('mouseup', this.boundResizeEnd);
     this.canvasController.clearGuides();
     this.updateFontSizeAndFit();
-    // Reposition suggestion popup if visible
     if (this.commandSuggest.isVisible()) {
       this.positionSuggestPopup();
     }
@@ -1650,6 +1708,14 @@ export class TerminalWindow {
       window.cancelAnimationFrame(this.syntaxRefreshFrame);
       this.syntaxRefreshFrame = null;
     }
+    if (this.dragRaf !== null) {
+      cancelAnimationFrame(this.dragRaf);
+      this.dragRaf = null;
+    }
+    if (this.resizeRaf !== null) {
+      cancelAnimationFrame(this.resizeRaf);
+      this.resizeRaf = null;
+    }
     this.commandSuggest.hide();
     this.closeTerminalContextMenu();
     this.selectionOverlays.forEach((overlay) => overlay.remove());
@@ -1688,7 +1754,9 @@ export class TerminalWindow {
     if (!wasFocused) {
       this.container.classList.remove('focus-pulse');
       void this.container.offsetWidth;
-      this.container.classList.add('focus-pulse');
+      requestAnimationFrame(() => {
+        this.container.classList.add('focus-pulse');
+      });
     }
   }
 
@@ -1704,6 +1772,30 @@ export class TerminalWindow {
     this.hideGhostText();
   }
 
+  freeze() {
+    this.frozen = true;
+    this.cancelOverlaySync();
+    if (this.syntaxRefreshFrame !== null) {
+      window.cancelAnimationFrame(this.syntaxRefreshFrame);
+      this.syntaxRefreshFrame = null;
+    }
+    this.hideSyntaxHighlight();
+    this.hideGhostText();
+    this.commandSuggest.hide();
+  }
+
+  thaw() {
+    if (!this.frozen) return;
+    this.frozen = false;
+    if (this.frozenOutput.length > 0) {
+      const batch = this.frozenOutput.join('');
+      this.frozenOutput = [];
+      this.extractTitleFromOsc(batch);
+      this.handleSshHandshakeOutput(batch);
+      this.term.write(batch);
+    }
+  }
+
   getCwd(): string {
     return this.cwdPath;
   }
@@ -1717,8 +1809,8 @@ export class TerminalWindow {
     return {
       x: parseFloat(this.container.style.left) || 0,
       y: parseFloat(this.container.style.top) || 0,
-      w: this.container.offsetWidth,
-      h: this.container.offsetHeight,
+      w: parseFloat(this.container.style.width) || this.width,
+      h: parseFloat(this.container.style.height) || this.height,
     };
   }
 
@@ -1834,8 +1926,8 @@ export class TerminalWindow {
   }
 
   private updateFontSizeAndFit() {
-    const w = this.container.offsetWidth;
-    const h = this.container.offsetHeight;
+    const w = parseFloat(this.container.style.width) || this.container.offsetWidth;
+    const h = parseFloat(this.container.style.height) || this.container.offsetHeight;
     const newSize = this.calcFontSize(w, h);
     if (newSize !== this.term.options.fontSize) {
       this.term.options.fontSize = newSize;

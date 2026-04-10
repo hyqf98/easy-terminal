@@ -861,6 +861,50 @@ fn expand_home(path: String) -> Result<PathBuf, String> {
     Ok(PathBuf::from(path))
 }
 
+pub fn prepare_ssh_key(private_key_path: String) -> Result<String, String> {
+    let key_path = expand_home(private_key_path)?;
+
+    if !key_path.exists() {
+        return Err(format!("密钥文件不存在: {}", key_path.display()));
+    }
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let metadata =
+            local_fs::metadata(&key_path).map_err(|e| format!("无法读取密钥文件信息: {}", e))?;
+        let mode = metadata.permissions().mode() & 0o777;
+
+        if mode & 0o077 == 0 {
+            return Ok(key_path.to_string_lossy().to_string());
+        }
+
+        let tmp_dir = std::env::temp_dir().join("easy-terminal-ssh-keys");
+        local_fs::create_dir_all(&tmp_dir).map_err(|e| format!("无法创建临时目录: {}", e))?;
+
+        let tmp_name = format!(
+            "key-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis()
+        );
+        let tmp_path = tmp_dir.join(tmp_name);
+
+        local_fs::copy(&key_path, &tmp_path).map_err(|e| format!("无法复制密钥文件: {}", e))?;
+
+        local_fs::set_permissions(&tmp_path, local_fs::Permissions::from_mode(0o600))
+            .map_err(|e| format!("无法设置密钥文件权限: {}", e))?;
+
+        Ok(tmp_path.to_string_lossy().to_string())
+    }
+
+    #[cfg(not(unix))]
+    {
+        Ok(key_path.to_string_lossy().to_string())
+    }
+}
+
 fn normalize_remote_path(path: &str) -> String {
     let normalized = path.replace('\\', "/");
     if normalized.is_empty() {

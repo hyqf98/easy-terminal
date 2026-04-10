@@ -282,6 +282,11 @@ fn load_default_shortcuts() -> Vec<settings::ShortcutBinding> {
 }
 
 #[tauri::command]
+fn prepare_ssh_key(private_key_path: String) -> Result<String, String> {
+    ssh::prepare_ssh_key(private_key_path)
+}
+
+#[tauri::command]
 fn get_platform() -> String {
     commands::get_platform()
 }
@@ -438,6 +443,7 @@ pub fn run() {
             load_ssh_profiles,
             save_ssh_profiles,
             test_ssh_connection,
+            prepare_ssh_key,
             get_remote_home,
             read_remote_dir,
             download_remote_entries,

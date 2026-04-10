@@ -15,6 +15,8 @@ export class Canvas implements CanvasController {
   private dragStartX = 0;
   private dragStartY = 0;
 
+  private snapCache: { excludeId?: string; targets: SnapTarget[]; vertical: number[]; horizontal: number[] } | null = null;
+
   public onTerminalCreate?: (x: number, y: number, w: number, h: number) => void;
   public getSnapTargets: ((excludeId?: string) => SnapTarget[]) | null = null;
   public onCanvasContextMenu?: ((canvas: Canvas, clientX: number, clientY: number) => void) | null = null;
@@ -140,6 +142,7 @@ export class Canvas implements CanvasController {
   clearGuides(): void {
     this.verticalGuide.style.display = 'none';
     this.horizontalGuide.style.display = 'none';
+    this.snapCache = null;
   }
 
   private bindEvents() {
@@ -265,10 +268,14 @@ export class Canvas implements CanvasController {
   }
 
   private applyTransform() {
-    this.canvasEl.style.transform = `translate(${this.panX}px, ${this.panY}px) scale(${this.zoom})`;
+    this.canvasEl.style.transform = `translate3d(${this.panX}px, ${this.panY}px, 0) scale(${this.zoom})`;
   }
 
   private collectCandidates(excludeId?: string): { vertical: number[]; horizontal: number[] } {
+    if (this.snapCache && this.snapCache.excludeId === excludeId) {
+      return { vertical: this.snapCache.vertical, horizontal: this.snapCache.horizontal };
+    }
+
     const targets = this.getSnapTargets ? this.getSnapTargets(excludeId) : [];
     const vertical = new Set<number>([0]);
     const horizontal = new Set<number>([0]);
@@ -282,10 +289,13 @@ export class Canvas implements CanvasController {
       horizontal.add(target.y + target.h);
     }
 
-    return {
+    const result = {
       vertical: [...vertical],
       horizontal: [...horizontal],
     };
+
+    this.snapCache = { excludeId, targets, ...result };
+    return result;
   }
 
   private findClosest(value: number, candidates: number[]): { value: number; guide: number | null } {

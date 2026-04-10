@@ -1,6 +1,6 @@
 import { TerminalWindow } from './terminal-window';
 import { CommandSuggest } from './command-suggest';
-import { buildSshPasswordSequence, buildSshStartupCommand } from './command-intercept';
+import { buildSshPasswordSequence, buildSshStartupCommand, resolveSshKeyPath } from './command-intercept';
 import type { ShortcutManager } from './shortcut-manager';
 import type {
   CanvasController,
@@ -48,7 +48,7 @@ export class TerminalManager {
   }
 
   async createTerminal(x: number, y: number, w: number, h: number, options: TerminalLaunchOptions = {}) {
-    const launchOptions = this.resolveLaunchOptions(options);
+    const launchOptions = await this.resolveLaunchOptionsAsync(options);
     const tw = new TerminalWindow(
       this.canvasEl,
       x,
@@ -179,6 +179,18 @@ export class TerminalManager {
     }
   }
 
+  freezeAllExcept(excludeId?: string) {
+    for (const [id, tw] of this.terminals) {
+      if (id !== excludeId) tw.freeze();
+    }
+  }
+
+  thawAll() {
+    for (const [, tw] of this.terminals) {
+      tw.thaw();
+    }
+  }
+
   getActiveId(): string | null {
     return this.activeId;
   }
@@ -233,7 +245,7 @@ export class TerminalManager {
   }
 
   async restoreTerminalSession(session: TerminalSessionState) {
-    const launchOptions = this.resolveRestoreLaunchOptions(session);
+    const launchOptions = await this.resolveRestoreLaunchOptions(session);
     await this.createTerminal(session.x, session.y, session.w, session.h, launchOptions);
     const active = this.activeId ? this.terminals.get(this.activeId) : null;
     if (!active) return;
@@ -320,11 +332,15 @@ export class TerminalManager {
   }
 
   async createSshTerminal(profile: SSHProfile, x = 80, y = 80, w = 760, h = 480) {
+    let resolvedKeyPath: string | undefined;
+    if (profile.authType === 'key' && profile.privateKeyPath) {
+      resolvedKeyPath = await resolveSshKeyPath(profile.privateKeyPath);
+    }
     await this.createTerminal(x, y, w, h, {
       mode: 'ssh',
       profileId: profile.id,
       profileName: profile.name,
-      startupCommand: buildSshStartupCommand(profile, this.sshProfiles),
+      startupCommand: buildSshStartupCommand(profile, this.sshProfiles, resolvedKeyPath),
       passwordSequence: buildSshPasswordSequence(profile, this.sshProfiles),
     });
   }
@@ -339,17 +355,21 @@ export class TerminalManager {
     return targets;
   }
 
-  private resolveLaunchOptions(options: TerminalLaunchOptions): TerminalLaunchOptions {
+  private async resolveLaunchOptionsAsync(options: TerminalLaunchOptions): Promise<TerminalLaunchOptions> {
     if (options.mode === 'ssh' || options.startupCommand) {
       return { ...options, mode: 'ssh' };
     }
 
     if (!options.cwd && this.pendingSshProfile) {
+      let resolvedKeyPath: string | undefined;
+      if (this.pendingSshProfile.authType === 'key' && this.pendingSshProfile.privateKeyPath) {
+        resolvedKeyPath = await resolveSshKeyPath(this.pendingSshProfile.privateKeyPath);
+      }
       return {
         mode: 'ssh',
         profileId: this.pendingSshProfile.id,
         profileName: this.pendingSshProfile.name,
-        startupCommand: buildSshStartupCommand(this.pendingSshProfile, this.sshProfiles),
+        startupCommand: buildSshStartupCommand(this.pendingSshProfile, this.sshProfiles, resolvedKeyPath),
       };
     }
 
@@ -366,16 +386,20 @@ export class TerminalManager {
     };
   }
 
-  private resolveRestoreLaunchOptions(session: TerminalSessionState): TerminalLaunchOptions {
+  private async resolveRestoreLaunchOptions(session: TerminalSessionState): Promise<TerminalLaunchOptions> {
     const options = session.launchOptions || {};
     if (options.mode === 'ssh' && options.profileId) {
       const profile = this.sshProfiles.find((item) => item.id === options.profileId);
       if (profile) {
+        let resolvedKeyPath: string | undefined;
+        if (profile.authType === 'key' && profile.privateKeyPath) {
+          resolvedKeyPath = await resolveSshKeyPath(profile.privateKeyPath);
+        }
         return {
           mode: 'ssh',
           profileId: profile.id,
           profileName: profile.name,
-          startupCommand: buildSshStartupCommand(profile, this.sshProfiles),
+          startupCommand: buildSshStartupCommand(profile, this.sshProfiles, resolvedKeyPath),
           passwordSequence: buildSshPasswordSequence(profile, this.sshProfiles),
         };
       }
