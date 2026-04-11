@@ -384,30 +384,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     terminalManager.hideTransientUi();
   }, { passive: true });
 
-  let globalInteractionActive = false;
-  document.addEventListener('mousedown', (e) => {
-    const tw = (e.target as HTMLElement).closest('.terminal-window');
-    if (!tw) return;
-    const titleBar = (e.target as HTMLElement).closest('.title-bar');
-    const resizeHandle = (e.target as HTMLElement).closest('.resize-handle');
-    const xtermArea = (e.target as HTMLElement).closest('.terminal-body .xterm');
-    if (titleBar || resizeHandle) {
-      globalInteractionActive = true;
-      terminalManager.freezeAll();
-      return;
-    }
-    if (xtermArea) {
-      globalInteractionActive = true;
-      terminalManager.freezeAll();
-    }
-  }, true);
-  document.addEventListener('mouseup', () => {
-    if (globalInteractionActive) {
-      globalInteractionActive = false;
-      terminalManager.thawAll();
-    }
-  }, true);
-
   // Toast notification when terminal is copied via Ctrl+C
   terminalManager.onTerminalCopied = () => {
     showToast(t('terminal.copied'));

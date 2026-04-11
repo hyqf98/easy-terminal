@@ -25,6 +25,7 @@ export class TerminalManager {
   private pendingSshProfile: SSHProfile | null = null;
   private sshProfiles: SSHProfile[] = [];
   private shortcutManager?: ShortcutManager;
+  private interactionDepth = 0;
 
   /** Called when Ctrl+C successfully copies a terminal (for toast) */
   public onTerminalCopied: (() => void) | null = null;
@@ -76,6 +77,8 @@ export class TerminalManager {
     };
     tw.onAddMappingFromSelection = (text) => this.onAddMappingFromSelection?.(text);
     tw.onSelectionCopied = () => this.onTextCopied?.();
+    tw.onInteractionStart = () => this.beginTerminalInteraction();
+    tw.onInteractionEnd = () => this.endTerminalInteraction();
 
     this.terminals.set(tw.getId(), tw);
     this.focusTerminal(tw.getId());
@@ -205,6 +208,21 @@ export class TerminalManager {
   thawTerminal(id: string) {
     const tw = this.terminals.get(id);
     if (tw) tw.thaw();
+  }
+
+  private beginTerminalInteraction() {
+    this.interactionDepth += 1;
+    if (this.interactionDepth === 1) {
+      this.freezeAll();
+    }
+  }
+
+  private endTerminalInteraction() {
+    if (this.interactionDepth === 0) return;
+    this.interactionDepth -= 1;
+    if (this.interactionDepth === 0) {
+      this.thawAll();
+    }
   }
 
   getActiveId(): string | null {

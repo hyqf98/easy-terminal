@@ -155,6 +155,7 @@ export class TerminalWindow {
   private ghostOverlay: HTMLDivElement | null = null;
   private launchOptions: TerminalLaunchOptions = { mode: 'local' };
   private appWindow = getCurrentWindow();
+  private interactionActive = false;
 
   public onActivate: ((id: string) => void) | null = null;
   public onCommandExecuted: ((command: string, cwd: string) => void | Promise<void>) | null = null;
@@ -162,6 +163,8 @@ export class TerminalWindow {
   public onAddMappingFromSelection: ((text: string) => void) | null = null;
   public onCloseRequested: ((id: string) => void) | null = null;
   public onSelectionCopied: (() => void) | null = null;
+  public onInteractionStart: (() => void) | null = null;
+  public onInteractionEnd: (() => void) | null = null;
 
   constructor(
     parentEl: HTMLElement,
@@ -224,6 +227,7 @@ export class TerminalWindow {
     const body = this.container.querySelector('.terminal-body') as HTMLDivElement;
     this.term.open(body);
     this.installZoomMouseFix(body);
+    this.bindMouseInteractionPause(body);
     this.bindSelectionCopy(body);
     this.term.onRender(() => {
       if (!this.currentLine.trim() || this.isInAltBuffer()) return;
@@ -539,15 +543,16 @@ export class TerminalWindow {
       terminalBody.appendChild(this.ghostOverlay);
     }
 
-    const left = metrics.offsetX + metrics.cursorX * metrics.colWidth;
-    const top = metrics.offsetY + metrics.cursorY * metrics.rowHeight;
+    const cursorCell = this.resolveOverlayCursorCell(metrics);
+    const left = metrics.offsetX + cursorCell.x * metrics.colWidth;
+    const top = metrics.offsetY + cursorCell.y * metrics.rowHeight;
 
     const xtermScreen = terminalBody.querySelector('.xterm-screen') as HTMLElement | null;
     const rows = xtermScreen?.querySelectorAll<HTMLDivElement>(':scope .xterm-rows > div');
     let rowTop = top;
-    if (rows && rows[metrics.cursorY]) {
+    if (rows && rows[cursorCell.y]) {
       const bodyRect = terminalBody.getBoundingClientRect();
-      const rowRect = rows[metrics.cursorY].getBoundingClientRect();
+      const rowRect = rows[cursorCell.y].getBoundingClientRect();
       rowTop = rowRect.top - bodyRect.top;
     }
 
@@ -961,6 +966,7 @@ export class TerminalWindow {
   private positionSuggestPopup() {
     const metrics = this.getOverlayMetrics();
     if (!metrics) return;
+    const cursorCell = this.resolveOverlayCursorCell(metrics);
 
     // Use getBoundingClientRect() which reflects the current CSS transform
     // (canvas translate + scale) to get accurate screen-space coordinates.
@@ -972,8 +978,8 @@ export class TerminalWindow {
     const scaledColWidth = hostRect.width / metrics.cols;
     const scaledRowHeight = hostRect.height / metrics.rows;
 
-    const cursorScreenX = hostRect.left + metrics.cursorX * scaledColWidth;
-    const cursorScreenY = hostRect.top + (metrics.cursorY + 1) * scaledRowHeight;
+    const cursorScreenX = hostRect.left + cursorCell.x * scaledColWidth;
+    const cursorScreenY = hostRect.top + (cursorCell.y + 1) * scaledRowHeight;
 
     this.commandSuggest.positionAtScreen(cursorScreenX, cursorScreenY);
   }
@@ -1301,6 +1307,17 @@ export class TerminalWindow {
     });
   }
 
+  private bindMouseInteractionPause(body: HTMLDivElement) {
+    body.addEventListener('mousedown', (event) => {
+      if (!(event.target as HTMLElement).closest('.xterm')) return;
+      this.beginInteraction();
+    }, true);
+
+    window.addEventListener('mouseup', () => {
+      this.endInteraction();
+    });
+  }
+
   private enqueueTerminalOutput(data: string) {
     if (!data) return;
     this.pendingOutput += data;
@@ -1451,6 +1468,7 @@ export class TerminalWindow {
         if ((e.target as HTMLElement).closest('.window-controls')) return;
         if (e.button !== 0) return;
         e.preventDefault();
+        this.beginInteraction();
         if (this.id) {
           this.onActivate?.(this.id);
         }
@@ -1470,6 +1488,7 @@ export class TerminalWindow {
       if (this.isMaximized) return;
       if (e.button !== 0) return; // left button only
       e.preventDefault();
+      this.beginInteraction();
       if (this.id) {
         this.onActivate?.(this.id);
       }
@@ -1515,6 +1534,7 @@ export class TerminalWindow {
       this.pendingDragEvent = null;
       this.container.classList.remove('dragging');
       this.canvasController.clearGuides();
+      this.endInteraction();
       window.removeEventListener('mousemove', this.boundDragMove);
       window.removeEventListener('mouseup', this.boundDragEnd);
       origDragEnd.call(this);
@@ -1581,6 +1601,7 @@ export class TerminalWindow {
         handle.addEventListener('mousedown', (e: MouseEvent) => {
           e.preventDefault();
           e.stopPropagation();
+          this.beginInteraction();
           if (this.id) {
             this.onActivate?.(this.id);
           }
@@ -1601,6 +1622,7 @@ export class TerminalWindow {
         if (this.isMaximized) return;
         e.preventDefault();
         e.stopPropagation();
+        this.beginInteraction();
         if (this.id) {
           this.onActivate?.(this.id);
         }
@@ -1742,6 +1764,7 @@ export class TerminalWindow {
     window.removeEventListener('mousemove', this.boundResizeMove);
     window.removeEventListener('mouseup', this.boundResizeEnd);
     this.canvasController.clearGuides();
+    this.endInteraction();
     this.updateFontSizeAndFit();
     if (this.commandSuggest.isVisible()) {
       this.positionSuggestPopup();
@@ -1836,6 +1859,7 @@ export class TerminalWindow {
     window.removeEventListener('mouseup', this.boundDragEnd);
     window.removeEventListener('mousemove', this.boundResizeMove);
     window.removeEventListener('mouseup', this.boundResizeEnd);
+    this.endInteraction();
     this.container.style.transition = 'opacity 0.15s, transform 0.15s';
     this.container.style.opacity = '0';
     this.container.style.transform = 'scale(0.95)';
@@ -2115,6 +2139,21 @@ export class TerminalWindow {
     return this.lineStartCell;
   }
 
+  private resolveOverlayCursorCell(metrics: { cols: number; cursorX: number; cursorY: number }): { x: number; y: number } {
+    if (this.currentLine && !this.lastOverlayPositionStale) {
+      const absoluteCell = this.getLineStartCell(metrics) + this.cursorPos;
+      return {
+        x: this.mod(absoluteCell, metrics.cols),
+        y: Math.max(0, Math.floor(absoluteCell / metrics.cols)),
+      };
+    }
+
+    return {
+      x: metrics.cursorX,
+      y: metrics.cursorY,
+    };
+  }
+
   private ensureSelectionOverlayCount(count: number, terminalBody: HTMLElement) {
     while (this.selectionOverlays.length < count) {
       const overlay = document.createElement('div');
@@ -2127,6 +2166,18 @@ export class TerminalWindow {
 
   private mod(value: number, divisor: number): number {
     return ((value % divisor) + divisor) % divisor;
+  }
+
+  private beginInteraction() {
+    if (this.interactionActive) return;
+    this.interactionActive = true;
+    this.onInteractionStart?.();
+  }
+
+  private endInteraction() {
+    if (!this.interactionActive) return;
+    this.interactionActive = false;
+    this.onInteractionEnd?.();
   }
 
 }
