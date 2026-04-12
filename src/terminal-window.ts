@@ -104,6 +104,12 @@ type OverlayMetrics = {
   screenColWidth: number;
   screenRowHeight: number;
 };
+type WindowRect = {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+};
 
 export class TerminalWindow {
   private id = '';
@@ -181,6 +187,8 @@ export class TerminalWindow {
   private interactionActive = false;
   private lastCanvasViewChangeAt = 0;
   private pendingCanvasViewRestore: number | null = null;
+  private rectState: WindowRect;
+  private unbindMouseInteractionPause: (() => void) | null = null;
 
   public onActivate: ((id: string) => void) | null = null;
   public onCommandExecuted: ((command: string, cwd: string) => void | Promise<void>) | null = null;
@@ -193,8 +201,8 @@ export class TerminalWindow {
 
   constructor(
     parentEl: HTMLElement,
-    private x: number,
-    private y: number,
+    x: number,
+    y: number,
     private width: number,
     private height: number,
     canvasController: CanvasController,
@@ -204,6 +212,7 @@ export class TerminalWindow {
   ) {
     this.canvasController = canvasController;
     this.commandSuggest = commandSuggest;
+    this.rectState = { x, y, w: width, h: height };
     this.container = this.buildDOM(parentEl);
     this.container.dataset.initStage = 'dom';
     const baseFontSize = this.calcFontSize(this.width, this.height);
@@ -1174,10 +1183,10 @@ export class TerminalWindow {
   private buildDOM(parent: HTMLElement): HTMLDivElement {
     const el = document.createElement('div');
     el.className = `terminal-window${this.hostMode === 'native-window' ? ' terminal-window-native-host' : ''}`;
-    el.style.left = `${this.x}px`;
-    el.style.top = `${this.y}px`;
-    el.style.width = `${this.width}px`;
-    el.style.height = `${this.height}px`;
+    el.style.left = `${this.rectState.x}px`;
+    el.style.top = `${this.rectState.y}px`;
+    el.style.width = `${this.rectState.w}px`;
+    el.style.height = `${this.rectState.h}px`;
     el.innerHTML = `
       <div class="title-bar">
         <div class="title-spacer"></div>
@@ -1328,14 +1337,41 @@ export class TerminalWindow {
   }
 
   private bindMouseInteractionPause(body: HTMLDivElement) {
+    let pressedInsideXterm = false;
+    let pressStartX = 0;
+    let pressStartY = 0;
+    let interactionStarted = false;
+
     body.addEventListener('mousedown', (event) => {
+      if (event.button !== 0) return;
       if (!(event.target as HTMLElement).closest('.xterm')) return;
-      this.beginInteraction();
+      pressedInsideXterm = true;
+      interactionStarted = false;
+      pressStartX = event.clientX;
+      pressStartY = event.clientY;
     }, true);
 
-    window.addEventListener('mouseup', () => {
+    const onMove = (event: MouseEvent) => {
+      if (!pressedInsideXterm || interactionStarted || (event.buttons & 1) === 0) return;
+      const dx = Math.abs(event.clientX - pressStartX);
+      const dy = Math.abs(event.clientY - pressStartY);
+      if (dx < 4 && dy < 4) return;
+      interactionStarted = true;
+      this.beginInteraction();
+    };
+
+    const onUp = () => {
+      pressedInsideXterm = false;
+      interactionStarted = false;
       this.endInteraction();
-    });
+    };
+
+    window.addEventListener('mousemove', onMove, true);
+    window.addEventListener('mouseup', onUp, true);
+    this.unbindMouseInteractionPause = () => {
+      window.removeEventListener('mousemove', onMove, true);
+      window.removeEventListener('mouseup', onUp, true);
+    };
   }
 
   private enqueueTerminalOutput(data: string) {
@@ -1522,10 +1558,10 @@ export class TerminalWindow {
       this.dragZoom = zoom;
       this.dragPanX = panX;
       this.dragPanY = panY;
-      this.dragWidth = parseFloat(this.container.style.width) || this.container.offsetWidth;
-      this.dragHeight = parseFloat(this.container.style.height) || this.container.offsetHeight;
-      const containerLeft = parseFloat(this.container.style.left) || 0;
-      const containerTop = parseFloat(this.container.style.top) || 0;
+      this.dragWidth = this.rectState.w;
+      this.dragHeight = this.rectState.h;
+      const containerLeft = this.rectState.x;
+      const containerTop = this.rectState.y;
       const pointerCanvasX = (e.clientX - viewportRect.left - panX) / zoom;
       const pointerCanvasY = (e.clientY - viewportRect.top - panY) / zoom;
       this.dragOffsetX = pointerCanvasX - containerLeft;
@@ -1590,8 +1626,7 @@ export class TerminalWindow {
         sourceId: this.id,
         mode: 'drag',
       });
-      this.container.style.left = `${snapped.x}px`;
-      this.container.style.top = `${snapped.y}px`;
+      this.applyRect({ x: snapped.x, y: snapped.y, w: this.dragWidth, h: this.dragHeight }, ['x', 'y']);
     });
   }
 
@@ -1661,10 +1696,10 @@ export class TerminalWindow {
         this.resizeDirection = dir;
         this.resizeStartX = e.clientX;
         this.resizeStartY = e.clientY;
-        this.resizeStartW = parseFloat(this.container.style.width) || this.container.offsetWidth;
-        this.resizeStartH = parseFloat(this.container.style.height) || this.container.offsetHeight;
-        this.resizeStartLeft = parseFloat(this.container.style.left) || 0;
-        this.resizeStartTop = parseFloat(this.container.style.top) || 0;
+        this.resizeStartW = this.rectState.w;
+        this.resizeStartH = this.rectState.h;
+        this.resizeStartLeft = this.rectState.x;
+        this.resizeStartTop = this.rectState.y;
         window.addEventListener('mousemove', this.boundResizeMove);
         window.addEventListener('mouseup', this.boundResizeEnd);
       });
@@ -1771,10 +1806,7 @@ export class TerminalWindow {
         direction: dir,
       });
 
-      this.container.style.left = `${snapped.x}px`;
-      this.container.style.top = `${snapped.y}px`;
-      this.container.style.width = `${snapped.w}px`;
-      this.container.style.height = `${snapped.h}px`;
+      this.applyRect({ x: snapped.x, y: snapped.y, w: snapped.w, h: snapped.h });
     });
   }
 
@@ -1828,25 +1860,19 @@ export class TerminalWindow {
 
     if (this.isMaximized) {
       if (this.savedRect) {
-        this.container.style.left = `${this.savedRect.x}px`;
-        this.container.style.top = `${this.savedRect.y}px`;
-        this.container.style.width = `${this.savedRect.w}px`;
-        this.container.style.height = `${this.savedRect.h}px`;
+        this.applyRect(this.savedRect, ['x', 'y', 'w', 'h'], true);
       }
       this.isMaximized = false;
     } else {
-      this.savedRect = {
-        x: parseFloat(this.container.style.left) || 0,
-        y: parseFloat(this.container.style.top) || 0,
-        w: this.container.offsetWidth,
-        h: this.container.offsetHeight,
-      };
+      this.savedRect = { ...this.rectState };
       const viewport = this.container.closest('#app-viewport')!;
       const { zoom, panX, panY } = this.canvasController.getState();
-      this.container.style.left = `${-panX / zoom}px`;
-      this.container.style.top = `${-panY / zoom}px`;
-      this.container.style.width = `${viewport.clientWidth / zoom}px`;
-      this.container.style.height = `${viewport.clientHeight / zoom}px`;
+      this.applyRect({
+        x: -panX / zoom,
+        y: -panY / zoom,
+        w: viewport.clientWidth / zoom,
+        h: viewport.clientHeight / zoom,
+      }, ['x', 'y', 'w', 'h'], true);
       this.isMaximized = true;
     }
     setTimeout(() => {
@@ -1886,6 +1912,8 @@ export class TerminalWindow {
     }
     this.unlisten?.();
     this.unlistenLang?.();
+    this.unbindMouseInteractionPause?.();
+    this.unbindMouseInteractionPause = null;
     window.removeEventListener('mousemove', this.boundDragMove);
     window.removeEventListener('mouseup', this.boundDragEnd);
     window.removeEventListener('mousemove', this.boundResizeMove);
@@ -2007,12 +2035,7 @@ export class TerminalWindow {
   }
 
   getRect(): { x: number; y: number; w: number; h: number } {
-    return {
-      x: parseFloat(this.container.style.left) || 0,
-      y: parseFloat(this.container.style.top) || 0,
-      w: parseFloat(this.container.style.width) || this.width,
-      h: parseFloat(this.container.style.height) || this.height,
-    };
+    return { ...this.rectState };
   }
 
   isWindowMinimized(): boolean {
@@ -2096,10 +2119,7 @@ export class TerminalWindow {
   }
 
   setRect(x: number, y: number, w: number, h: number) {
-    this.container.style.left = `${x}px`;
-    this.container.style.top = `${y}px`;
-    this.container.style.width = `${w}px`;
-    this.container.style.height = `${h}px`;
+    this.applyRect({ x, y, w, h });
     this.isMaximized = false;
     this.savedRect = null;
     this.updateFontSizeAndFit();
@@ -2136,9 +2156,27 @@ export class TerminalWindow {
     return Math.max(10, Math.min(22, Math.round(14 * scale)));
   }
 
+  private applyRect(nextRect: WindowRect, fields: Array<keyof WindowRect> = ['x', 'y', 'w', 'h'], force = false) {
+    if (fields.includes('x') && (force || nextRect.x !== this.rectState.x)) {
+      this.container.style.left = `${nextRect.x}px`;
+      this.rectState.x = nextRect.x;
+    }
+    if (fields.includes('y') && (force || nextRect.y !== this.rectState.y)) {
+      this.container.style.top = `${nextRect.y}px`;
+      this.rectState.y = nextRect.y;
+    }
+    if (fields.includes('w') && (force || nextRect.w !== this.rectState.w)) {
+      this.container.style.width = `${nextRect.w}px`;
+      this.rectState.w = nextRect.w;
+    }
+    if (fields.includes('h') && (force || nextRect.h !== this.rectState.h)) {
+      this.container.style.height = `${nextRect.h}px`;
+      this.rectState.h = nextRect.h;
+    }
+  }
+
   private updateFontSizeAndFit() {
-    const w = parseFloat(this.container.style.width) || this.container.offsetWidth;
-    const h = parseFloat(this.container.style.height) || this.container.offsetHeight;
+    const { w, h } = this.rectState;
     const newSize = this.calcFontSize(w, h);
     if (newSize !== this.term.options.fontSize) {
       this.term.options.fontSize = newSize;
