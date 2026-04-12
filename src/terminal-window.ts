@@ -89,6 +89,21 @@ function getTermTheme(theme: string) {
 
 type TerminalHostMode = 'canvas' | 'native-window';
 const CANVAS_VIEW_SETTLE_MS = 700;
+type OverlayMetrics = {
+  terminalBody: HTMLElement;
+  offsetX: number;
+  offsetY: number;
+  colWidth: number;
+  rowHeight: number;
+  cols: number;
+  rows: number;
+  cursorX: number;
+  cursorY: number;
+  screenLeft: number;
+  screenTop: number;
+  screenColWidth: number;
+  screenRowHeight: number;
+};
 
 export class TerminalWindow {
   private id = '';
@@ -471,8 +486,8 @@ export class TerminalWindow {
       return;
     }
     // Check if cursor position matches our tracked position before showing suggestions
+    const metrics = this.getOverlayMetrics();
     if (this.currentLine.trim() && this.lineStartCell !== null && !inCanvasViewTransition) {
-      const metrics = this.getOverlayMetrics();
       if (metrics) {
         const expectedCell = this.lineStartCell + this.cursorPos;
         const actualCell = metrics.cursorY * metrics.cols + metrics.cursorX;
@@ -491,13 +506,13 @@ export class TerminalWindow {
       }
     }
     if (this.currentLine.trim()) {
-      this.showSyntaxHighlight();
+      this.showSyntaxHighlight(metrics);
       this.commandSuggest.clearTemporaryItems();
       const hasSuggestions = await this.commandSuggest.update(this.currentLine);
       if (hasSuggestions) {
-        this.positionSuggestPopup();
+        this.positionSuggestPopup(metrics);
       }
-      this.updateGhostText();
+      this.updateGhostText(metrics);
       return;
     }
     this.commandSuggest.hide();
@@ -505,7 +520,7 @@ export class TerminalWindow {
     this.hideGhostText();
   }
 
-  private updateGhostText() {
+  private updateGhostText(metrics: OverlayMetrics | null = null) {
     const visibleItems = this.commandSuggest.getVisibleItems();
     const activeItem = this.commandSuggest.getActiveItem();
     const ghost = visibleItems.length > 0
@@ -519,7 +534,7 @@ export class TerminalWindow {
     const acceptance = this.resolveGhostAcceptance(ghost.item, ghost.text);
     this.currentGhostReplacement = acceptance.value;
     this.currentGhostPreserveLeadingWhitespace = acceptance.preserveLeadingWhitespace;
-    this.showGhostText(ghost.text);
+    this.showGhostText(ghost.text, metrics);
   }
 
   private updateGhostTextForItem(item: SuggestionItem | null) {
@@ -541,14 +556,14 @@ export class TerminalWindow {
     this.showGhostText(ghost.text);
   }
 
-  private showGhostText(text: string) {
+  private showGhostText(text: string, metrics: OverlayMetrics | null = null) {
     if (this.isInAltBuffer()) {
       this.hideGhostText();
       return;
     }
     const terminalBody = this.container.querySelector('.terminal-body') as HTMLDivElement;
-    const metrics = this.getOverlayMetrics();
-    if (!metrics || this.cursorPos !== this.currentLine.length) {
+    const resolvedMetrics = metrics || this.getOverlayMetrics();
+    if (!resolvedMetrics || this.cursorPos !== this.currentLine.length) {
       this.hideGhostText();
       return;
     }
@@ -559,41 +574,41 @@ export class TerminalWindow {
       terminalBody.appendChild(this.ghostOverlay);
     }
 
-    const cursorCell = this.resolveOverlayCursorCell(metrics);
-    const left = metrics.offsetX + cursorCell.x * metrics.colWidth;
-    const top = metrics.offsetY + cursorCell.y * metrics.rowHeight;
+    const cursorCell = this.resolveOverlayCursorCell(resolvedMetrics);
+    const left = resolvedMetrics.offsetX + cursorCell.x * resolvedMetrics.colWidth;
+    const top = resolvedMetrics.offsetY + cursorCell.y * resolvedMetrics.rowHeight;
 
     const xtermScreen = terminalBody.querySelector('.xterm-screen') as HTMLElement | null;
     const rows = xtermScreen?.querySelectorAll<HTMLDivElement>(':scope .xterm-rows > div');
     let rowTop = top;
     if (rows && rows[cursorCell.y]) {
-      rowTop = metrics.offsetY + rows[cursorCell.y].offsetTop;
+      rowTop = resolvedMetrics.offsetY + rows[cursorCell.y].offsetTop;
     }
 
     this.ghostOverlay.textContent = text;
     this.ghostOverlay.style.left = `${left}px`;
     this.ghostOverlay.style.top = `${rowTop}px`;
-    this.ghostOverlay.style.height = `${metrics.rowHeight}px`;
-    this.ghostOverlay.style.maxWidth = `${Math.max(metrics.terminalBody.clientWidth - left - 12, 64)}px`;
+    this.ghostOverlay.style.height = `${resolvedMetrics.rowHeight}px`;
+    this.ghostOverlay.style.maxWidth = `${Math.max(resolvedMetrics.terminalBody.clientWidth - left - 12, 64)}px`;
     this.ghostOverlay.style.fontFamily = this.term.options.fontFamily || 'monospace';
     this.ghostOverlay.style.fontSize = `${this.term.options.fontSize || 14}px`;
     this.ghostOverlay.style.display = 'block';
   }
 
-  private showSyntaxHighlight() {
+  private showSyntaxHighlight(metrics: OverlayMetrics | null = null) {
     if (this.isInAltBuffer()) return;
 
-    const metrics = this.getOverlayMetrics();
-    if (!metrics || !this.currentLine.trim()) return;
+    const resolvedMetrics = metrics || this.getOverlayMetrics();
+    if (!resolvedMetrics || !this.currentLine.trim()) return;
 
     const rows = this.container.querySelectorAll<HTMLDivElement>('.terminal-body .xterm-rows > div');
     if (rows.length === 0) return;
 
     const classes = buildInputSyntaxClasses(this.currentLine);
-    const startCell = this.getLineStartCell(metrics);
+    const startCell = this.getLineStartCell(resolvedMetrics);
     const endCell = startCell + classes.length;
-    const startRow = Math.floor(startCell / metrics.cols);
-    const endRow = Math.floor(Math.max(startCell, endCell - 1) / metrics.cols);
+    const startRow = Math.floor(startCell / resolvedMetrics.cols);
+    const endRow = Math.floor(Math.max(startCell, endCell - 1) / resolvedMetrics.cols);
     const nextHighlightedRows = new Set<HTMLDivElement>();
 
     for (let rowIndex = startRow; rowIndex <= endRow; rowIndex += 1) {
@@ -601,12 +616,12 @@ export class TerminalWindow {
       if (!rowEl) continue;
       nextHighlightedRows.add(rowEl);
 
-      const rowStartCell: number = rowIndex * metrics.cols;
+      const rowStartCell: number = rowIndex * resolvedMetrics.cols;
       const segmentStart = Math.max(startCell, rowStartCell);
-      const segmentEnd = Math.min(endCell, rowStartCell + metrics.cols);
+      const segmentEnd = Math.min(endCell, rowStartCell + resolvedMetrics.cols);
       if (segmentEnd <= segmentStart) continue;
 
-      const cells = expandRenderedRowCells(rowEl, metrics.cols);
+      const cells = expandRenderedRowCells(rowEl, resolvedMetrics.cols);
       for (let absoluteCell = segmentStart; absoluteCell < segmentEnd; absoluteCell += 1) {
         const colIndex = absoluteCell - rowStartCell;
         const inputIndex = absoluteCell - startCell;
@@ -832,11 +847,12 @@ export class TerminalWindow {
         }
       }
       this.lineStartCell = null;
-      this.showSyntaxHighlight();
+      const metrics = this.getOverlayMetrics();
+      this.showSyntaxHighlight(metrics);
       if (this.commandSuggest.isVisible()) {
-        this.positionSuggestPopup();
+        this.positionSuggestPopup(metrics);
       }
-      this.updateGhostText();
+      this.updateGhostText(metrics);
     });
   }
 
@@ -978,12 +994,12 @@ export class TerminalWindow {
     return false;
   }
 
-  private positionSuggestPopup() {
-    const metrics = this.getOverlayMetrics();
-    if (!metrics) return;
-    const cursorCell = this.resolveOverlayCursorCell(metrics);
-    const cursorScreenX = metrics.screenLeft + cursorCell.x * metrics.screenColWidth;
-    const cursorScreenY = metrics.screenTop + (cursorCell.y + 1) * metrics.screenRowHeight;
+  private positionSuggestPopup(metrics: OverlayMetrics | null = null) {
+    const resolvedMetrics = metrics || this.getOverlayMetrics();
+    if (!resolvedMetrics) return;
+    const cursorCell = this.resolveOverlayCursorCell(resolvedMetrics);
+    const cursorScreenX = resolvedMetrics.screenLeft + cursorCell.x * resolvedMetrics.screenColWidth;
+    const cursorScreenY = resolvedMetrics.screenTop + (cursorCell.y + 1) * resolvedMetrics.screenRowHeight;
 
     this.commandSuggest.positionAtScreen(cursorScreenX, cursorScreenY);
   }
@@ -1073,39 +1089,39 @@ export class TerminalWindow {
     this.updateLineSelectionOverlay();
   }
 
-  private updateLineSelectionOverlay() {
+  private updateLineSelectionOverlay(metrics: OverlayMetrics | null = null) {
     const range = this.getLineSelectionRange();
-    const metrics = this.getOverlayMetrics();
-    if (!range || !metrics || !this.currentLine) {
+    const resolvedMetrics = metrics || this.getOverlayMetrics();
+    if (!range || !resolvedMetrics || !this.currentLine) {
       this.selectionOverlays.forEach((overlay) => {
         overlay.style.display = 'none';
       });
       return;
     }
 
-    const lineStartCell = this.getLineStartCell(metrics);
+    const lineStartCell = this.getLineStartCell(resolvedMetrics);
     const startCell = lineStartCell + range.start;
     const endCell = lineStartCell + range.end;
-    const startRow = Math.floor(startCell / metrics.cols);
-    const endRow = Math.floor(Math.max(startCell, endCell - 1) / metrics.cols);
+    const startRow = Math.floor(startCell / resolvedMetrics.cols);
+    const endRow = Math.floor(Math.max(startCell, endCell - 1) / resolvedMetrics.cols);
     const visibleRows: Array<{ row: number; startCol: number; endCol: number }> = [];
 
     for (let row = startRow; row <= endRow; row += 1) {
-      if (row < 0 || row >= metrics.rows) continue;
-      const startCol = row === startRow ? this.mod(startCell, metrics.cols) : 0;
-      const endCol = row === endRow ? this.mod(endCell, metrics.cols) || metrics.cols : metrics.cols;
+      if (row < 0 || row >= resolvedMetrics.rows) continue;
+      const startCol = row === startRow ? this.mod(startCell, resolvedMetrics.cols) : 0;
+      const endCol = row === endRow ? this.mod(endCell, resolvedMetrics.cols) || resolvedMetrics.cols : resolvedMetrics.cols;
       if (endCol <= startCol) continue;
       visibleRows.push({ row, startCol, endCol });
     }
 
-    this.ensureSelectionOverlayCount(visibleRows.length, metrics.terminalBody);
+    this.ensureSelectionOverlayCount(visibleRows.length, resolvedMetrics.terminalBody);
 
     visibleRows.forEach((segment, index) => {
       const overlay = this.selectionOverlays[index];
-      overlay.style.left = `${metrics.offsetX + segment.startCol * metrics.colWidth}px`;
-      overlay.style.top = `${metrics.offsetY + segment.row * metrics.rowHeight}px`;
-      overlay.style.width = `${Math.max((segment.endCol - segment.startCol) * metrics.colWidth, 2)}px`;
-      overlay.style.height = `${Math.max(metrics.rowHeight, 18)}px`;
+      overlay.style.left = `${resolvedMetrics.offsetX + segment.startCol * resolvedMetrics.colWidth}px`;
+      overlay.style.top = `${resolvedMetrics.offsetY + segment.row * resolvedMetrics.rowHeight}px`;
+      overlay.style.width = `${Math.max((segment.endCol - segment.startCol) * resolvedMetrics.colWidth, 2)}px`;
+      overlay.style.height = `${Math.max(resolvedMetrics.rowHeight, 18)}px`;
       overlay.style.display = 'block';
     });
 
@@ -1923,14 +1939,15 @@ export class TerminalWindow {
       window.clearTimeout(this.pendingCanvasViewRestore);
       this.pendingCanvasViewRestore = null;
     }
+    const metrics = this.getOverlayMetrics();
     if (this.commandSuggest.isVisible()) {
-      this.positionSuggestPopup();
-      this.updateGhostText();
+      this.positionSuggestPopup(metrics);
+      this.updateGhostText(metrics);
     } else if (this.currentGhostText) {
-      this.showGhostText(this.currentGhostText);
+      this.showGhostText(this.currentGhostText, metrics);
     }
     if (this.hasLineSelection()) {
-      this.updateLineSelectionOverlay();
+      this.updateLineSelectionOverlay(metrics);
     }
     const expectedInput = this.currentLine;
     this.pendingCanvasViewRestore = window.setTimeout(() => {
