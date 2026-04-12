@@ -114,6 +114,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
   }
   canvas.getSnapTargets = (excludeId) => terminalManager.getSnapTargets(excludeId);
+  canvas.onViewChange = () => {
+    terminalManager.handleCanvasViewChange();
+  };
   canvas.onCanvasContextMenu = (cvs, clientX, clientY) => {
     const items: Array<{ label: string; action: () => void }> = [];
     if (terminalManager.getTerminalCount() > 0) {

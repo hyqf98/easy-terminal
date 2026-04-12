@@ -25,7 +25,8 @@ export class TerminalManager {
   private pendingSshProfile: SSHProfile | null = null;
   private sshProfiles: SSHProfile[] = [];
   private shortcutManager?: ShortcutManager;
-  private interactionDepth = 0;
+  private activeInteractions = new Set<string>();
+  private viewChangeRaf: number | null = null;
 
   /** Called when Ctrl+C successfully copies a terminal (for toast) */
   public onTerminalCopied: (() => void) | null = null;
@@ -77,8 +78,8 @@ export class TerminalManager {
     };
     tw.onAddMappingFromSelection = (text) => this.onAddMappingFromSelection?.(text);
     tw.onSelectionCopied = () => this.onTextCopied?.();
-    tw.onInteractionStart = () => this.beginTerminalInteraction();
-    tw.onInteractionEnd = () => this.endTerminalInteraction();
+    tw.onInteractionStart = (id) => this.beginTerminalInteraction(id);
+    tw.onInteractionEnd = (id) => this.endTerminalInteraction(id);
 
     this.terminals.set(tw.getId(), tw);
     this.focusTerminal(tw.getId());
@@ -210,19 +211,16 @@ export class TerminalManager {
     if (tw) tw.thaw();
   }
 
-  private beginTerminalInteraction() {
-    this.interactionDepth += 1;
-    if (this.interactionDepth === 1) {
-      this.freezeAll();
-    }
+  private beginTerminalInteraction(id: string) {
+    if (!id || this.activeInteractions.has(id)) return;
+    this.activeInteractions.add(id);
+    this.freezeTerminal(id);
   }
 
-  private endTerminalInteraction() {
-    if (this.interactionDepth === 0) return;
-    this.interactionDepth -= 1;
-    if (this.interactionDepth === 0) {
-      this.thawAll();
-    }
+  private endTerminalInteraction(id: string) {
+    if (!id || !this.activeInteractions.has(id)) return;
+    this.activeInteractions.delete(id);
+    this.thawTerminal(id);
   }
 
   getActiveId(): string | null {
@@ -393,6 +391,16 @@ export class TerminalManager {
       targets.push({ id, ...rect });
     }
     return targets;
+  }
+
+  handleCanvasViewChange() {
+    if (this.viewChangeRaf !== null) return;
+    this.viewChangeRaf = window.requestAnimationFrame(() => {
+      this.viewChangeRaf = null;
+      for (const [, tw] of this.terminals) {
+        tw.handleCanvasViewChange();
+      }
+    });
   }
 
   private async resolveLaunchOptionsAsync(options: TerminalLaunchOptions): Promise<TerminalLaunchOptions> {

@@ -88,6 +88,7 @@ function getTermTheme(theme: string) {
 }
 
 type TerminalHostMode = 'canvas' | 'native-window';
+const CANVAS_VIEW_SETTLE_MS = 700;
 
 export class TerminalWindow {
   private id = '';
@@ -131,6 +132,12 @@ export class TerminalWindow {
   private boundDragEnd: () => void;
   private dragRaf: number | null = null;
   private pendingDragEvent: MouseEvent | null = null;
+  private dragViewportRect: DOMRect | null = null;
+  private dragZoom = 1;
+  private dragPanX = 0;
+  private dragPanY = 0;
+  private dragWidth = 0;
+  private dragHeight = 0;
 
   private isResizing = false;
   private resizeDirection = '';
@@ -144,6 +151,7 @@ export class TerminalWindow {
   private boundResizeEnd: () => void;
   private resizeRaf: number | null = null;
   private pendingResizeEvent: MouseEvent | null = null;
+  private resizeZoom = 1;
 
   // Minimize/Maximize state
   private isMinimized = false;
@@ -156,6 +164,8 @@ export class TerminalWindow {
   private launchOptions: TerminalLaunchOptions = { mode: 'local' };
   private appWindow = getCurrentWindow();
   private interactionActive = false;
+  private lastCanvasViewChangeAt = 0;
+  private pendingCanvasViewRestore: number | null = null;
 
   public onActivate: ((id: string) => void) | null = null;
   public onCommandExecuted: ((command: string, cwd: string) => void | Promise<void>) | null = null;
@@ -163,8 +173,8 @@ export class TerminalWindow {
   public onAddMappingFromSelection: ((text: string) => void) | null = null;
   public onCloseRequested: ((id: string) => void) | null = null;
   public onSelectionCopied: (() => void) | null = null;
-  public onInteractionStart: (() => void) | null = null;
-  public onInteractionEnd: (() => void) | null = null;
+  public onInteractionStart: ((id: string) => void) | null = null;
+  public onInteractionEnd: ((id: string) => void) | null = null;
 
   constructor(
     parentEl: HTMLElement,
@@ -230,7 +240,7 @@ export class TerminalWindow {
     this.bindMouseInteractionPause(body);
     this.bindSelectionCopy(body);
     this.term.onRender(() => {
-      if (!this.currentLine.trim() || this.isInAltBuffer()) return;
+      if (!this.isFocusedWindow() || !this.currentLine.trim() || this.isInAltBuffer()) return;
       this.scheduleSyntaxHighlightRefresh();
     });
     this.unlistenLang = onLangChange(() => {
@@ -303,7 +313,7 @@ export class TerminalWindow {
     });
 
     this.term.onCursorMove(() => {
-      if (this.frozen) return;
+      if (this.frozen || !this.isFocusedWindow()) return;
       this.scheduleOverlayReposition();
     });
 
@@ -440,6 +450,12 @@ export class TerminalWindow {
   }
 
   private async refreshSuggestions() {
+    if (!this.isFocusedWindow()) {
+      this.hideSyntaxHighlight();
+      this.hideGhostText();
+      return;
+    }
+    const inCanvasViewTransition = this.isCanvasViewTransitionActive();
     if (this.isInAltBuffer()) {
       this.overlayMismatchCount = 0;
       this.commandSuggest.hide();
@@ -455,7 +471,7 @@ export class TerminalWindow {
       return;
     }
     // Check if cursor position matches our tracked position before showing suggestions
-    if (this.currentLine.trim() && this.lineStartCell !== null) {
+    if (this.currentLine.trim() && this.lineStartCell !== null && !inCanvasViewTransition) {
       const metrics = this.getOverlayMetrics();
       if (metrics) {
         const expectedCell = this.lineStartCell + this.cursorPos;
@@ -776,6 +792,7 @@ export class TerminalWindow {
     this.cancelOverlaySync();
     this.overlaySyncFrame = window.requestAnimationFrame(() => {
       this.overlaySyncFrame = null;
+      const inCanvasViewTransition = this.isCanvasViewTransitionActive();
       if (this.isInAltBuffer()) {
         this.overlayMismatchCount = 0;
         this.lineStartCell = null;
@@ -795,7 +812,7 @@ export class TerminalWindow {
       // Detect TUI apps that don't use alternate screen buffer (e.g., Claude CLI).
       // When a TUI moves the cursor, the expected cell (based on our line tracking)
       // won't match the actual cursor position — suppress overlays in that case.
-      if (this.lineStartCell !== null) {
+      if (this.lineStartCell !== null && !inCanvasViewTransition) {
         const metrics = this.getOverlayMetrics();
         if (metrics) {
           const expectedCell = this.lineStartCell + this.cursorPos;
@@ -1485,6 +1502,12 @@ export class TerminalWindow {
       dragStarted = false;
       const { zoom, panX, panY } = this.canvasController.getState();
       const viewportRect = this.container.closest('#app-viewport')!.getBoundingClientRect();
+      this.dragViewportRect = viewportRect;
+      this.dragZoom = zoom;
+      this.dragPanX = panX;
+      this.dragPanY = panY;
+      this.dragWidth = parseFloat(this.container.style.width) || this.container.offsetWidth;
+      this.dragHeight = parseFloat(this.container.style.height) || this.container.offsetHeight;
       const containerLeft = parseFloat(this.container.style.left) || 0;
       const containerTop = parseFloat(this.container.style.top) || 0;
       const pointerCanvasX = (e.clientX - viewportRect.left - panX) / zoom;
@@ -1519,6 +1542,7 @@ export class TerminalWindow {
         this.dragRaf = null;
       }
       this.pendingDragEvent = null;
+      this.dragViewportRect = null;
       this.container.classList.remove('dragging');
       this.canvasController.clearGuides();
       this.endInteraction();
@@ -1536,19 +1560,16 @@ export class TerminalWindow {
       this.dragRaf = null;
       const ev = this.pendingDragEvent;
       if (!ev) return;
-      const { zoom, panX, panY } = this.canvasController.getState();
-      const viewportRect = this.container.closest('#app-viewport')!.getBoundingClientRect();
-      const pointerCanvasX = (ev.clientX - viewportRect.left - panX) / zoom;
-      const pointerCanvasY = (ev.clientY - viewportRect.top - panY) / zoom;
+      const viewportRect = this.dragViewportRect || this.container.closest('#app-viewport')!.getBoundingClientRect();
+      const pointerCanvasX = (ev.clientX - viewportRect.left - this.dragPanX) / this.dragZoom;
+      const pointerCanvasY = (ev.clientY - viewportRect.top - this.dragPanY) / this.dragZoom;
       const canvasX = pointerCanvasX - this.dragOffsetX;
       const canvasY = pointerCanvasY - this.dragOffsetY;
-      const currentW = parseFloat(this.container.style.width) || this.container.offsetWidth;
-      const currentH = parseFloat(this.container.style.height) || this.container.offsetHeight;
       const snapped = this.canvasController.snapRect({
         x: canvasX,
         y: canvasY,
-        w: currentW,
-        h: currentH,
+        w: this.dragWidth,
+        h: this.dragHeight,
       }, {
         sourceId: this.id,
         mode: 'drag',
@@ -1565,6 +1586,7 @@ export class TerminalWindow {
       this.dragRaf = null;
     }
     this.pendingDragEvent = null;
+    this.dragViewportRect = null;
     this.container.classList.remove('dragging');
     this.canvasController.clearGuides();
     window.removeEventListener('mousemove', this.boundDragMove);
@@ -1619,6 +1641,7 @@ export class TerminalWindow {
         this.isResizing = true;
         this.freeze();
         this.container.classList.add('resizing');
+        this.resizeZoom = this.canvasController.getState().zoom;
         this.resizeDirection = dir;
         this.resizeStartX = e.clientX;
         this.resizeStartY = e.clientY;
@@ -1695,9 +1718,8 @@ export class TerminalWindow {
       this.resizeRaf = null;
       const ev = this.pendingResizeEvent;
       if (!ev) return;
-      const { zoom } = this.canvasController.getState();
-      const dx = (ev.clientX - this.resizeStartX) / zoom;
-      const dy = (ev.clientY - this.resizeStartY) / zoom;
+      const dx = (ev.clientX - this.resizeStartX) / this.resizeZoom;
+      const dy = (ev.clientY - this.resizeStartY) / this.resizeZoom;
       const dir = this.resizeDirection;
 
       let newLeft = this.resizeStartLeft;
@@ -1818,6 +1840,10 @@ export class TerminalWindow {
 
   async close() {
     this.cancelOverlaySync();
+    if (this.pendingCanvasViewRestore !== null) {
+      window.clearTimeout(this.pendingCanvasViewRestore);
+      this.pendingCanvasViewRestore = null;
+    }
     if (this.syntaxRefreshFrame !== null) {
       window.cancelAnimationFrame(this.syntaxRefreshFrame);
       this.syntaxRefreshFrame = null;
@@ -1876,6 +1902,7 @@ export class TerminalWindow {
   }
 
   blur() {
+    this.hideTransientUi();
     this.term.blur();
     this.container.classList.remove('focused');
   }
@@ -1885,6 +1912,40 @@ export class TerminalWindow {
     this.commandSuggest.hide();
     this.hideSyntaxHighlight();
     this.hideGhostText();
+  }
+
+  handleCanvasViewChange() {
+    if (this.hostMode !== 'canvas' || !this.isFocusedWindow()) return;
+    if (this.frozen || this.isDragging || this.isResizing) return;
+    this.lastCanvasViewChangeAt = Date.now();
+    if (this.isInAltBuffer() || !this.currentLine.trim()) return;
+    if (this.pendingCanvasViewRestore !== null) {
+      window.clearTimeout(this.pendingCanvasViewRestore);
+      this.pendingCanvasViewRestore = null;
+    }
+    if (this.commandSuggest.isVisible()) {
+      this.positionSuggestPopup();
+      this.updateGhostText();
+    } else if (this.currentGhostText) {
+      this.showGhostText(this.currentGhostText);
+    }
+    if (this.hasLineSelection()) {
+      this.updateLineSelectionOverlay();
+    }
+    const expectedInput = this.currentLine;
+    this.pendingCanvasViewRestore = window.setTimeout(() => {
+      this.pendingCanvasViewRestore = null;
+      if (this.isInAltBuffer() || this.currentLine !== expectedInput) return;
+      void this.refreshSuggestions();
+    }, 120);
+  }
+
+  private isFocusedWindow(): boolean {
+    return this.container.classList.contains('focused');
+  }
+
+  private isCanvasViewTransitionActive(): boolean {
+    return Date.now() - this.lastCanvasViewChangeAt < CANVAS_VIEW_SETTLE_MS;
   }
 
   freeze() {
@@ -2189,13 +2250,17 @@ export class TerminalWindow {
   private beginInteraction() {
     if (this.interactionActive) return;
     this.interactionActive = true;
-    this.onInteractionStart?.();
+    if (this.id) {
+      this.onInteractionStart?.(this.id);
+    }
   }
 
   private endInteraction() {
     if (!this.interactionActive) return;
     this.interactionActive = false;
-    this.onInteractionEnd?.();
+    if (this.id) {
+      this.onInteractionEnd?.(this.id);
+    }
   }
 
 }

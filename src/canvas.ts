@@ -21,6 +21,7 @@ export class Canvas implements CanvasController {
   public getSnapTargets: ((excludeId?: string) => SnapTarget[]) | null = null;
   public onCanvasContextMenu?: ((canvas: Canvas, clientX: number, clientY: number) => void) | null = null;
   public getViewportSize: (() => { w: number; h: number }) | null = null;
+  public onViewChange?: ((state: CanvasState) => void) | null = null;
 
   constructor(
     viewport: HTMLDivElement,
@@ -269,6 +270,7 @@ export class Canvas implements CanvasController {
 
   private applyTransform() {
     this.canvasEl.style.transform = `translate3d(${this.panX}px, ${this.panY}px, 0) scale(${this.zoom})`;
+    this.onViewChange?.(this.getState());
   }
 
   private collectCandidates(excludeId?: string): { vertical: number[]; horizontal: number[] } {
