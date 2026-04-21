@@ -68,7 +68,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQ3MkM4MDU4Q0YyM0EyRUYKUldUdm9pUFBXSUFzMThGMkJPTGUwMlpNdnA2VlpNZVFxVUpUS2dUSE9SdkJRSFJ5TFA4eUZSYTQK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDNDNjA5OUVBQzYzNkNFNTQKUldSVXpqYkc2cGxnUFA1Q09nTWtmNDhWWHFwMUk1QXg2MjJZWFJrUFBCUURBeHZYSEp1V203eEgK",
       "endpoints": [
         "https://github.com/hyqf98/easy-terminal/releases/latest/download/latest.json"
       ],

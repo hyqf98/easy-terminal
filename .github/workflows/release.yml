@@ -119,9 +119,6 @@ jobs:
               print("::error::Make sure you pasted the private key, not the public key")
               sys.exit(1)
 
-          if "encrypted secret key" in decoded and not os.environ.get("TAURI_SIGNING_PRIVATE_KEY_PASSWORD_SECRET"):
-              print("::error::Encrypted updater private key requires TAURI_SIGNING_PRIVATE_KEY_PASSWORD")
-              sys.exit(1)
           PY
 
           {
